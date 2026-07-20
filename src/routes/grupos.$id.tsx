@@ -1,0 +1,719 @@
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmptyState } from "@/components/EmptyState";
+import { RequireAuth } from "@/components/RequireAuth";
+import { MobileShell } from "@/components/MobileShell";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { SKILL_KEYS, mediaSkill, type SkillRow } from "@/lib/sorteio";
+import { AvaliarMembroModal } from "@/components/AvaliarMembroModal";
+import { TemporadaTab } from "@/components/TemporadaTab";
+
+export const Route = createFileRoute("/grupos/$id")({
+  component: GrupoPageWrapper,
+});
+
+const items = [
+  { to: "/capitao", label: "Início", icon: Home },
+  { to: "/capitao/grupos", label: "Grupos", icon: Shield },
+  { to: "/capitao/peladas", label: "Peladas", icon: CircleDot },
+  { to: "/capitao/perfil", label: "Perfil", icon: User },
+];
+
+function GrupoPageWrapper() {
+  return (
+    <RequireAuth allow={["jogador", "capitao", "admin"]}>
+      <MobileShell items={items as any}><GrupoPage /></MobileShell>
+    </RequireAuth>
+  );
+}
+
+type Membro = {
+  id: string; user_id: string; papel: "jogador" | "auxiliar" | "capitao"; status: string;
+  profile: { nome: string; foto_url: string | null; cidade: string | null } | null;
+  skill: SkillRow | null;
+  skill_origem: string | null;
+};
+type Pelada = { id: string; nome_pelada: string; data: string; horario_inicio: string; status: string };
+type Quadra = { id: string; nome: string; cidade: string | null };
+
+function GrupoPage() {
+  const { id } = Route.useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [grupo, setGrupo] = useState<any>(null);
+  const [membros, setMembros] = useState<Membro[]>([]);
+  const [peladas, setPeladas] = useState<Pelada[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isCapitao = !!membros.find((m) => m.user_id === user?.id && (m.papel === "capitao" || m.papel === "auxiliar"));
+
+  const load = async () => {
+    setLoading(true);
+    const [g, m, p] = await Promise.all([
+      supabase.from("grupos").select("*").eq("id", id).maybeSingle(),
+      supabase.from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).eq("status", "ativo"),
+      supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, status").eq("grupo_id", id).order("data", { ascending: true }),
+    ]);
+    if (g.error) toast.error(g.error.message);
+    setGrupo(g.data);
+    const userIds = (m.data || []).map((x: any) => x.user_id);
+    let profilesMap: Record<string, { nome: string; foto_url: string | null; cidade: string | null }> = {};
+    let skillsMap: Record<string, any> = {};
+    if (userIds.length > 0) {
+      const [pr, sk] = await Promise.all([
+        supabase.from("profiles").select("user_id, nome, foto_url, cidade").in("user_id", userIds),
+        supabase.from("skills").select("*").in("user_id", userIds),
+      ]);
+      (pr.data || []).forEach((x: any) => { profilesMap[x.user_id] = { nome: x.nome, foto_url: x.foto_url, cidade: x.cidade }; });
+      (sk.data || []).forEach((x: any) => { skillsMap[x.user_id] = x; });
+    }
+    setMembros((m.data || []).map((x: any) => ({
+      ...x,
+      profile: profilesMap[x.user_id] || null,
+      skill: skillsMap[x.user_id] || null,
+      skill_origem: skillsMap[x.user_id]?.origem_ultima_atualizacao || null,
+    })));
+    setPeladas((p.data as any) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { void load(); }, [id]);
+
+  if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
+  if (!grupo) return <EmptyState icon={Shield} title="Grupo não encontrado" />;
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => navigate({ to: "/capitao/grupos" })} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Voltar
+      </button>
+      <div>
+        <h2 className="text-2xl font-bold">{grupo.nome}</h2>
+        <p className="text-sm text-muted-foreground">Código: <span className="text-foreground font-mono">{grupo.codigo_convite}</span></p>
+      </div>
+
+      <Tabs defaultValue="membros">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="membros"><Users className="mr-2 h-4 w-4" />Membros</TabsTrigger>
+          <TabsTrigger value="peladas"><CircleDot className="mr-2 h-4 w-4" />Peladas</TabsTrigger>
+          <TabsTrigger value="temporada">🏆 Temporada</TabsTrigger>
+          <TabsTrigger value="config"><Settings className="mr-2 h-4 w-4" />Config</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="membros" className="mt-4">
+          <MembrosTab grupo={grupo} membros={membros} isCapitao={isCapitao} onChange={load} />
+        </TabsContent>
+
+        <TabsContent value="peladas" className="mt-4">
+          <PeladasTab grupoId={id} peladas={peladas} isCapitao={isCapitao} onChange={load} />
+        </TabsContent>
+
+        <TabsContent value="temporada" className="mt-4">
+          <TemporadaTab grupoId={id} />
+        </TabsContent>
+
+        <TabsContent value="config" className="mt-4">
+          <ConfigTab grupo={grupo} isCapitao={isCapitao} peladas={peladas} onChange={load} onDeleted={() => navigate({ to: "/capitao/grupos" })} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function tituloFor(papel: string) {
+  if (papel === "capitao") return { label: "Capitão", emoji: "👑" };
+  if (papel === "auxiliar") return { label: "Auxiliar", emoji: "⚙️" };
+  return { label: "Jogador", emoji: "🎮" };
+}
+
+function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membros: Membro[]; isCapitao: boolean; onChange: () => void }) {
+  const { user } = useAuth();
+  const [convidarOpen, setConvidarOpen] = useState(false);
+  const [skillsMembro, setSkillsMembro] = useState<Membro | null>(null);
+  const [avaliarMembro, setAvaliarMembro] = useState<Membro | null>(null);
+  const [jaAvaliados, setJaAvaliados] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("avaliacoes_skill_membro")
+        .select("avaliado_id")
+        .eq("avaliador_id", user.id).eq("grupo_id", grupo.id).eq("tipo", "conhecimento_previo");
+      setJaAvaliados(new Set((data || []).map((x: any) => x.avaliado_id)));
+    })();
+  }, [user?.id, grupo.id, membros.length]);
+
+  const setPapel = async (m: Membro, papel: "jogador" | "auxiliar") => {
+    const { error } = await supabase.from("grupo_membros").update({ papel } as never).eq("id", m.id);
+    if (error) return toast.error(error.message);
+    toast.success("Atualizado"); onChange();
+  };
+  const remover = async (m: Membro) => {
+    if (!confirm(`Remover ${m.profile?.nome || "membro"} do grupo?`)) return;
+    const { error } = await supabase.from("grupo_membros").update({ status: "removido" } as never).eq("id", m.id);
+    if (error) return toast.error(error.message);
+    toast.success("Membro removido"); onChange();
+  };
+
+  return (
+    <div className="space-y-4">
+      {isCapitao && (
+        <div className="flex justify-end">
+          <Button onClick={() => setConvidarOpen(true)} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+            <UserPlus className="mr-2 h-4 w-4" />Convidar Jogador
+          </Button>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {membros.map((m) => {
+          const nome = (m.profile?.nome && m.profile.nome.trim()) || "Jogador";
+          const initials = nome.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase();
+          const t = tituloFor(m.papel);
+          const media = m.skill ? mediaSkill(m.skill) : 0;
+          const pendente = !m.skill || !m.skill_origem;
+          return (
+            <div key={m.id} className="rounded-xl border border-border bg-card p-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  {m.profile?.foto_url ? <AvatarImage src={m.profile.foto_url} /> : null}
+                  <AvatarFallback className="bg-secondary">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold truncate">{nome}</div>
+                  <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    {m.papel === "capitao" && <Crown className="h-3 w-3 text-primary" />}
+                    <span>{t.emoji} {t.label}</span>
+                  </div>
+                </div>
+                {isCapitao && m.papel !== "capitao" && (
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setSkillsMembro(m)} title="Definir Skills">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setPapel(m, m.papel === "auxiliar" ? "jogador" : "auxiliar")} title={m.papel === "auxiliar" ? "Remover auxiliar" : "Tornar auxiliar"}>
+                      <UserCog className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => remover(m)} title="Remover">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                {pendente ? (
+                  <Badge className="bg-orange-500/15 text-orange-500 hover:bg-orange-500/15">Skills pendentes</Badge>
+                ) : (
+                  <>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                      <div className={`h-full ${media >= 4 ? "bg-green-500" : media >= 2.5 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${(media / 5) * 100}%` }} />
+                    </div>
+                    <span className="w-12 text-right text-xs font-bold text-primary">⭐ {media.toFixed(1)}</span>
+                  </>
+                )}
+                {user && m.user_id !== user.id && !jaAvaliados.has(m.user_id) && (
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={() => setAvaliarMembro(m)}>
+                    Aguardando sua avaliação
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {avaliarMembro && (
+        <AvaliarMembroModal
+          open={!!avaliarMembro}
+          onClose={() => setAvaliarMembro(null)}
+          avaliado={{ user_id: avaliarMembro.user_id, nome: avaliarMembro.profile?.nome || "Jogador", foto_url: avaliarMembro.profile?.foto_url }}
+          grupoId={grupo.id}
+          onDone={() => { setJaAvaliados((s) => new Set([...s, avaliarMembro.user_id])); onChange(); }}
+        />
+      )}
+
+      <Dialog open={convidarOpen} onOpenChange={setConvidarOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto bg-card">
+          <DialogHeader><DialogTitle>Convidar Jogador</DialogTitle></DialogHeader>
+          <ConvidarJogadorModal grupo={grupo} membros={membros} onDone={() => { setConvidarOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!skillsMembro} onOpenChange={(o) => !o && setSkillsMembro(null)}>
+        <DialogContent className="bg-card">
+          <DialogHeader><DialogTitle>Skills — {skillsMembro?.profile?.nome}</DialogTitle></DialogHeader>
+          {skillsMembro && <SkillsModal membro={skillsMembro} onDone={() => { setSkillsMembro(null); onChange(); }} />}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros: Membro[]; onDone: () => void }) {
+  const { user } = useAuth();
+  const [tab, setTab] = useState<"buscar" | "link">("buscar");
+  const [termo, setTermo] = useState("");
+  const [resultados, setResultados] = useState<any[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const link = `${typeof window !== "undefined" ? window.location.origin : ""}/convite/${grupo.codigo_convite}`;
+  const copy = () => { navigator.clipboard.writeText(link); toast.success("Link copiado"); };
+
+  const memberIds = useMemo(() => new Set(membros.map((m) => m.user_id)), [membros]);
+
+  useEffect(() => {
+    if (termo.trim().length < 3) { setResultados([]); return; }
+    setBuscando(true);
+    const t = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, nome, foto_url, cidade, role")
+        .or(`nome.ilike.%${termo}%,whatsapp.ilike.%${termo}%`)
+        .in("role", ["jogador", "capitao"])
+        .limit(20);
+      if (error) toast.error(error.message);
+      setResultados((data || []).filter((p: any) => !memberIds.has(p.user_id)));
+      setBuscando(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [termo, memberIds]);
+
+  const convidar = async (convidado_id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("convites_grupo").insert({
+      grupo_id: grupo.id, capitao_id: user.id, convidado_id,
+    } as never);
+    if (error) return toast.error(error.message);
+    toast.success("Convite enviado!");
+    setResultados((arr) => arr.filter((r) => r.user_id !== convidado_id));
+  };
+
+  const gerarNovoCodigo = async () => {
+    const novo = "FZ-" + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const { error } = await supabase.from("grupos").update({ codigo_convite: novo } as never).eq("id", grupo.id);
+    if (error) return toast.error(error.message);
+    toast.success("Novo código gerado"); onDone();
+  };
+
+  return (
+    <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="buscar"><Search className="mr-2 h-4 w-4" />Buscar Jogador</TabsTrigger>
+        <TabsTrigger value="link"><Copy className="mr-2 h-4 w-4" />Link de Convite</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="buscar" className="mt-3 space-y-3">
+        <Input placeholder="Nome ou WhatsApp (mínimo 3 letras)" value={termo} onChange={(e) => setTermo(e.target.value)} autoFocus />
+        {buscando && <p className="text-xs text-muted-foreground">Buscando...</p>}
+        {!buscando && termo.length >= 3 && resultados.length === 0 && (
+          <p className="text-xs text-muted-foreground">Nenhum jogador encontrado.</p>
+        )}
+        <div className="space-y-2">
+          {resultados.map((r) => {
+            const initials = (r.nome || "?").split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
+            return (
+              <div key={r.user_id} className="flex items-center gap-3 rounded-xl border border-border bg-secondary/30 p-2">
+                <Avatar className="h-9 w-9">
+                  {r.foto_url ? <AvatarImage src={r.foto_url} /> : null}
+                  <AvatarFallback className="bg-secondary text-xs">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold truncate">{r.nome}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {r.cidade || "—"} · {r.role === "capitao" ? "👑 Capitão" : "🎮 Jogador"}
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => convidar(r.user_id)}>Convidar</Button>
+              </div>
+            );
+          })}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="link" className="mt-3 space-y-3">
+        <Label className="text-xs text-muted-foreground">URL de convite</Label>
+        <div className="flex gap-2">
+          <Input readOnly value={link} className="font-mono text-xs" />
+          <Button onClick={copy} variant="secondary"><Copy className="h-4 w-4" /></Button>
+        </div>
+        <Button variant="outline" size="sm" onClick={gerarNovoCodigo}>Gerar novo código</Button>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function SkillsModal({ membro, onDone }: { membro: Membro; onDone: () => void }) {
+  const base = membro.skill || { velocidade: 3, drible: 3, passe: 3, chute: 3, resistencia: 3, posicionamento: 3 };
+  const [vals, setVals] = useState<Record<string, number>>({
+    velocidade: base.velocidade, drible: base.drible, passe: base.passe,
+    chute: base.chute, resistencia: base.resistencia, posicionamento: base.posicionamento,
+  });
+  const [saving, setSaving] = useState(false);
+  const media = SKILL_KEYS.reduce((a, k) => a + (vals[k] || 0), 0) / SKILL_KEYS.length;
+
+  const labels: Record<string, string> = {
+    velocidade: "⚡ Velocidade", drible: "🎯 Drible", passe: "🤝 Passe",
+    chute: "👟 Chute", resistencia: "💪 Resistência", posicionamento: "📍 Posicionamento",
+  };
+
+  const salvar = async () => {
+    setSaving(true);
+    const payload: any = {
+      user_id: membro.user_id,
+      ...vals,
+      origem_ultima_atualizacao: "capitao",
+      atualizado_em: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("skills").upsert(payload as never, { onConflict: "user_id" });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Skills salvas!");
+    onDone();
+  };
+
+  return (
+    <div className="space-y-3">
+      {SKILL_KEYS.map((k) => (
+        <div key={k}>
+          <div className="mb-1 flex items-center justify-between text-sm">
+            <span>{labels[k]}</span>
+            <span className="font-bold text-primary">{vals[k]}</span>
+          </div>
+          <Slider min={1} max={5} step={1} value={[vals[k]]} onValueChange={([v]) => setVals({ ...vals, [k]: v })} />
+        </div>
+      ))}
+      <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
+        <div className="text-xs text-muted-foreground">Nível geral</div>
+        <div className="text-2xl font-bold text-primary">⭐ {media.toFixed(1)}</div>
+      </div>
+      <DialogFooter>
+        <Button onClick={salvar} disabled={saving} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+          {saving ? "Salvando..." : "Salvar Skills"}
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
+function PeladasTab({ grupoId, peladas, isCapitao, onChange }: { grupoId: string; peladas: Pelada[]; isCapitao: boolean; onChange: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="space-y-3">
+      {isCapitao && (
+        <div className="flex justify-end">
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary text-primary-foreground font-bold hover:bg-primary/90"><Plus className="mr-2 h-4 w-4" />Criar Pelada</Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-card">
+              <DialogHeader><DialogTitle>Nova pelada</DialogTitle></DialogHeader>
+              <CriarPeladaForm grupoId={grupoId} onCreated={() => { setOpen(false); onChange(); }} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+      {peladas.length === 0 ? (
+        <EmptyState icon={CircleDot} title="Nenhuma pelada criada" description="Marque a primeira pelada deste grupo." />
+      ) : (
+        peladas.map((p) => (
+          <Link key={p.id} to="/peladas/$id" params={{ id: p.id }} className="block rounded-xl border border-border bg-card p-4 transition hover:border-primary/50">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="font-bold">{p.nome_pelada}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{p.data.split("-").reverse().join("/")} às {p.horario_inicio.slice(0,5)}</div>
+              </div>
+              <StatusBadge status={p.status} />
+            </div>
+          </Link>
+        ))
+      )}
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    aguardando: { label: "Aguardando", cls: "bg-yellow-500/10 text-yellow-500" },
+    confirmada: { label: "Confirmada", cls: "bg-primary/10 text-primary" },
+    em_andamento: { label: "Em andamento", cls: "bg-blue-500/10 text-blue-400" },
+    encerrada: { label: "Encerrada", cls: "bg-muted text-muted-foreground" },
+    cancelada: { label: "Cancelada", cls: "bg-destructive/10 text-destructive" },
+  };
+  const v = map[status] || { label: status, cls: "bg-muted" };
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${v.cls}`}>{v.label}</span>;
+}
+
+function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: () => void }) {
+  const { user } = useAuth();
+  const [tipo, setTipo] = useState<"publica" | "cliente">("publica");
+  const [quadras, setQuadras] = useState<Quadra[]>([]);
+  const [quadraId, setQuadraId] = useState<string>("");
+  const [novaQuadra, setNovaQuadra] = useState(false);
+  const [novaQ, setNovaQ] = useState({ nome: "", endereco: "", cidade: "", estado: "", tipo_superficie: "society" as const, capacidade_total: 14 });
+  const [form, setForm] = useState({
+    nome_pelada: "", data: "", horario_inicio: "20:00", horario_fim: "22:00",
+    duracao_partida_minutos: 10,
+    tempo_locado_minutos: 60,
+    tempo_locado_custom: false,
+    gols_para_encerrar_ativo: false,
+    gols_para_encerrar: 2,
+    numero_times: 2,
+    jogadores_linha_por_time: 4,
+    goleiros_por_time: 1,
+    modalidade_goleiro: "fixo" as "fixo" | "sorteado",
+    sistema_disputa: "rodizio" as const,
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    void supabase.from("quadras_publicas").select("id, nome, cidade").eq("publica", true).order("nome").then(({ data }) => setQuadras((data as any) || []));
+  }, []);
+
+  const cadastrarQuadra = async () => {
+    if (!user || !novaQ.nome.trim()) return;
+    const { data, error } = await supabase.from("quadras_publicas").insert({ ...novaQ, criada_por: user.id } as never).select("id, nome, cidade").single();
+    if (error) return toast.error(error.message);
+    setQuadras([...quadras, data as any]);
+    setQuadraId((data as any).id);
+    setNovaQuadra(false);
+    toast.success("Quadra cadastrada");
+  };
+
+  const totalPorTime = form.jogadores_linha_por_time + form.goleiros_por_time;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setLoading(true);
+    const { tempo_locado_custom, gols_para_encerrar_ativo, ...rest } = form;
+    void tempo_locado_custom;
+    const payload: any = {
+      grupo_id: grupoId,
+      criado_por: user.id,
+      ...rest,
+      jogadores_por_time: totalPorTime,
+      gols_para_encerrar: gols_para_encerrar_ativo ? form.gols_para_encerrar : null,
+    };
+    if (tipo === "publica" && quadraId) payload.quadra_id = quadraId;
+    const { error } = await supabase.from("peladas").insert(payload as never);
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Pelada criada");
+    onCreated();
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <div><Label>Nome da pelada</Label><Input required value={form.nome_pelada} onChange={(e) => setForm({ ...form, nome_pelada: e.target.value })} placeholder="Pelada de Quinta" /></div>
+
+      <div>
+        <Label>Tipo de quadra</Label>
+        <Select value={tipo} onValueChange={(v) => setTipo(v as any)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="publica">Quadra Pública</SelectItem>
+            <SelectItem value="cliente">Quadra Futzone (cliente)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {tipo === "publica" && (
+        <div className="space-y-2 rounded-xl border border-border bg-secondary/30 p-3">
+          {!novaQuadra ? (
+            <>
+              <Label>Selecionar quadra</Label>
+              <Select value={quadraId} onValueChange={setQuadraId}>
+                <SelectTrigger><SelectValue placeholder="Buscar..." /></SelectTrigger>
+                <SelectContent>
+                  {quadras.map((q) => <SelectItem key={q.id} value={q.id}>{q.nome}{q.cidade ? ` — ${q.cidade}` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setNovaQuadra(true)}><Plus className="mr-1 h-3 w-3" />Cadastrar nova quadra</Button>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <Input placeholder="Nome" value={novaQ.nome} onChange={(e) => setNovaQ({ ...novaQ, nome: e.target.value })} />
+              <Input placeholder="Endereço" value={novaQ.endereco} onChange={(e) => setNovaQ({ ...novaQ, endereco: e.target.value })} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Cidade" value={novaQ.cidade} onChange={(e) => setNovaQ({ ...novaQ, cidade: e.target.value })} />
+                <Input placeholder="UF" maxLength={2} value={novaQ.estado} onChange={(e) => setNovaQ({ ...novaQ, estado: e.target.value })} />
+              </div>
+              <Select value={novaQ.tipo_superficie} onValueChange={(v) => setNovaQ({ ...novaQ, tipo_superficie: v as any })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="society">Society</SelectItem>
+                  <SelectItem value="futsal">Futsal</SelectItem>
+                  <SelectItem value="campo">Campo</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input type="number" placeholder="Capacidade" value={novaQ.capacidade_total} onChange={(e) => setNovaQ({ ...novaQ, capacidade_total: +e.target.value })} />
+              <div className="flex gap-2">
+                <Button type="button" onClick={cadastrarQuadra} size="sm">Salvar quadra</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setNovaQuadra(false)}>Cancelar</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Data</Label><Input type="date" required value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></div>
+        <div><Label>Início</Label><Input type="time" required value={form.horario_inicio} onChange={(e) => setForm({ ...form, horario_inicio: e.target.value })} /></div>
+        <div><Label>Fim</Label><Input type="time" required value={form.horario_fim} onChange={(e) => setForm({ ...form, horario_fim: e.target.value })} /></div>
+        <div>
+          <Label>Tempo locado da quadra</Label>
+          <Select
+            value={form.tempo_locado_custom ? "custom" : String(form.tempo_locado_minutos)}
+            onValueChange={(v) => {
+              if (v === "custom") setForm({ ...form, tempo_locado_custom: true });
+              else setForm({ ...form, tempo_locado_custom: false, tempo_locado_minutos: +v });
+            }}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="60">60min (1h)</SelectItem>
+              <SelectItem value="90">90min (1h30)</SelectItem>
+              <SelectItem value="120">120min (2h)</SelectItem>
+              <SelectItem value="150">150min (2h30)</SelectItem>
+              <SelectItem value="180">180min (3h)</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          {form.tempo_locado_custom && (
+            <Input className="mt-2" type="number" min={10} value={form.tempo_locado_minutos} onChange={(e) => setForm({ ...form, tempo_locado_minutos: +e.target.value })} placeholder="minutos" />
+          )}
+        </div>
+        <div><Label>Duração de cada partida (min)</Label><Input type="number" min={1} value={form.duracao_partida_minutos} onChange={(e) => setForm({ ...form, duracao_partida_minutos: +e.target.value })} /></div>
+        <div>
+          <Label>Nº de times</Label>
+          <Select value={String(form.numero_times)} onValueChange={(v) => setForm({ ...form, numero_times: +v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[2,3,4,5,6].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div><Label>Jogadores de linha/time</Label><Input type="number" min={1} value={form.jogadores_linha_por_time} onChange={(e) => setForm({ ...form, jogadores_linha_por_time: +e.target.value })} /></div>
+        <div>
+          <Label>Goleiros/time</Label>
+          <Input type="number" min={0} value={form.goleiros_por_time} onChange={(e) => setForm({ ...form, goleiros_por_time: +e.target.value })} />
+          <p className="mt-1 text-xs text-muted-foreground">Total por time: {totalPorTime}</p>
+        </div>
+        <div>
+          <Label>Sistema</Label>
+          <Select value={form.sistema_disputa} onValueChange={(v) => setForm({ ...form, sistema_disputa: v as any })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="rodizio">Rodízio</SelectItem>
+              <SelectItem value="mata_mata">Mata-mata</SelectItem>
+              <SelectItem value="pontos_corridos">Pontos corridos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="cursor-pointer" htmlFor="gols-toggle">Encerrar quando um time marcar X gols</Label>
+          <Switch id="gols-toggle" checked={form.gols_para_encerrar_ativo} onCheckedChange={(v) => setForm({ ...form, gols_para_encerrar_ativo: v })} />
+        </div>
+        {form.gols_para_encerrar_ativo && (
+          <Input type="number" min={1} value={form.gols_para_encerrar} onChange={(e) => setForm({ ...form, gols_para_encerrar: +e.target.value })} />
+        )}
+        <p className="text-xs text-muted-foreground">A partida encerra automaticamente por tempo OU por gols, o que acontecer primeiro.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Modalidade dos goleiros</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, modalidade_goleiro: "fixo" })}
+            className={`rounded-xl border p-3 text-left text-sm ${form.modalidade_goleiro === "fixo" ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
+          >
+            <div className="font-bold">🔒 Goleiros Fixos</div>
+            <div className="text-xs text-muted-foreground">Goleiros ficam nas traves toda a pelada e não entram no sorteio.</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, modalidade_goleiro: "sorteado" })}
+            className={`rounded-xl border p-3 text-left text-sm ${form.modalidade_goleiro === "sorteado" ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
+          >
+            <div className="font-bold">🔀 Goleiros Sorteados</div>
+            <div className="text-xs text-muted-foreground">Goleiros entram no sorteio junto com os jogadores de linha.</div>
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-secondary/50 p-3 text-xs text-muted-foreground">
+        {form.numero_times} times de {form.jogadores_linha_por_time} na linha + {form.goleiros_por_time} goleiro(s) | Partidas de {form.duracao_partida_minutos}min{form.gols_para_encerrar_ativo ? ` ou ${form.gols_para_encerrar} gols` : ""} | Aluguel de {form.tempo_locado_minutos}min
+      </div>
+
+      <DialogFooter>
+        <Button type="submit" disabled={loading} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+          {loading ? "Criando..." : "Criar Pelada"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: any; isCapitao: boolean; peladas: Pelada[]; onChange: () => void; onDeleted: () => void }) {
+  const [nome, setNome] = useState(grupo.nome);
+  const temAtiva = peladas.some((p) => p.status === "em_andamento");
+
+  const salvar = async () => {
+    const { error } = await supabase.from("grupos").update({ nome } as never).eq("id", grupo.id);
+    if (error) return toast.error(error.message);
+    toast.success("Salvo"); onChange();
+  };
+  const regen = async () => {
+    const { error } = await supabase.from("grupos").update({ codigo_convite: "" } as never).eq("id", grupo.id);
+    if (error) return toast.error(error.message);
+    // re-trigger by setting null then refetching — codigo_convite NOT NULL, so do an RPC alternative: regenerate client-side
+    const novo = "FZ-" + Math.random().toString(36).slice(2, 6).toUpperCase();
+    await supabase.from("grupos").update({ codigo_convite: novo } as never).eq("id", grupo.id);
+    toast.success("Novo código gerado"); onChange();
+  };
+  const excluir = async () => {
+    if (temAtiva) return toast.error("Existem peladas em andamento");
+    if (!confirm("Excluir grupo definitivamente?")) return;
+    const { error } = await supabase.from("grupos").delete().eq("id", grupo.id);
+    if (error) return toast.error(error.message);
+    toast.success("Grupo excluído"); onDeleted();
+  };
+
+  if (!isCapitao) return <EmptyState icon={Settings} title="Apenas o capitão pode editar" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        <div><Label>Nome do grupo</Label><Input value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+        <Button onClick={salvar} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">Salvar alterações</Button>
+      </div>
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+        <div className="text-sm font-bold">Código de convite</div>
+        <div className="font-mono text-sm">{grupo.codigo_convite}</div>
+        <Button variant="secondary" onClick={regen}>Regenerar código</Button>
+      </div>
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+        <div className="text-sm font-bold text-destructive">Zona de perigo</div>
+        <p className="text-xs text-muted-foreground">{temAtiva ? "Não é possível excluir com peladas em andamento." : "Esta ação não pode ser desfeita."}</p>
+        <Button variant="destructive" onClick={excluir} disabled={temAtiva}><Trash2 className="mr-2 h-4 w-4" />Excluir grupo</Button>
+      </div>
+    </div>
+  );
+}
