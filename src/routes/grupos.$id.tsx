@@ -279,9 +279,9 @@ function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros:
     const t = setTimeout(async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("user_id, nome, foto_url, cidade, role")
+        .select("user_id, nome, email, foto_url, cidade, role")
         .or(`nome.ilike.%${termo}%,whatsapp.ilike.%${termo}%`)
-        .in("role", ["jogador", "capitao"])
+        .not("role", "in", '("dono_quadra","parceiro","admin")')
         .limit(20);
       if (error) toast.error(error.message);
       setResultados((data || []).filter((p: any) => !memberIds.has(p.user_id)));
