@@ -423,38 +423,79 @@ function LancesPage() {
         </div>
       </div>
 
-      {/* BLOCO 3 — LANCES RECENTES */}
-      <div className="shrink-0 border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5" style={{ minHeight: 140 }}>
+      {/* BLOCO 3 — LANCES RECENTES (agrupados por partida) */}
+      <div className="shrink-0 border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5 overflow-y-auto" style={{ maxHeight: 400 }}>
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" style={{ color: "#00FF87" }} />
             <span className="text-xs font-bold uppercase tracking-wider text-white">Lances Recentes</span>
           </div>
-          <button className="rounded-full border border-[#2A2A2A] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70">
-            Ver todos
-          </button>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-          {lances.length === 0 ? (
-            <p className="text-xs text-white/50">Nenhum lance marcado.</p>
-          ) : lances.map((l) => {
-            const info = TIPO_LABEL_COR[l.tipo] || { label: l.tipo, color: "#9CA3AF" };
-            const icon = TIPOS.find((t) => t.v === l.tipo)?.icon || "•";
-            return (
-              <div key={l.id} className="shrink-0 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] px-3 py-2" style={{ width: 170 }}>
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="rounded-full bg-[#0D0D0D] px-1.5 py-0.5 text-[10px] font-bold text-white/60">{minutoLance(l)}</span>
-                  <div className="grid h-7 w-7 place-items-center rounded-full" style={{ background: `${info.color}22` }}>
-                    <span className="text-sm">{icon}</span>
+        {lancesAll.length === 0 ? (
+          <p className="text-xs text-white/50">Nenhum lance marcado.</p>
+        ) : (
+          <div className="space-y-3">
+            {[...partidasAll]
+              .filter((p) => lancesAll.some((l) => l.partida_id === p.id))
+              .sort((a, b) => b.numero_partida - a.numero_partida)
+              .map((p) => {
+                const lancesP = lancesAll
+                  .filter((l) => l.partida_id === p.id)
+                  .sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime());
+                const tA = times.find((t) => t.id === p.time_a_id);
+                const tB = times.find((t) => t.id === p.time_b_id);
+                const emAndamento = p.status === "em_andamento";
+                const statusLabel = p.status === "encerrada" ? "ENCERRADA" : p.status === "aguardando" ? "AGUARDANDO" : "AO VIVO";
+                return (
+                  <div key={p.id} className="rounded-xl overflow-hidden border border-[#1F1F1F]">
+                    <div className="flex items-center justify-between gap-2 bg-[#111111] px-3 py-2 rounded-t-xl">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 shrink-0">{ordinal(p.numero_partida)} PARTIDA</span>
+                        <span className="text-[12px] font-bold text-white truncate">
+                          <span style={{ color: tA?.cor }}>{tA?.nome || "—"}</span>
+                          <span className="mx-1 text-white/80">{p.placar_a} x {p.placar_b}</span>
+                          <span style={{ color: tB?.cor }}>{tB?.nome || "—"}</span>
+                        </span>
+                      </div>
+                      {emAndamento ? (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider animate-pulse" style={{ background: "rgba(255,77,77,0.15)", color: "#FF4D4D" }}>
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#FF4D4D" }} />AO VIVO
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-[#2A2A2A] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/50">{statusLabel}</span>
+                      )}
+                    </div>
+                    <div className="bg-[#1A1A1A]">
+                      {lancesP.map((l, idx) => {
+                        const info = TIPO_LABEL_COR[l.tipo] || { label: l.tipo, color: "#9CA3AF" };
+                        const icon = TIPOS.find((t) => t.v === l.tipo)?.icon || "•";
+                        return (
+                          <div key={l.id} className={`flex items-center gap-2 px-3 py-2 ${idx > 0 ? "border-t border-[#2A2A2A]" : ""}`}>
+                            <div className="grid h-7 w-7 place-items-center rounded-full shrink-0" style={{ background: `${info.color}22` }}>
+                              <span className="text-sm">{icon}</span>
+                            </div>
+                            <div className="flex-1 min-w-0 text-[12px] leading-tight">
+                              <span className="font-bold text-white">{profiles[l.user_id]?.nome || "Jogador"}</span>
+                              <span className="text-white/70"> fez </span>
+                              <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
+                              <span className="text-white/50"> — </span>
+                              <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
+                            </div>
+                            <span className="rounded-full bg-[#0D0D0D] px-1.5 py-0.5 text-[10px] font-bold text-white/60 tabular-nums shrink-0">{minutoLance(l, p)}</span>
+                            {ehAuxiliar && (
+                              <button onClick={() => excluirLance(l.id)} className="text-white/40 hover:text-red-400 shrink-0" aria-label="Excluir lance">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-                <div className="text-[13px] font-bold text-white leading-tight truncate">{profiles[l.user_id]?.nome || "—"}</div>
-                <div className="text-[11px] font-semibold" style={{ color: info.color }}>{info.label}</div>
-                <div className="text-[10px] font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+          </div>
+        )}
       </div>
 
       {/* BLOCO 4 — ENCERRAR */}
