@@ -2439,6 +2439,7 @@ export type Database = {
         Row: {
           altura: number | null
           bio: string | null
+          cadastro_completo: boolean
           cidade: string | null
           criado_em: string
           data_nascimento: string | null
@@ -2464,6 +2465,7 @@ export type Database = {
         Insert: {
           altura?: number | null
           bio?: string | null
+          cadastro_completo?: boolean
           cidade?: string | null
           criado_em?: string
           data_nascimento?: string | null
@@ -2489,6 +2491,7 @@ export type Database = {
         Update: {
           altura?: number | null
           bio?: string | null
+          cadastro_completo?: boolean
           cidade?: string | null
           criado_em?: string
           data_nascimento?: string | null
