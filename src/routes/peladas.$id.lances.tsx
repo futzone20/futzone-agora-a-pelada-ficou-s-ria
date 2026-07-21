@@ -53,6 +53,8 @@ function LancesPage() {
   const [times, setTimes] = useState<any[]>([]);
   const [timeJogadores, setTimeJogadores] = useState<any[]>([]);
   const [lances, setLances] = useState<any[]>([]);
+  const [partidasAll, setPartidasAll] = useState<any[]>([]);
+  const [lancesAll, setLancesAll] = useState<any[]>([]);
   const [auxiliar, setAuxiliar] = useState<any>(null);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [drawer, setDrawer] = useState<{ tipo: string; timeId: string } | null>(null);
