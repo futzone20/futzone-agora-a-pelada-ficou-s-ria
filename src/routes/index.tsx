@@ -54,7 +54,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        FUTZONE © {new Date().getFullYear()} — A pelada ficou séria.
+        MRFUT © {new Date().getFullYear()} — A pelada ficou séria.
       </footer>
     </div>
   );

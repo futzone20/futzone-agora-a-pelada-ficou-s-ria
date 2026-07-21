@@ -46,8 +46,8 @@ function SignupPage() {
         goleiro,
       });
       toast.success("Conta criada!");
-      const invite = typeof window !== "undefined" ? sessionStorage.getItem("futzone_invite") : null;
-      if (invite) { sessionStorage.removeItem("futzone_invite"); navigate({ to: "/convite/$codigo", params: { codigo: invite } }); }
+      const invite = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_invite") : null;
+      if (invite) { sessionStorage.removeItem("mrfut_invite"); navigate({ to: "/convite/$codigo", params: { codigo: invite } }); }
       else navigate({ to: rolePath(u.role) });
     } catch (err: any) {
       toast.error(err.message || "Erro no cadastro");
@@ -62,7 +62,7 @@ function SignupPage() {
         <div className="mb-8 flex justify-center"><Link to="/"><Logo className="text-2xl" /></Link></div>
         <div className="rounded-2xl border border-border bg-card p-6">
           <h1 className="text-xl font-bold">Criar conta</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Junte-se à FUTZONE.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Junte-se à MRFUT.</p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div>
               <Label htmlFor="nome">Nome completo</Label>

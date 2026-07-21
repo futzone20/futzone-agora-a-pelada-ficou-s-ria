@@ -8,7 +8,7 @@ export const Route = createFileRoute("/ranking")({
   component: RankingPublico,
   head: () => ({
     meta: [
-      { title: "Ranking Global — Futzone" },
+      { title: "Ranking Global — MrFut" },
       { name: "description", content: "Top jogadores de pelada no Brasil." },
     ],
   }),
