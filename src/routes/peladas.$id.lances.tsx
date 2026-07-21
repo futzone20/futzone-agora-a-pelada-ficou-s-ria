@@ -218,13 +218,12 @@ function LancesPage() {
         }
       }
 
-      // Abrir drawer do goleiro adversário
-      // Time adversário = o outro time (não o timeId do gol)
+      // Abrir drawer do goleiro adversário — mostrar TODOS os jogadores do time adversário
       const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
       const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
-      const goleirosAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId && j.eh_goleiro);
+      const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
 
-      if (goleirosAdversario.length > 0 && timeAdversario) {
+      if (jogadoresAdversario.length > 0 && timeAdversario) {
         setPendingGol({ userId, tipo, timeId });
         setDrawerGoleiro({
           goleiroTimeId: timeAdversarioId,
@@ -232,6 +231,7 @@ function LancesPage() {
           goleiroTimeCor: timeAdversario.cor,
         });
       }
+
 
       return;
     }
