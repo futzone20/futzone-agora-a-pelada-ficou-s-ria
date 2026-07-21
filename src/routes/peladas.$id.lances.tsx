@@ -231,21 +231,39 @@ function LancesPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0D0D0D]">
-      {/* BLOCO 1 — Cronômetros */}
+      {/* BLOCO 1 — Cronômetros + Placar em evidência */}
       <div className="border-b border-[#2A2A2A] bg-[#1A1A1A] p-3 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">⏱ Pelada</span>
-          <span className={`text-[28px] font-black tabular-nums ${pulseAluguel}`} style={{ color: corCronoAluguel }}>
+          <span className={`text-[22px] font-black tabular-nums ${pulseAluguel}`} style={{ color: corCronoAluguel }}>
             {fmt(tempoAluguelSec)}
           </span>
-          <span className="w-16" />
+          <span className="w-12" />
         </div>
+
+        {/* PLACAR EM EVIDÊNCIA */}
+        <div className="flex items-center justify-center gap-4 py-2">
+          <div className="flex flex-1 items-center justify-end gap-2">
+            <span className="truncate text-sm font-bold" style={{ color: timeA?.cor }}>{timeA?.nome}</span>
+            <span className="inline-block h-3 w-3 rounded-full" style={{ background: timeA?.cor }} />
+          </div>
+          <div className="flex items-center gap-3 rounded-xl bg-[#0D0D0D] px-5 py-2 border border-[#2A2A2A]">
+            <span className="text-[42px] font-black leading-none tabular-nums" style={{ color: timeA?.cor }}>{partida.placar_a}</span>
+            <span className="text-2xl font-black text-muted-foreground">×</span>
+            <span className="text-[42px] font-black leading-none tabular-nums" style={{ color: timeB?.cor }}>{partida.placar_b}</span>
+          </div>
+          <div className="flex flex-1 items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-full" style={{ background: timeB?.cor }} />
+            <span className="truncate text-sm font-bold" style={{ color: timeB?.cor }}>{timeB?.nome}</span>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">⚽ Partida {partida.numero_partida}</span>
           <span className={`text-[22px] font-black tabular-nums ${restanteSec <= 30 ? "text-red-500 animate-pulse" : "text-foreground"}`}>
             {fmt(restanteSec)}
           </span>
-          <span className="text-lg font-black text-primary tabular-nums w-16 text-right">{partida.placar_a} x {partida.placar_b}</span>
+          <span className="w-12" />
         </div>
       </div>
 
