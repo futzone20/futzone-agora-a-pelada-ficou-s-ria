@@ -21,7 +21,7 @@ function ConvitePage() {
   const [acting, setActing] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") sessionStorage.setItem("futzone_invite", codigo);
+    if (typeof window !== "undefined") sessionStorage.setItem("mrfut_invite", codigo);
   }, [codigo]);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ function ConvitePage() {
     } as never);
     setActing(false);
     if (error && !error.message.includes("duplicate")) return toast.error(error.message);
-    if (typeof window !== "undefined") sessionStorage.removeItem("futzone_invite");
+    if (typeof window !== "undefined") sessionStorage.removeItem("mrfut_invite");
     toast.success(`Bem-vindo ao ${grupo.nome}!`);
     navigate({ to: "/grupos/$id", params: { id: grupo.id } });
   };

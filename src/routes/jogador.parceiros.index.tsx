@@ -38,7 +38,7 @@ function JogParceiros() {
     <div className="space-y-3">
       <Card className="p-4 bg-gradient-to-r from-primary/20 to-primary/5">
         <div className="text-xs text-muted-foreground">Seus pontos</div>
-        <div className="text-3xl font-bold">{pontos} <span className="text-sm">pts Futzone</span></div>
+        <div className="text-3xl font-bold">{pontos} <span className="text-sm">pts MrFut</span></div>
       </Card>
 
       <div className="flex gap-2">

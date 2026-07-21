@@ -524,7 +524,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="publica">Quadra Pública</SelectItem>
-            <SelectItem value="cliente">Quadra Futzone (cliente)</SelectItem>
+            <SelectItem value="cliente">Quadra MrFut (cliente)</SelectItem>
           </SelectContent>
         </Select>
       </div>

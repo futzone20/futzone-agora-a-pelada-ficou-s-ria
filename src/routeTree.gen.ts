@@ -9,107 +9,67 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as CadastroRouteImport } from './routes/cadastro'
-import { Route as CapitaoRouteImport } from './routes/capitao'
-import { Route as DonoRouteImport } from './routes/dono'
-import { Route as JogadorRouteImport } from './routes/jogador'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ParceiroRouteImport } from './routes/parceiro'
-import { Route as RankingRouteImport } from './routes/ranking'
-import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AdminAdsRouteImport } from './routes/admin.ads'
-import { Route as AdminComunicacaoRouteImport } from './routes/admin.comunicacao'
-import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
-import { Route as AdminGamificacaoRouteImport } from './routes/admin.gamificacao'
-import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
-import { Route as AdminQuadrasRouteImport } from './routes/admin.quadras'
-import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
-import { Route as CapitaoIndexRouteImport } from './routes/capitao.index'
-import { Route as CapitaoGruposRouteImport } from './routes/capitao.grupos'
-import { Route as CapitaoPeladasRouteImport } from './routes/capitao.peladas'
-import { Route as CapitaoPerfilRouteImport } from './routes/capitao.perfil'
-import { Route as CapitaoRankingRouteImport } from './routes/capitao.ranking'
-import { Route as CapitaoResenhaRouteImport } from './routes/capitao.resenha'
-import { Route as ConviteCodigoRouteImport } from './routes/convite.$codigo'
-import { Route as DonoIndexRouteImport } from './routes/dono.index'
-import { Route as DonoAgendamentosRouteImport } from './routes/dono.agendamentos'
-import { Route as DonoArenaRouteImport } from './routes/dono.arena'
-import { Route as DonoCashbackRouteImport } from './routes/dono.cashback'
-import { Route as DonoFinanceiroRouteImport } from './routes/dono.financeiro'
-import { Route as DonoPdvRouteImport } from './routes/dono.pdv'
-import { Route as DonoPerfilRouteImport } from './routes/dono.perfil'
-import { Route as DonoProdutosRouteImport } from './routes/dono.produtos'
-import { Route as DonoQuadrasRouteImport } from './routes/dono.quadras'
-import { Route as GoleirosIndexRouteImport } from './routes/goleiros.index'
-import { Route as GoleirosIdRouteImport } from './routes/goleiros.$id'
-import { Route as GruposIdRouteImport } from './routes/grupos.$id'
-import { Route as JogadorIndexRouteImport } from './routes/jogador.index'
-import { Route as JogadorPeladasRouteImport } from './routes/jogador.peladas'
-import { Route as JogadorPerfilRouteImport } from './routes/jogador.perfil'
-import { Route as JogadorRankingRouteImport } from './routes/jogador.ranking'
-import { Route as JogadorResenhaRouteImport } from './routes/jogador.resenha'
-import { Route as PIdRouteImport } from './routes/p.$id'
+import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as RankingRouteImport } from './routes/ranking'
+import { Route as ParceiroRouteImport } from './routes/parceiro'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as JogadorRouteImport } from './routes/jogador'
+import { Route as DonoRouteImport } from './routes/dono'
+import { Route as CapitaoRouteImport } from './routes/capitao'
+import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as ParceiroIndexRouteImport } from './routes/parceiro.index'
-import { Route as ParceiroCatalogoRouteImport } from './routes/parceiro.catalogo'
-import { Route as ParceiroRelatoriosRouteImport } from './routes/parceiro.relatorios'
+import { Route as JogadorIndexRouteImport } from './routes/jogador.index'
+import { Route as GoleirosIndexRouteImport } from './routes/goleiros.index'
+import { Route as DonoIndexRouteImport } from './routes/dono.index'
+import { Route as CapitaoIndexRouteImport } from './routes/capitao.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ParceiroResgatesRouteImport } from './routes/parceiro.resgates'
-import { Route as JogadorParceirosIndexRouteImport } from './routes/jogador.parceiros.index'
-import { Route as JogadorParceirosSlugRouteImport } from './routes/jogador.parceiros.$slug'
+import { Route as ParceiroRelatoriosRouteImport } from './routes/parceiro.relatorios'
+import { Route as ParceiroCatalogoRouteImport } from './routes/parceiro.catalogo'
+import { Route as PIdRouteImport } from './routes/p.$id'
+import { Route as JogadorResenhaRouteImport } from './routes/jogador.resenha'
+import { Route as JogadorRankingRouteImport } from './routes/jogador.ranking'
+import { Route as JogadorPerfilRouteImport } from './routes/jogador.perfil'
+import { Route as JogadorPeladasRouteImport } from './routes/jogador.peladas'
+import { Route as GruposIdRouteImport } from './routes/grupos.$id'
+import { Route as GoleirosIdRouteImport } from './routes/goleiros.$id'
+import { Route as DonoQuadrasRouteImport } from './routes/dono.quadras'
+import { Route as DonoProdutosRouteImport } from './routes/dono.produtos'
+import { Route as DonoPerfilRouteImport } from './routes/dono.perfil'
+import { Route as DonoPdvRouteImport } from './routes/dono.pdv'
+import { Route as DonoFinanceiroRouteImport } from './routes/dono.financeiro'
+import { Route as DonoCashbackRouteImport } from './routes/dono.cashback'
+import { Route as DonoArenaRouteImport } from './routes/dono.arena'
+import { Route as DonoAgendamentosRouteImport } from './routes/dono.agendamentos'
+import { Route as ConviteCodigoRouteImport } from './routes/convite.$codigo'
+import { Route as CapitaoResenhaRouteImport } from './routes/capitao.resenha'
+import { Route as CapitaoRankingRouteImport } from './routes/capitao.ranking'
+import { Route as CapitaoPerfilRouteImport } from './routes/capitao.perfil'
+import { Route as CapitaoPeladasRouteImport } from './routes/capitao.peladas'
+import { Route as CapitaoGruposRouteImport } from './routes/capitao.grupos'
+import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
+import { Route as AdminQuadrasRouteImport } from './routes/admin.quadras'
+import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
+import { Route as AdminGamificacaoRouteImport } from './routes/admin.gamificacao'
+import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
+import { Route as AdminComunicacaoRouteImport } from './routes/admin.comunicacao'
+import { Route as AdminAdsRouteImport } from './routes/admin.ads'
 import { Route as PeladasIdIndexRouteImport } from './routes/peladas.$id.index'
-import { Route as PeladasIdAvaliarRouteImport } from './routes/peladas.$id.avaliar'
-import { Route as PeladasIdCardRouteImport } from './routes/peladas.$id.card'
-import { Route as PeladasIdControleRouteImport } from './routes/peladas.$id.controle'
-import { Route as PeladasIdLancesRouteImport } from './routes/peladas.$id.lances'
-import { Route as PeladasIdSorteioRouteImport } from './routes/peladas.$id.sorteio'
+import { Route as JogadorParceirosIndexRouteImport } from './routes/jogador.parceiros.index'
 import { Route as PlacarArenaQuadraRouteImport } from './routes/placar.$arena.$quadra'
+import { Route as PeladasIdSorteioRouteImport } from './routes/peladas.$id.sorteio'
+import { Route as PeladasIdLancesRouteImport } from './routes/peladas.$id.lances'
+import { Route as PeladasIdControleRouteImport } from './routes/peladas.$id.controle'
+import { Route as PeladasIdCardRouteImport } from './routes/peladas.$id.card'
+import { Route as PeladasIdAvaliarRouteImport } from './routes/peladas.$id.avaliar'
+import { Route as JogadorParceirosSlugRouteImport } from './routes/jogador.parceiros.$slug'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CadastroRoute = CadastroRouteImport.update({
-  id: '/cadastro',
-  path: '/cadastro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CapitaoRoute = CapitaoRouteImport.update({
-  id: '/capitao',
-  path: '/capitao',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DonoRoute = DonoRouteImport.update({
-  id: '/dono',
-  path: '/dono',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const JogadorRoute = JogadorRouteImport.update({
-  id: '/jogador',
-  path: '/jogador',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ParceiroRoute = ParceiroRouteImport.update({
-  id: '/parceiro',
-  path: '/parceiro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RankingRoute = RankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
@@ -117,174 +77,49 @@ const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   path: '/recuperar-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminAdsRoute = AdminAdsRouteImport.update({
-  id: '/ads',
-  path: '/ads',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminComunicacaoRoute = AdminComunicacaoRouteImport.update({
-  id: '/comunicacao',
-  path: '/comunicacao',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminFinanceiroRoute = AdminFinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminGamificacaoRoute = AdminGamificacaoRouteImport.update({
-  id: '/gamificacao',
-  path: '/gamificacao',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminParceirosRoute = AdminParceirosRouteImport.update({
-  id: '/parceiros',
-  path: '/parceiros',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminQuadrasRoute = AdminQuadrasRouteImport.update({
-  id: '/quadras',
-  path: '/quadras',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
-  id: '/usuarios',
-  path: '/usuarios',
-  getParentRoute: () => AdminRoute,
-} as any)
-const CapitaoIndexRoute = CapitaoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CapitaoRoute,
-} as any)
-const CapitaoGruposRoute = CapitaoGruposRouteImport.update({
-  id: '/grupos',
-  path: '/grupos',
-  getParentRoute: () => CapitaoRoute,
-} as any)
-const CapitaoPeladasRoute = CapitaoPeladasRouteImport.update({
-  id: '/peladas',
-  path: '/peladas',
-  getParentRoute: () => CapitaoRoute,
-} as any)
-const CapitaoPerfilRoute = CapitaoPerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
-  getParentRoute: () => CapitaoRoute,
-} as any)
-const CapitaoRankingRoute = CapitaoRankingRouteImport.update({
+const RankingRoute = RankingRouteImport.update({
   id: '/ranking',
   path: '/ranking',
-  getParentRoute: () => CapitaoRoute,
-} as any)
-const CapitaoResenhaRoute = CapitaoResenhaRouteImport.update({
-  id: '/resenha',
-  path: '/resenha',
-  getParentRoute: () => CapitaoRoute,
-} as any)
-const ConviteCodigoRoute = ConviteCodigoRouteImport.update({
-  id: '/convite/$codigo',
-  path: '/convite/$codigo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DonoIndexRoute = DonoIndexRouteImport.update({
+const ParceiroRoute = ParceiroRouteImport.update({
+  id: '/parceiro',
+  path: '/parceiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JogadorRoute = JogadorRouteImport.update({
+  id: '/jogador',
+  path: '/jogador',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonoRoute = DonoRouteImport.update({
+  id: '/dono',
+  path: '/dono',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CapitaoRoute = CapitaoRouteImport.update({
+  id: '/capitao',
+  path: '/capitao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoAgendamentosRoute = DonoAgendamentosRouteImport.update({
-  id: '/agendamentos',
-  path: '/agendamentos',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoArenaRoute = DonoArenaRouteImport.update({
-  id: '/arena',
-  path: '/arena',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoCashbackRoute = DonoCashbackRouteImport.update({
-  id: '/cashback',
-  path: '/cashback',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoFinanceiroRoute = DonoFinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoPdvRoute = DonoPdvRouteImport.update({
-  id: '/pdv',
-  path: '/pdv',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoPerfilRoute = DonoPerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoProdutosRoute = DonoProdutosRouteImport.update({
-  id: '/produtos',
-  path: '/produtos',
-  getParentRoute: () => DonoRoute,
-} as any)
-const DonoQuadrasRoute = DonoQuadrasRouteImport.update({
-  id: '/quadras',
-  path: '/quadras',
-  getParentRoute: () => DonoRoute,
-} as any)
-const GoleirosIndexRoute = GoleirosIndexRouteImport.update({
-  id: '/goleiros/',
-  path: '/goleiros/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GoleirosIdRoute = GoleirosIdRouteImport.update({
-  id: '/goleiros/$id',
-  path: '/goleiros/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GruposIdRoute = GruposIdRouteImport.update({
-  id: '/grupos/$id',
-  path: '/grupos/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const JogadorIndexRoute = JogadorIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => JogadorRoute,
-} as any)
-const JogadorPeladasRoute = JogadorPeladasRouteImport.update({
-  id: '/peladas',
-  path: '/peladas',
-  getParentRoute: () => JogadorRoute,
-} as any)
-const JogadorPerfilRoute = JogadorPerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
-  getParentRoute: () => JogadorRoute,
-} as any)
-const JogadorRankingRoute = JogadorRankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
-  getParentRoute: () => JogadorRoute,
-} as any)
-const JogadorResenhaRoute = JogadorResenhaRouteImport.update({
-  id: '/resenha',
-  path: '/resenha',
-  getParentRoute: () => JogadorRoute,
-} as any)
-const PIdRoute = PIdRouteImport.update({
-  id: '/p/$id',
-  path: '/p/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParceiroIndexRoute = ParceiroIndexRouteImport.update({
@@ -292,9 +127,34 @@ const ParceiroIndexRoute = ParceiroIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ParceiroRoute,
 } as any)
-const ParceiroCatalogoRoute = ParceiroCatalogoRouteImport.update({
-  id: '/catalogo',
-  path: '/catalogo',
+const JogadorIndexRoute = JogadorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => JogadorRoute,
+} as any)
+const GoleirosIndexRoute = GoleirosIndexRouteImport.update({
+  id: '/goleiros/',
+  path: '/goleiros/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonoIndexRoute = DonoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DonoRoute,
+} as any)
+const CapitaoIndexRoute = CapitaoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CapitaoRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const ParceiroResgatesRoute = ParceiroResgatesRouteImport.update({
+  id: '/resgates',
+  path: '/resgates',
   getParentRoute: () => ParceiroRoute,
 } as any)
 const ParceiroRelatoriosRoute = ParceiroRelatoriosRouteImport.update({
@@ -302,44 +162,164 @@ const ParceiroRelatoriosRoute = ParceiroRelatoriosRouteImport.update({
   path: '/relatorios',
   getParentRoute: () => ParceiroRoute,
 } as any)
-const ParceiroResgatesRoute = ParceiroResgatesRouteImport.update({
-  id: '/resgates',
-  path: '/resgates',
+const ParceiroCatalogoRoute = ParceiroCatalogoRouteImport.update({
+  id: '/catalogo',
+  path: '/catalogo',
   getParentRoute: () => ParceiroRoute,
 } as any)
-const JogadorParceirosIndexRoute = JogadorParceirosIndexRouteImport.update({
-  id: '/parceiros/',
-  path: '/parceiros/',
+const PIdRoute = PIdRouteImport.update({
+  id: '/p/$id',
+  path: '/p/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JogadorResenhaRoute = JogadorResenhaRouteImport.update({
+  id: '/resenha',
+  path: '/resenha',
   getParentRoute: () => JogadorRoute,
 } as any)
-const JogadorParceirosSlugRoute = JogadorParceirosSlugRouteImport.update({
-  id: '/parceiros/$slug',
-  path: '/parceiros/$slug',
+const JogadorRankingRoute = JogadorRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
   getParentRoute: () => JogadorRoute,
+} as any)
+const JogadorPerfilRoute = JogadorPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => JogadorRoute,
+} as any)
+const JogadorPeladasRoute = JogadorPeladasRouteImport.update({
+  id: '/peladas',
+  path: '/peladas',
+  getParentRoute: () => JogadorRoute,
+} as any)
+const GruposIdRoute = GruposIdRouteImport.update({
+  id: '/grupos/$id',
+  path: '/grupos/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoleirosIdRoute = GoleirosIdRouteImport.update({
+  id: '/goleiros/$id',
+  path: '/goleiros/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonoQuadrasRoute = DonoQuadrasRouteImport.update({
+  id: '/quadras',
+  path: '/quadras',
+  getParentRoute: () => DonoRoute,
+} as any)
+const DonoProdutosRoute = DonoProdutosRouteImport.update({
+  id: '/produtos',
+  path: '/produtos',
+  getParentRoute: () => DonoRoute,
+} as any)
+const DonoPerfilRoute = DonoPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => DonoRoute,
+} as any)
+const DonoPdvRoute = DonoPdvRouteImport.update({
+  id: '/pdv',
+  path: '/pdv',
+  getParentRoute: () => DonoRoute,
+} as any)
+const DonoFinanceiroRoute = DonoFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => DonoRoute,
+} as any)
+const DonoCashbackRoute = DonoCashbackRouteImport.update({
+  id: '/cashback',
+  path: '/cashback',
+  getParentRoute: () => DonoRoute,
+} as any)
+const DonoArenaRoute = DonoArenaRouteImport.update({
+  id: '/arena',
+  path: '/arena',
+  getParentRoute: () => DonoRoute,
+} as any)
+const DonoAgendamentosRoute = DonoAgendamentosRouteImport.update({
+  id: '/agendamentos',
+  path: '/agendamentos',
+  getParentRoute: () => DonoRoute,
+} as any)
+const ConviteCodigoRoute = ConviteCodigoRouteImport.update({
+  id: '/convite/$codigo',
+  path: '/convite/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CapitaoResenhaRoute = CapitaoResenhaRouteImport.update({
+  id: '/resenha',
+  path: '/resenha',
+  getParentRoute: () => CapitaoRoute,
+} as any)
+const CapitaoRankingRoute = CapitaoRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => CapitaoRoute,
+} as any)
+const CapitaoPerfilRoute = CapitaoPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => CapitaoRoute,
+} as any)
+const CapitaoPeladasRoute = CapitaoPeladasRouteImport.update({
+  id: '/peladas',
+  path: '/peladas',
+  getParentRoute: () => CapitaoRoute,
+} as any)
+const CapitaoGruposRoute = CapitaoGruposRouteImport.update({
+  id: '/grupos',
+  path: '/grupos',
+  getParentRoute: () => CapitaoRoute,
+} as any)
+const AdminUsuariosRoute = AdminUsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminQuadrasRoute = AdminQuadrasRouteImport.update({
+  id: '/quadras',
+  path: '/quadras',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminParceirosRoute = AdminParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGamificacaoRoute = AdminGamificacaoRouteImport.update({
+  id: '/gamificacao',
+  path: '/gamificacao',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFinanceiroRoute = AdminFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminComunicacaoRoute = AdminComunicacaoRouteImport.update({
+  id: '/comunicacao',
+  path: '/comunicacao',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdsRoute = AdminAdsRouteImport.update({
+  id: '/ads',
+  path: '/ads',
+  getParentRoute: () => AdminRoute,
 } as any)
 const PeladasIdIndexRoute = PeladasIdIndexRouteImport.update({
   id: '/peladas/$id/',
   path: '/peladas/$id/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PeladasIdAvaliarRoute = PeladasIdAvaliarRouteImport.update({
-  id: '/peladas/$id/avaliar',
-  path: '/peladas/$id/avaliar',
-  getParentRoute: () => rootRouteImport,
+const JogadorParceirosIndexRoute = JogadorParceirosIndexRouteImport.update({
+  id: '/parceiros/',
+  path: '/parceiros/',
+  getParentRoute: () => JogadorRoute,
 } as any)
-const PeladasIdCardRoute = PeladasIdCardRouteImport.update({
-  id: '/peladas/$id/card',
-  path: '/peladas/$id/card',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PeladasIdControleRoute = PeladasIdControleRouteImport.update({
-  id: '/peladas/$id/controle',
-  path: '/peladas/$id/controle',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PeladasIdLancesRoute = PeladasIdLancesRouteImport.update({
-  id: '/peladas/$id/lances',
-  path: '/peladas/$id/lances',
+const PlacarArenaQuadraRoute = PlacarArenaQuadraRouteImport.update({
+  id: '/placar/$arena/$quadra',
+  path: '/placar/$arena/$quadra',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PeladasIdSorteioRoute = PeladasIdSorteioRouteImport.update({
@@ -347,10 +327,30 @@ const PeladasIdSorteioRoute = PeladasIdSorteioRouteImport.update({
   path: '/peladas/$id/sorteio',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlacarArenaQuadraRoute = PlacarArenaQuadraRouteImport.update({
-  id: '/placar/$arena/$quadra',
-  path: '/placar/$arena/$quadra',
+const PeladasIdLancesRoute = PeladasIdLancesRouteImport.update({
+  id: '/peladas/$id/lances',
+  path: '/peladas/$id/lances',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PeladasIdControleRoute = PeladasIdControleRouteImport.update({
+  id: '/peladas/$id/controle',
+  path: '/peladas/$id/controle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PeladasIdCardRoute = PeladasIdCardRouteImport.update({
+  id: '/peladas/$id/card',
+  path: '/peladas/$id/card',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PeladasIdAvaliarRoute = PeladasIdAvaliarRouteImport.update({
+  id: '/peladas/$id/avaliar',
+  path: '/peladas/$id/avaliar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JogadorParceirosSlugRoute = JogadorParceirosSlugRouteImport.update({
+  id: '/parceiros/$slug',
+  path: '/parceiros/$slug',
+  getParentRoute: () => JogadorRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -729,67 +729,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cadastro': {
-      id: '/cadastro'
-      path: '/cadastro'
-      fullPath: '/cadastro'
-      preLoaderRoute: typeof CadastroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/capitao': {
-      id: '/capitao'
-      path: '/capitao'
-      fullPath: '/capitao'
-      preLoaderRoute: typeof CapitaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dono': {
-      id: '/dono'
-      path: '/dono'
-      fullPath: '/dono'
-      preLoaderRoute: typeof DonoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/jogador': {
-      id: '/jogador'
-      path: '/jogador'
-      fullPath: '/jogador'
-      preLoaderRoute: typeof JogadorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/parceiro': {
-      id: '/parceiro'
-      path: '/parceiro'
-      fullPath: '/parceiro'
-      preLoaderRoute: typeof ParceiroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ranking': {
-      id: '/ranking'
-      path: '/ranking'
-      fullPath: '/ranking'
-      preLoaderRoute: typeof RankingRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recuperar-senha': {
@@ -799,242 +743,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecuperarSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/': {
-      id: '/admin/'
-      path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/ads': {
-      id: '/admin/ads'
-      path: '/ads'
-      fullPath: '/admin/ads'
-      preLoaderRoute: typeof AdminAdsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/comunicacao': {
-      id: '/admin/comunicacao'
-      path: '/comunicacao'
-      fullPath: '/admin/comunicacao'
-      preLoaderRoute: typeof AdminComunicacaoRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/financeiro': {
-      id: '/admin/financeiro'
-      path: '/financeiro'
-      fullPath: '/admin/financeiro'
-      preLoaderRoute: typeof AdminFinanceiroRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/gamificacao': {
-      id: '/admin/gamificacao'
-      path: '/gamificacao'
-      fullPath: '/admin/gamificacao'
-      preLoaderRoute: typeof AdminGamificacaoRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/parceiros': {
-      id: '/admin/parceiros'
-      path: '/parceiros'
-      fullPath: '/admin/parceiros'
-      preLoaderRoute: typeof AdminParceirosRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/quadras': {
-      id: '/admin/quadras'
-      path: '/quadras'
-      fullPath: '/admin/quadras'
-      preLoaderRoute: typeof AdminQuadrasRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/usuarios': {
-      id: '/admin/usuarios'
-      path: '/usuarios'
-      fullPath: '/admin/usuarios'
-      preLoaderRoute: typeof AdminUsuariosRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/capitao/': {
-      id: '/capitao/'
-      path: '/'
-      fullPath: '/capitao/'
-      preLoaderRoute: typeof CapitaoIndexRouteImport
-      parentRoute: typeof CapitaoRoute
-    }
-    '/capitao/grupos': {
-      id: '/capitao/grupos'
-      path: '/grupos'
-      fullPath: '/capitao/grupos'
-      preLoaderRoute: typeof CapitaoGruposRouteImport
-      parentRoute: typeof CapitaoRoute
-    }
-    '/capitao/peladas': {
-      id: '/capitao/peladas'
-      path: '/peladas'
-      fullPath: '/capitao/peladas'
-      preLoaderRoute: typeof CapitaoPeladasRouteImport
-      parentRoute: typeof CapitaoRoute
-    }
-    '/capitao/perfil': {
-      id: '/capitao/perfil'
-      path: '/perfil'
-      fullPath: '/capitao/perfil'
-      preLoaderRoute: typeof CapitaoPerfilRouteImport
-      parentRoute: typeof CapitaoRoute
-    }
-    '/capitao/ranking': {
-      id: '/capitao/ranking'
+    '/ranking': {
+      id: '/ranking'
       path: '/ranking'
-      fullPath: '/capitao/ranking'
-      preLoaderRoute: typeof CapitaoRankingRouteImport
-      parentRoute: typeof CapitaoRoute
-    }
-    '/capitao/resenha': {
-      id: '/capitao/resenha'
-      path: '/resenha'
-      fullPath: '/capitao/resenha'
-      preLoaderRoute: typeof CapitaoResenhaRouteImport
-      parentRoute: typeof CapitaoRoute
-    }
-    '/convite/$codigo': {
-      id: '/convite/$codigo'
-      path: '/convite/$codigo'
-      fullPath: '/convite/$codigo'
-      preLoaderRoute: typeof ConviteCodigoRouteImport
+      fullPath: '/ranking'
+      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dono/': {
-      id: '/dono/'
+    '/parceiro': {
+      id: '/parceiro'
+      path: '/parceiro'
+      fullPath: '/parceiro'
+      preLoaderRoute: typeof ParceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jogador': {
+      id: '/jogador'
+      path: '/jogador'
+      fullPath: '/jogador'
+      preLoaderRoute: typeof JogadorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dono': {
+      id: '/dono'
+      path: '/dono'
+      fullPath: '/dono'
+      preLoaderRoute: typeof DonoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/capitao': {
+      id: '/capitao'
+      path: '/capitao'
+      fullPath: '/capitao'
+      preLoaderRoute: typeof CapitaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
       path: '/'
-      fullPath: '/dono/'
-      preLoaderRoute: typeof DonoIndexRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/agendamentos': {
-      id: '/dono/agendamentos'
-      path: '/agendamentos'
-      fullPath: '/dono/agendamentos'
-      preLoaderRoute: typeof DonoAgendamentosRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/arena': {
-      id: '/dono/arena'
-      path: '/arena'
-      fullPath: '/dono/arena'
-      preLoaderRoute: typeof DonoArenaRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/cashback': {
-      id: '/dono/cashback'
-      path: '/cashback'
-      fullPath: '/dono/cashback'
-      preLoaderRoute: typeof DonoCashbackRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/financeiro': {
-      id: '/dono/financeiro'
-      path: '/financeiro'
-      fullPath: '/dono/financeiro'
-      preLoaderRoute: typeof DonoFinanceiroRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/pdv': {
-      id: '/dono/pdv'
-      path: '/pdv'
-      fullPath: '/dono/pdv'
-      preLoaderRoute: typeof DonoPdvRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/perfil': {
-      id: '/dono/perfil'
-      path: '/perfil'
-      fullPath: '/dono/perfil'
-      preLoaderRoute: typeof DonoPerfilRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/produtos': {
-      id: '/dono/produtos'
-      path: '/produtos'
-      fullPath: '/dono/produtos'
-      preLoaderRoute: typeof DonoProdutosRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/dono/quadras': {
-      id: '/dono/quadras'
-      path: '/quadras'
-      fullPath: '/dono/quadras'
-      preLoaderRoute: typeof DonoQuadrasRouteImport
-      parentRoute: typeof DonoRoute
-    }
-    '/goleiros/': {
-      id: '/goleiros/'
-      path: '/goleiros'
-      fullPath: '/goleiros/'
-      preLoaderRoute: typeof GoleirosIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/goleiros/$id': {
-      id: '/goleiros/$id'
-      path: '/goleiros/$id'
-      fullPath: '/goleiros/$id'
-      preLoaderRoute: typeof GoleirosIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/grupos/$id': {
-      id: '/grupos/$id'
-      path: '/grupos/$id'
-      fullPath: '/grupos/$id'
-      preLoaderRoute: typeof GruposIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/jogador/': {
-      id: '/jogador/'
-      path: '/'
-      fullPath: '/jogador/'
-      preLoaderRoute: typeof JogadorIndexRouteImport
-      parentRoute: typeof JogadorRoute
-    }
-    '/jogador/peladas': {
-      id: '/jogador/peladas'
-      path: '/peladas'
-      fullPath: '/jogador/peladas'
-      preLoaderRoute: typeof JogadorPeladasRouteImport
-      parentRoute: typeof JogadorRoute
-    }
-    '/jogador/perfil': {
-      id: '/jogador/perfil'
-      path: '/perfil'
-      fullPath: '/jogador/perfil'
-      preLoaderRoute: typeof JogadorPerfilRouteImport
-      parentRoute: typeof JogadorRoute
-    }
-    '/jogador/ranking': {
-      id: '/jogador/ranking'
-      path: '/ranking'
-      fullPath: '/jogador/ranking'
-      preLoaderRoute: typeof JogadorRankingRouteImport
-      parentRoute: typeof JogadorRoute
-    }
-    '/jogador/resenha': {
-      id: '/jogador/resenha'
-      path: '/resenha'
-      fullPath: '/jogador/resenha'
-      preLoaderRoute: typeof JogadorResenhaRouteImport
-      parentRoute: typeof JogadorRoute
-    }
-    '/p/$id': {
-      id: '/p/$id'
-      path: '/p/$id'
-      fullPath: '/p/$id'
-      preLoaderRoute: typeof PIdRouteImport
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parceiro/': {
@@ -1044,11 +813,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParceiroIndexRouteImport
       parentRoute: typeof ParceiroRoute
     }
-    '/parceiro/catalogo': {
-      id: '/parceiro/catalogo'
-      path: '/catalogo'
-      fullPath: '/parceiro/catalogo'
-      preLoaderRoute: typeof ParceiroCatalogoRouteImport
+    '/jogador/': {
+      id: '/jogador/'
+      path: '/'
+      fullPath: '/jogador/'
+      preLoaderRoute: typeof JogadorIndexRouteImport
+      parentRoute: typeof JogadorRoute
+    }
+    '/goleiros/': {
+      id: '/goleiros/'
+      path: '/goleiros'
+      fullPath: '/goleiros/'
+      preLoaderRoute: typeof GoleirosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dono/': {
+      id: '/dono/'
+      path: '/'
+      fullPath: '/dono/'
+      preLoaderRoute: typeof DonoIndexRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/capitao/': {
+      id: '/capitao/'
+      path: '/'
+      fullPath: '/capitao/'
+      preLoaderRoute: typeof CapitaoIndexRouteImport
+      parentRoute: typeof CapitaoRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/parceiro/resgates': {
+      id: '/parceiro/resgates'
+      path: '/resgates'
+      fullPath: '/parceiro/resgates'
+      preLoaderRoute: typeof ParceiroResgatesRouteImport
       parentRoute: typeof ParceiroRoute
     }
     '/parceiro/relatorios': {
@@ -1058,26 +862,208 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParceiroRelatoriosRouteImport
       parentRoute: typeof ParceiroRoute
     }
-    '/parceiro/resgates': {
-      id: '/parceiro/resgates'
-      path: '/resgates'
-      fullPath: '/parceiro/resgates'
-      preLoaderRoute: typeof ParceiroResgatesRouteImport
+    '/parceiro/catalogo': {
+      id: '/parceiro/catalogo'
+      path: '/catalogo'
+      fullPath: '/parceiro/catalogo'
+      preLoaderRoute: typeof ParceiroCatalogoRouteImport
       parentRoute: typeof ParceiroRoute
     }
-    '/jogador/parceiros/': {
-      id: '/jogador/parceiros/'
-      path: '/parceiros'
-      fullPath: '/jogador/parceiros/'
-      preLoaderRoute: typeof JogadorParceirosIndexRouteImport
+    '/p/$id': {
+      id: '/p/$id'
+      path: '/p/$id'
+      fullPath: '/p/$id'
+      preLoaderRoute: typeof PIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jogador/resenha': {
+      id: '/jogador/resenha'
+      path: '/resenha'
+      fullPath: '/jogador/resenha'
+      preLoaderRoute: typeof JogadorResenhaRouteImport
       parentRoute: typeof JogadorRoute
     }
-    '/jogador/parceiros/$slug': {
-      id: '/jogador/parceiros/$slug'
-      path: '/parceiros/$slug'
-      fullPath: '/jogador/parceiros/$slug'
-      preLoaderRoute: typeof JogadorParceirosSlugRouteImport
+    '/jogador/ranking': {
+      id: '/jogador/ranking'
+      path: '/ranking'
+      fullPath: '/jogador/ranking'
+      preLoaderRoute: typeof JogadorRankingRouteImport
       parentRoute: typeof JogadorRoute
+    }
+    '/jogador/perfil': {
+      id: '/jogador/perfil'
+      path: '/perfil'
+      fullPath: '/jogador/perfil'
+      preLoaderRoute: typeof JogadorPerfilRouteImport
+      parentRoute: typeof JogadorRoute
+    }
+    '/jogador/peladas': {
+      id: '/jogador/peladas'
+      path: '/peladas'
+      fullPath: '/jogador/peladas'
+      preLoaderRoute: typeof JogadorPeladasRouteImport
+      parentRoute: typeof JogadorRoute
+    }
+    '/grupos/$id': {
+      id: '/grupos/$id'
+      path: '/grupos/$id'
+      fullPath: '/grupos/$id'
+      preLoaderRoute: typeof GruposIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/goleiros/$id': {
+      id: '/goleiros/$id'
+      path: '/goleiros/$id'
+      fullPath: '/goleiros/$id'
+      preLoaderRoute: typeof GoleirosIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dono/quadras': {
+      id: '/dono/quadras'
+      path: '/quadras'
+      fullPath: '/dono/quadras'
+      preLoaderRoute: typeof DonoQuadrasRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/dono/produtos': {
+      id: '/dono/produtos'
+      path: '/produtos'
+      fullPath: '/dono/produtos'
+      preLoaderRoute: typeof DonoProdutosRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/dono/perfil': {
+      id: '/dono/perfil'
+      path: '/perfil'
+      fullPath: '/dono/perfil'
+      preLoaderRoute: typeof DonoPerfilRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/dono/pdv': {
+      id: '/dono/pdv'
+      path: '/pdv'
+      fullPath: '/dono/pdv'
+      preLoaderRoute: typeof DonoPdvRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/dono/financeiro': {
+      id: '/dono/financeiro'
+      path: '/financeiro'
+      fullPath: '/dono/financeiro'
+      preLoaderRoute: typeof DonoFinanceiroRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/dono/cashback': {
+      id: '/dono/cashback'
+      path: '/cashback'
+      fullPath: '/dono/cashback'
+      preLoaderRoute: typeof DonoCashbackRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/dono/arena': {
+      id: '/dono/arena'
+      path: '/arena'
+      fullPath: '/dono/arena'
+      preLoaderRoute: typeof DonoArenaRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/dono/agendamentos': {
+      id: '/dono/agendamentos'
+      path: '/agendamentos'
+      fullPath: '/dono/agendamentos'
+      preLoaderRoute: typeof DonoAgendamentosRouteImport
+      parentRoute: typeof DonoRoute
+    }
+    '/convite/$codigo': {
+      id: '/convite/$codigo'
+      path: '/convite/$codigo'
+      fullPath: '/convite/$codigo'
+      preLoaderRoute: typeof ConviteCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/capitao/resenha': {
+      id: '/capitao/resenha'
+      path: '/resenha'
+      fullPath: '/capitao/resenha'
+      preLoaderRoute: typeof CapitaoResenhaRouteImport
+      parentRoute: typeof CapitaoRoute
+    }
+    '/capitao/ranking': {
+      id: '/capitao/ranking'
+      path: '/ranking'
+      fullPath: '/capitao/ranking'
+      preLoaderRoute: typeof CapitaoRankingRouteImport
+      parentRoute: typeof CapitaoRoute
+    }
+    '/capitao/perfil': {
+      id: '/capitao/perfil'
+      path: '/perfil'
+      fullPath: '/capitao/perfil'
+      preLoaderRoute: typeof CapitaoPerfilRouteImport
+      parentRoute: typeof CapitaoRoute
+    }
+    '/capitao/peladas': {
+      id: '/capitao/peladas'
+      path: '/peladas'
+      fullPath: '/capitao/peladas'
+      preLoaderRoute: typeof CapitaoPeladasRouteImport
+      parentRoute: typeof CapitaoRoute
+    }
+    '/capitao/grupos': {
+      id: '/capitao/grupos'
+      path: '/grupos'
+      fullPath: '/capitao/grupos'
+      preLoaderRoute: typeof CapitaoGruposRouteImport
+      parentRoute: typeof CapitaoRoute
+    }
+    '/admin/usuarios': {
+      id: '/admin/usuarios'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AdminUsuariosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/quadras': {
+      id: '/admin/quadras'
+      path: '/quadras'
+      fullPath: '/admin/quadras'
+      preLoaderRoute: typeof AdminQuadrasRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/parceiros': {
+      id: '/admin/parceiros'
+      path: '/parceiros'
+      fullPath: '/admin/parceiros'
+      preLoaderRoute: typeof AdminParceirosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/gamificacao': {
+      id: '/admin/gamificacao'
+      path: '/gamificacao'
+      fullPath: '/admin/gamificacao'
+      preLoaderRoute: typeof AdminGamificacaoRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/financeiro': {
+      id: '/admin/financeiro'
+      path: '/financeiro'
+      fullPath: '/admin/financeiro'
+      preLoaderRoute: typeof AdminFinanceiroRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/comunicacao': {
+      id: '/admin/comunicacao'
+      path: '/comunicacao'
+      fullPath: '/admin/comunicacao'
+      preLoaderRoute: typeof AdminComunicacaoRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ads': {
+      id: '/admin/ads'
+      path: '/ads'
+      fullPath: '/admin/ads'
+      preLoaderRoute: typeof AdminAdsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/peladas/$id/': {
       id: '/peladas/$id/'
@@ -1086,32 +1072,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PeladasIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/peladas/$id/avaliar': {
-      id: '/peladas/$id/avaliar'
-      path: '/peladas/$id/avaliar'
-      fullPath: '/peladas/$id/avaliar'
-      preLoaderRoute: typeof PeladasIdAvaliarRouteImport
-      parentRoute: typeof rootRouteImport
+    '/jogador/parceiros/': {
+      id: '/jogador/parceiros/'
+      path: '/parceiros'
+      fullPath: '/jogador/parceiros/'
+      preLoaderRoute: typeof JogadorParceirosIndexRouteImport
+      parentRoute: typeof JogadorRoute
     }
-    '/peladas/$id/card': {
-      id: '/peladas/$id/card'
-      path: '/peladas/$id/card'
-      fullPath: '/peladas/$id/card'
-      preLoaderRoute: typeof PeladasIdCardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/peladas/$id/controle': {
-      id: '/peladas/$id/controle'
-      path: '/peladas/$id/controle'
-      fullPath: '/peladas/$id/controle'
-      preLoaderRoute: typeof PeladasIdControleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/peladas/$id/lances': {
-      id: '/peladas/$id/lances'
-      path: '/peladas/$id/lances'
-      fullPath: '/peladas/$id/lances'
-      preLoaderRoute: typeof PeladasIdLancesRouteImport
+    '/placar/$arena/$quadra': {
+      id: '/placar/$arena/$quadra'
+      path: '/placar/$arena/$quadra'
+      fullPath: '/placar/$arena/$quadra'
+      preLoaderRoute: typeof PlacarArenaQuadraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/peladas/$id/sorteio': {
@@ -1121,12 +1093,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PeladasIdSorteioRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/placar/$arena/$quadra': {
-      id: '/placar/$arena/$quadra'
-      path: '/placar/$arena/$quadra'
-      fullPath: '/placar/$arena/$quadra'
-      preLoaderRoute: typeof PlacarArenaQuadraRouteImport
+    '/peladas/$id/lances': {
+      id: '/peladas/$id/lances'
+      path: '/peladas/$id/lances'
+      fullPath: '/peladas/$id/lances'
+      preLoaderRoute: typeof PeladasIdLancesRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/peladas/$id/controle': {
+      id: '/peladas/$id/controle'
+      path: '/peladas/$id/controle'
+      fullPath: '/peladas/$id/controle'
+      preLoaderRoute: typeof PeladasIdControleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/peladas/$id/card': {
+      id: '/peladas/$id/card'
+      path: '/peladas/$id/card'
+      fullPath: '/peladas/$id/card'
+      preLoaderRoute: typeof PeladasIdCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/peladas/$id/avaliar': {
+      id: '/peladas/$id/avaliar'
+      path: '/peladas/$id/avaliar'
+      fullPath: '/peladas/$id/avaliar'
+      preLoaderRoute: typeof PeladasIdAvaliarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jogador/parceiros/$slug': {
+      id: '/jogador/parceiros/$slug'
+      path: '/parceiros/$slug'
+      fullPath: '/jogador/parceiros/$slug'
+      preLoaderRoute: typeof JogadorParceirosSlugRouteImport
+      parentRoute: typeof JogadorRoute
     }
   }
 }

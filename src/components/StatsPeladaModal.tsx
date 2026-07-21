@@ -185,15 +185,15 @@ export function StatsPeladaModal({
       });
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 1));
       if (!blob) throw new Error("Falha ao gerar imagem");
-      const file = new File([blob], `futzone-${tab}.png`, { type: "image/png" });
+      const file = new File([blob], `mrfut-${tab}.png`, { type: "image/png" });
       const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
       if (nav.canShare && nav.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "FUTZONE", text: "Estatísticas da pelada 🔥" });
+        await navigator.share({ files: [file], title: "MRFUT", text: "Estatísticas da pelada 🔥" });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `futzone-${tab}.png`;
+        a.download = `mrfut-${tab}.png`;
         a.click();
         URL.revokeObjectURL(url);
         toast.info("Compartilhamento direto não é suportado aqui — imagem baixada.");
@@ -510,7 +510,7 @@ export function StatsPeladaModal({
                   <BarChart3 className="h-4 w-4 text-primary" />
                 </div>
                 <span className="text-xl font-black text-white">
-                  FUT<span className="text-primary">ZONE</span>
+                  MR<span className="text-primary">FUT</span>
                 </span>
               </div>
               {peladaInfo && (

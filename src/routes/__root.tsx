@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "MrFut — Agora a pelada ficou séria!" },
       { name: "description", content: "MrFut: organize, sorteie e gamifique suas peladas de futebol." },
-      { name: "author", content: "FUTZONE" },
+      { name: "author", content: "MRFUT" },
       { property: "og:title", content: "MrFut — Agora a pelada ficou séria!" },
       { property: "og:description", content: "MrFut: organize, sorteie e gamifique suas peladas de futebol." },
       { property: "og:type", content: "website" },

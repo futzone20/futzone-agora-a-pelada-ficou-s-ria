@@ -87,7 +87,7 @@ function Cat() {
             <div><Label>Foto URL</Label><Input value={form.foto_url||""} onChange={e=>setForm({...form,foto_url:e.target.value})}/></div>
             <div><Label>Valor de referência (interno) R$</Label><Input type="number" step="0.01" value={form.valor_real} onChange={e=>setForm({...form,valor_real:+e.target.value})}/></div>
             <div>
-              <Label>Pontos Futzone para resgatar</Label>
+              <Label>Pontos MrFut para resgatar</Label>
               <Input type="number" value={form.pontos_necessarios} onChange={e=>setForm({...form,pontos_necessarios:+e.target.value})}/>
               <p className="text-xs text-muted-foreground mt-1">≈ R$ {(form.pontos_necessarios / proporcao).toFixed(2)} em valor de referência</p>
             </div>

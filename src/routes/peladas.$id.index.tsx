@@ -399,7 +399,7 @@ function PeladaDetail() {
             <button onClick={() => navigate({ to: "/jogador/peladas" })} className="text-white">
               <ArrowLeft className="h-6 w-6" />
             </button>
-            <div className="font-bold text-lg"><span className="text-white">FUT</span><span className="text-[#00FF87]">Z</span>ONE</div>
+            <div className="font-bold text-lg"><span className="text-white">MR</span><span className="text-[#00FF87]">FUT</span></div>
             <div className="relative">
               <Bell className="h-6 w-6 text-white" />
               <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-[#00FF87]" />

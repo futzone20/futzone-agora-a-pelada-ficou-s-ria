@@ -24,8 +24,8 @@ function LoginPage() {
     try {
       const u = await signIn(email.trim().toLowerCase(), password);
       toast.success(`Bem-vindo, ${u.nome.split(" ")[0]}!`);
-      const invite = typeof window !== "undefined" ? sessionStorage.getItem("futzone_invite") : null;
-      if (invite) { sessionStorage.removeItem("futzone_invite"); navigate({ to: "/convite/$codigo", params: { codigo: invite } }); }
+      const invite = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_invite") : null;
+      if (invite) { sessionStorage.removeItem("mrfut_invite"); navigate({ to: "/convite/$codigo", params: { codigo: invite } }); }
       else navigate({ to: rolePath(u.role) });
     } catch (err: any) {
       toast.error(err.message || "Erro ao entrar");
@@ -40,7 +40,7 @@ function LoginPage() {
         <div className="mb-8 flex justify-center"><Link to="/"><Logo className="text-2xl" /></Link></div>
         <div className="rounded-2xl border border-border bg-card p-6">
           <h1 className="text-xl font-bold">Entrar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Acesse sua conta FUTZONE.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Acesse sua conta MRFUT.</p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>

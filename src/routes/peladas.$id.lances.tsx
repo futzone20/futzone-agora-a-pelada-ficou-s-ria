@@ -325,7 +325,7 @@ function LancesPage() {
             <ArrowLeft className="h-6 w-6" />
           </Link>
           <div className="text-xl font-black italic tracking-tight">
-            <span className="text-white">FUT</span><span style={{ color: "#00FF87" }}>ZONE</span>
+            <span className="text-white">MR</span><span style={{ color: "#00FF87" }}>FUT</span>
           </div>
           <div className="relative">
             <Bell className="h-6 w-6 text-white" />

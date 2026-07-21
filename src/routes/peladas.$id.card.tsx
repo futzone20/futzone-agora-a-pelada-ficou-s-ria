@@ -98,7 +98,7 @@ function Card() {
       const canvas = await gerarCanvas();
       if (!canvas) return;
       const link = document.createElement("a");
-      link.download = `futzone-vitoria-${id}.png`;
+      link.download = `mrfut-vitoria-${id}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch (err) {
@@ -116,15 +116,15 @@ function Card() {
       if (!canvas) return;
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 1));
       if (!blob) throw new Error("Falha ao gerar imagem");
-      const file = new File([blob], `futzone-vitoria-${id}.png`, { type: "image/png" });
+      const file = new File([blob], `mrfut-vitoria-${id}.png`, { type: "image/png" });
       const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
       if (nav.canShare && nav.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "FUTZONE", text: "🏆 Vitória na pelada!" });
+        await navigator.share({ files: [file], title: "MRFUT", text: "🏆 Vitória na pelada!" });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `futzone-vitoria-${id}.png`;
+        a.download = `mrfut-vitoria-${id}.png`;
         a.click();
         URL.revokeObjectURL(url);
         toast.info("Compartilhamento direto não é suportado aqui — imagem baixada.");
@@ -152,7 +152,7 @@ function Card() {
           width: 360, minHeight: 640, background: "linear-gradient(180deg,#0D0D0D 0%,#1a1a2e 100%)",
           color: "#fff", padding: 24, fontFamily: "system-ui, sans-serif", position: "relative",
         }}>
-          <div style={{ textAlign: "center", fontSize: 14, letterSpacing: 4, color: "#10b981", fontWeight: 900 }}>FUTZONE</div>
+          <div style={{ textAlign: "center", fontSize: 14, letterSpacing: 4, color: "#10b981", fontWeight: 900 }}>MRFUT</div>
           <div style={{ textAlign: "center", fontSize: 42, fontWeight: 900, color: "#10b981", marginTop: 12 }}>🏆 VITÓRIA!</div>
           <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, color: cor, marginTop: 8 }}>{data.time.nome}</div>
           <div style={{ background: `${cor}33`, borderRadius: 16, padding: 16, margin: "16px 0", textAlign: "center" }}>
@@ -199,7 +199,7 @@ function Card() {
             </div>
           )}
           <div style={{ position: "absolute", bottom: 16, left: 0, right: 0, textAlign: "center", fontSize: 11, color: "#888" }}>
-            futzone.app · {data.grupo?.nome} · {data.pelada.data?.split("-").reverse().join("/")}
+            mrfut.app · {data.grupo?.nome} · {data.pelada.data?.split("-").reverse().join("/")}
           </div>
         </div>
       </div>

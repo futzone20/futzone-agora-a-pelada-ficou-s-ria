@@ -57,7 +57,7 @@ function Page() {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xl font-bold">Financeiro Futzone</h2>
+      <h2 className="text-xl font-bold">Financeiro MrFut</h2>
       <div className="grid grid-cols-2 gap-2">
         <div><Label>De</Label><Input type="date" value={ini} onChange={e=>setIni(e.target.value)}/></div>
         <div><Label>Até</Label><Input type="date" value={fim} onChange={e=>setFim(e.target.value)}/></div>
