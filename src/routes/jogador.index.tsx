@@ -340,6 +340,14 @@ export function Inicio() {
                     <p className="mt-1 line-clamp-2 text-[11px] text-gray-500 leading-normal">
                       {n.mensagem}
                     </p>
+                    {n.tipo === "resultado_pelada" && n.link && (
+                      <Link
+                        to={n.link}
+                        className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#00FF87]/10 px-3 py-1 text-[10px] font-black uppercase tracking-tight text-[#00FF87] hover:bg-[#00FF87]/20"
+                      >
+                        🏆 Ver Card da Vitória
+                      </Link>
+                    )}
                   </div>
                   {!n.lida && (
                     <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#00FF87]" />
