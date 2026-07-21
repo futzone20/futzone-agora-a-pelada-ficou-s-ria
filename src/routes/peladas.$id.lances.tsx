@@ -87,9 +87,25 @@ function LancesPage() {
   useEffect(() => { void load(); }, [id]);
 
   useEffect(() => {
-    const ch = supabase.channel(`lances-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
+    const ch = supabase.channel(`lances-rt-${id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "lances",
+        filter: `pelada_id=eq.${id}`
+      }, () => void load())
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "lances",
+        filter: `pelada_id=eq.${id}`
+      }, () => void load())
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "partidas",
+        filter: `pelada_id=eq.${id}`
+      }, () => void load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [id]);
@@ -181,6 +197,9 @@ function LancesPage() {
     if (error) toast.error(error.message);
     else toast.success("Lance marcado ✓");
     setDrawer(null);
+
+    // Recarregar lances imediatamente após marcar (não esperar realtime)
+    void load();
 
     // Refetch partida para refletir placar atualizado pelo trigger
     const { data: partidaAtualizada }: any = await supabase
