@@ -87,9 +87,25 @@ function LancesPage() {
   useEffect(() => { void load(); }, [id]);
 
   useEffect(() => {
-    const ch = supabase.channel(`lances-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
+    const ch = supabase.channel(`lances-rt-${id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "lances",
+        filter: `pelada_id=eq.${id}`
+      }, () => void load())
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "lances",
+        filter: `pelada_id=eq.${id}`
+      }, () => void load())
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "partidas",
+        filter: `pelada_id=eq.${id}`
+      }, () => void load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [id]);
@@ -182,6 +198,9 @@ function LancesPage() {
     else toast.success("Lance marcado ✓");
     setDrawer(null);
 
+    // Recarregar lances imediatamente após marcar (não esperar realtime)
+    void load();
+
     // Refetch partida para refletir placar atualizado pelo trigger
     const { data: partidaAtualizada }: any = await supabase
       .from("partidas")
@@ -230,7 +249,7 @@ function LancesPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0D0D0D]">
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "#0D0D0D", display: "flex", flexDirection: "column" }}>
       {/* BLOCO 1 — Cronômetros + Placar em evidência */}
       <div className="border-b border-[#2A2A2A] bg-[#1A1A1A] p-3 space-y-2">
         <div className="flex items-center justify-between">
