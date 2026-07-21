@@ -16,6 +16,7 @@ import { Route as ParceiroRouteImport } from './routes/parceiro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JogadorRouteImport } from './routes/jogador'
 import { Route as DonoRouteImport } from './routes/dono'
+import { Route as CompletarCadastroRouteImport } from './routes/completar-cadastro'
 import { Route as CapitaoRouteImport } from './routes/capitao'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -100,6 +101,11 @@ const JogadorRoute = JogadorRouteImport.update({
 const DonoRoute = DonoRouteImport.update({
   id: '/dono',
   path: '/dono',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompletarCadastroRoute = CompletarCadastroRouteImport.update({
+  id: '/completar-cadastro',
+  path: '/completar-cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CapitaoRoute = CapitaoRouteImport.update({
@@ -358,6 +364,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/cadastro': typeof CadastroRoute
   '/capitao': typeof CapitaoRouteWithChildren
+  '/completar-cadastro': typeof CompletarCadastroRoute
   '/dono': typeof DonoRouteWithChildren
   '/jogador': typeof JogadorRouteWithChildren
   '/login': typeof LoginRoute
@@ -415,6 +422,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cadastro': typeof CadastroRoute
+  '/completar-cadastro': typeof CompletarCadastroRoute
   '/login': typeof LoginRoute
   '/ranking': typeof RankingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
@@ -472,6 +480,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/cadastro': typeof CadastroRoute
   '/capitao': typeof CapitaoRouteWithChildren
+  '/completar-cadastro': typeof CompletarCadastroRoute
   '/dono': typeof DonoRouteWithChildren
   '/jogador': typeof JogadorRouteWithChildren
   '/login': typeof LoginRoute
@@ -533,6 +542,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cadastro'
     | '/capitao'
+    | '/completar-cadastro'
     | '/dono'
     | '/jogador'
     | '/login'
@@ -590,6 +600,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/cadastro'
+    | '/completar-cadastro'
     | '/login'
     | '/ranking'
     | '/recuperar-senha'
@@ -646,6 +657,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/cadastro'
     | '/capitao'
+    | '/completar-cadastro'
     | '/dono'
     | '/jogador'
     | '/login'
@@ -706,6 +718,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   CadastroRoute: typeof CadastroRoute
   CapitaoRoute: typeof CapitaoRouteWithChildren
+  CompletarCadastroRoute: typeof CompletarCadastroRoute
   DonoRoute: typeof DonoRouteWithChildren
   JogadorRoute: typeof JogadorRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -776,6 +789,13 @@ declare module '@tanstack/react-router' {
       path: '/dono'
       fullPath: '/dono'
       preLoaderRoute: typeof DonoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/completar-cadastro': {
+      id: '/completar-cadastro'
+      path: '/completar-cadastro'
+      fullPath: '/completar-cadastro'
+      preLoaderRoute: typeof CompletarCadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/capitao': {
@@ -1248,6 +1268,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   CadastroRoute: CadastroRoute,
   CapitaoRoute: CapitaoRouteWithChildren,
+  CompletarCadastroRoute: CompletarCadastroRoute,
   DonoRoute: DonoRouteWithChildren,
   JogadorRoute: JogadorRouteWithChildren,
   LoginRoute: LoginRoute,
@@ -1271,13 +1292,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
