@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth";
 import { SKILL_KEYS, mediaSkill, type SkillRow } from "@/lib/sorteio";
 import { AvaliarMembroModal } from "@/components/AvaliarMembroModal";
 import { TemporadaTab } from "@/components/TemporadaTab";
+import { criarMembroManual } from "@/lib/membroManual";
 
 export const Route = createFileRoute("/grupos/$id")({
   component: GrupoPageWrapper,
@@ -42,7 +43,7 @@ function GrupoPageWrapper() {
 
 type Membro = {
   id: string; user_id: string; papel: "jogador" | "auxiliar" | "capitao"; status: string;
-  profile: { nome: string; foto_url: string | null; cidade: string | null } | null;
+  profile: { nome: string; foto_url: string | null; cidade: string | null; cadastro_completo: boolean } | null;
   skill: SkillRow | null;
   skill_origem: string | null;
 };
@@ -70,14 +71,14 @@ function GrupoPage() {
     if (g.error) toast.error(g.error.message);
     setGrupo(g.data);
     const userIds = (m.data || []).map((x: any) => x.user_id);
-    let profilesMap: Record<string, { nome: string; foto_url: string | null; cidade: string | null }> = {};
+    let profilesMap: Record<string, { nome: string; foto_url: string | null; cidade: string | null; cadastro_completo: boolean }> = {};
     let skillsMap: Record<string, any> = {};
     if (userIds.length > 0) {
       const [pr, sk] = await Promise.all([
-        supabase.from("profiles").select("user_id, nome, foto_url, cidade").in("user_id", userIds),
+        supabase.from("profiles").select("user_id, nome, foto_url, cidade, cadastro_completo").in("user_id", userIds),
         supabase.from("skills").select("*").in("user_id", userIds),
       ]);
-      (pr.data || []).forEach((x: any) => { profilesMap[x.user_id] = { nome: x.nome, foto_url: x.foto_url, cidade: x.cidade }; });
+      (pr.data || []).forEach((x: any) => { profilesMap[x.user_id] = { nome: x.nome, foto_url: x.foto_url, cidade: x.cidade, cadastro_completo: x.cadastro_completo !== false }; });
       (sk.data || []).forEach((x: any) => { skillsMap[x.user_id] = x; });
     }
     setMembros((m.data || []).map((x: any) => ({
@@ -142,6 +143,7 @@ function tituloFor(papel: string) {
 function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membros: Membro[]; isCapitao: boolean; onChange: () => void }) {
   const { user } = useAuth();
   const [convidarOpen, setConvidarOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [skillsMembro, setSkillsMembro] = useState<Membro | null>(null);
   const [avaliarMembro, setAvaliarMembro] = useState<Membro | null>(null);
   const [jaAvaliados, setJaAvaliados] = useState<Set<string>>(new Set());
@@ -171,7 +173,10 @@ function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membr
   return (
     <div className="space-y-4">
       {isCapitao && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setManualOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />Adicionar Manualmente
+          </Button>
           <Button onClick={() => setConvidarOpen(true)} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
             <UserPlus className="mr-2 h-4 w-4" />Convidar Jogador
           </Button>
@@ -214,6 +219,9 @@ function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membr
                 )}
               </div>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
+                {m.profile && !m.profile.cadastro_completo && (
+                  <Badge className="bg-blue-500/15 text-blue-400 hover:bg-blue-500/15">Cadastro pendente</Badge>
+                )}
                 {pendente ? (
                   <Badge className="bg-orange-500/15 text-orange-500 hover:bg-orange-500/15">Skills pendentes</Badge>
                 ) : (
@@ -249,6 +257,13 @@ function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membr
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-card">
           <DialogHeader><DialogTitle>Convidar Jogador</DialogTitle></DialogHeader>
           <ConvidarJogadorModal grupo={grupo} membros={membros} onDone={() => { setConvidarOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+        <DialogContent className="bg-card">
+          <DialogHeader><DialogTitle>Adicionar Membro Manualmente</DialogTitle></DialogHeader>
+          <AdicionarMembroManualModal grupoId={grupo.id} onDone={() => { setManualOpen(false); onChange(); }} />
         </DialogContent>
       </Dialog>
 
@@ -715,5 +730,78 @@ function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: 
         <Button variant="destructive" onClick={excluir} disabled={temAtiva}><Trash2 className="mr-2 h-4 w-4" />Excluir grupo</Button>
       </div>
     </div>
+  );
+}
+
+function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDone: () => void }) {
+  const [nome, setNome] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [linkGerado, setLinkGerado] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim()) return;
+    setLoading(true);
+    try {
+      const res = await criarMembroManual(grupoId, nome);
+      setLinkGerado(res.linkConvite);
+      toast.success("Membro adicionado ao grupo!");
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar membro.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copiar = () => {
+    if (!linkGerado) return;
+    navigator.clipboard.writeText(linkGerado);
+    toast.success("Link copiado!");
+  };
+
+  const outro = () => {
+    setNome("");
+    setLinkGerado(null);
+  };
+
+  if (linkGerado) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          ⚠️ Copie o link agora! Ele não pode ser gerado novamente depois.
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Link de convite pessoal</Label>
+          <div className="mt-1 flex gap-2">
+            <Input readOnly value={linkGerado} className="font-mono text-xs" />
+            <Button onClick={copiar} variant="secondary"><Copy className="h-4 w-4" /></Button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Envie esse link para o jogador. Ao abrir, ele vai completar o cadastro (email, senha e whatsapp) e já cai direto no grupo.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={outro}>Adicionar outro membro</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <Label htmlFor="mm-nome">Nome do jogador</Label>
+        <Input id="mm-nome" required autoFocus value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: João Silva" />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Vamos criar uma conta provisória e um link único para o jogador completar o cadastro. Ele já entra no grupo imediatamente e pode ser escalado nos sorteios.
+      </p>
+      <DialogFooter>
+        <Button type="submit" disabled={loading} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+          {loading ? "Adicionando..." : "Adicionar e gerar link"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

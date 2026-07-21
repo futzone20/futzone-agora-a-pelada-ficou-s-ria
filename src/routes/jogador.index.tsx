@@ -276,7 +276,7 @@ export function Inicio() {
             {proximas.map((p) => (
               <Link 
                 key={p.id} 
-                to="/peladas/$id/" 
+                to="/peladas/$id" 
                 params={{ id: p.id }}
                 className="flex items-center gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4 transition hover:border-[#00FF87]/30"
               >
