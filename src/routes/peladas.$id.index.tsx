@@ -182,25 +182,60 @@ function PeladaDetail() {
 
   const criarProximaPartida = async () => {
     if (!pelada) return;
-    const { data: ultima } = await supabase.from("partidas").select("numero_partida, time_a_id, time_b_id, time_fora_id, placar_a, placar_b").eq("pelada_id", id).order("numero_partida", { ascending: false }).limit(1).maybeSingle();
+    const { data: ultima } = await supabase
+      .from("partidas")
+      .select("numero_partida, time_a_id, time_b_id, time_fora_id, placar_a, placar_b")
+      .eq("pelada_id", id)
+      .order("numero_partida", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
+
     if (!tms || tms.length < 2) return;
-    let timeAId: string, timeBId: string, timeForaId: string | null;
-    if (ultima) {
+
+    let timeAId: string, timeBId: string, timeForaId: string | null = null;
+
+    if (!ultima) {
+      // Primeira partida
+      timeAId = tms[0].id;
+      timeBId = tms[1].id;
+      timeForaId = tms[2]?.id || null;
+    } else if (tms.length === 2) {
+      // Com 2 times: simplesmente invertemos para variar (ou mantemos igual — não há "fora")
+      // Vencedor fica como time_a, perdedor como time_b — sem time fora
       const u: any = ultima;
-      const vencedor = u.placar_a > u.placar_b ? u.time_a_id : u.placar_b > u.placar_a ? u.time_b_id : u.time_a_id;
+      const vencedor = u.placar_a > u.placar_b ? u.time_a_id
+        : u.placar_b > u.placar_a ? u.time_b_id
+        : u.time_a_id; // empate: mantém time_a
       const perdedor = vencedor === u.time_a_id ? u.time_b_id : u.time_a_id;
+
       timeAId = vencedor;
-      timeBId = u.time_fora_id || u.time_b_id;
-      timeForaId = u.time_fora_id ? perdedor : null;
+      timeBId = perdedor;
+      timeForaId = null; // NUNCA haverá time fora com 2 times
     } else {
-      timeAId = tms[0].id; timeBId = tms[1].id; timeForaId = tms[2]?.id || null;
+      // Com 3+ times: rodízio normal
+      const u: any = ultima;
+      const vencedor = u.placar_a > u.placar_b ? u.time_a_id
+        : u.placar_b > u.placar_a ? u.time_b_id
+        : u.time_a_id;
+      const perdedor = vencedor === u.time_a_id ? u.time_b_id : u.time_a_id;
+
+      // Vencedor fica, time de fora entra, perdedor sai
+      timeAId = vencedor;
+      timeBId = u.time_fora_id || tms.find((t: any) => t.id !== u.time_a_id && t.id !== u.time_b_id)?.id || tms[1].id;
+      timeForaId = perdedor;
     }
+
     await supabase.from("partidas").insert({
       pelada_id: id,
       numero_partida: ((ultima as any)?.numero_partida || 0) + 1,
-      time_a_id: timeAId, time_b_id: timeBId, time_fora_id: timeForaId,
-      placar_a: 0, placar_b: 0, status: "em_andamento",
+      time_a_id: timeAId,
+      time_b_id: timeBId,
+      time_fora_id: timeForaId,
+      placar_a: 0,
+      placar_b: 0,
+      status: "em_andamento",
       duracao_minutos: pelada.duracao_partida_minutos || 8,
       iniciada_em: new Date().toISOString(),
     } as never);
