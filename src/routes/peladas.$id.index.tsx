@@ -216,11 +216,14 @@ function PeladaDetail() {
 
   // Auto-encerrar pelada quando aluguel zera
   useEffect(() => {
-    if (pelada?.status === "em_andamento" && pelada?.aluguel_iniciado_em && tempoAluguelSec === 0 && !alertaAluguelEmitido) {
-      setAlertaAluguelEmitido(true);
-      void encerrarPeladaAuto();
-    }
-  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em]);
+    if (loading) return;
+    if (!pelada?.aluguel_iniciado_em) return;
+    if (pelada?.status !== "em_andamento") return;
+    if (tempoAluguelSec !== 0) return;
+    if (alertaAluguelEmitido) return;
+    setAlertaAluguelEmitido(true);
+    void encerrarPeladaAuto();
+  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, loading, alertaAluguelEmitido]);
 
   // Quando uma partida encerra e ainda há tempo de aluguel, cria próxima automaticamente
   useEffect(() => {
