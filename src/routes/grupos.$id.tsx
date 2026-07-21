@@ -732,3 +732,76 @@ function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: 
     </div>
   );
 }
+
+function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDone: () => void }) {
+  const [nome, setNome] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [linkGerado, setLinkGerado] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim()) return;
+    setLoading(true);
+    try {
+      const res = await criarMembroManual(grupoId, nome);
+      setLinkGerado(res.linkConvite);
+      toast.success("Membro adicionado ao grupo!");
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar membro.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copiar = () => {
+    if (!linkGerado) return;
+    navigator.clipboard.writeText(linkGerado);
+    toast.success("Link copiado!");
+  };
+
+  const outro = () => {
+    setNome("");
+    setLinkGerado(null);
+  };
+
+  if (linkGerado) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          ⚠️ Copie o link agora! Ele não pode ser gerado novamente depois.
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Link de convite pessoal</Label>
+          <div className="mt-1 flex gap-2">
+            <Input readOnly value={linkGerado} className="font-mono text-xs" />
+            <Button onClick={copiar} variant="secondary"><Copy className="h-4 w-4" /></Button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Envie esse link para o jogador. Ao abrir, ele vai completar o cadastro (email, senha e whatsapp) e já cai direto no grupo.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={outro}>Adicionar outro membro</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <Label htmlFor="mm-nome">Nome do jogador</Label>
+        <Input id="mm-nome" required autoFocus value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: João Silva" />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Vamos criar uma conta provisória e um link único para o jogador completar o cadastro. Ele já entra no grupo imediatamente e pode ser escalado nos sorteios.
+      </p>
+      <DialogFooter>
+        <Button type="submit" disabled={loading} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+          {loading ? "Adicionando..." : "Adicionar e gerar link"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
