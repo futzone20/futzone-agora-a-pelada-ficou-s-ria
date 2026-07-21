@@ -249,7 +249,7 @@ function LancesPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0D0D0D]">
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "#0D0D0D", display: "flex", flexDirection: "column" }}>
       {/* BLOCO 1 — Cronômetros + Placar em evidência */}
       <div className="border-b border-[#2A2A2A] bg-[#1A1A1A] p-3 space-y-2">
         <div className="flex items-center justify-between">
