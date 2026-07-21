@@ -260,6 +260,13 @@ function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membr
         </DialogContent>
       </Dialog>
 
+      <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+        <DialogContent className="bg-card">
+          <DialogHeader><DialogTitle>Adicionar Membro Manualmente</DialogTitle></DialogHeader>
+          <AdicionarMembroManualModal grupoId={grupo.id} onDone={() => { setManualOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!skillsMembro} onOpenChange={(o) => !o && setSkillsMembro(null)}>
         <DialogContent className="bg-card">
           <DialogHeader><DialogTitle>Skills — {skillsMembro?.profile?.nome}</DialogTitle></DialogHeader>
