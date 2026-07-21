@@ -501,7 +501,7 @@ function LancesPage() {
 
       {/* BLOCO 4 — ENCERRAR */}
       {ehAuxiliar && (
-        <div className="shrink-0 px-3 py-2">
+        <div className="px-3 py-2">
           <button
             onClick={() => encerrarPartidaAuto()}
             disabled={encerrando}
