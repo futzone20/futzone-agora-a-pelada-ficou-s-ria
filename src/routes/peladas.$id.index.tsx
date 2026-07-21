@@ -202,17 +202,20 @@ function PeladaDetail() {
       timeBId = tms[1].id;
       timeForaId = tms[2]?.id || null;
     } else if (tms.length === 2) {
-      // Com 2 times: simplesmente invertemos para variar (ou mantemos igual — não há "fora")
-      // Vencedor fica como time_a, perdedor como time_b — sem time fora
       const u: any = ultima;
-      const vencedor = u.placar_a > u.placar_b ? u.time_a_id
-        : u.placar_b > u.placar_a ? u.time_b_id
-        : u.time_a_id; // empate: mantém time_a
-      const perdedor = vencedor === u.time_a_id ? u.time_b_id : u.time_a_id;
+      // Com 2 times NUNCA há time de fora
+      if (u.placar_a === u.placar_b) {
+        // Empate: alternar posições
+        timeAId = u.time_b_id;
+        timeBId = u.time_a_id;
+      } else {
+        const vencedor = u.placar_a > u.placar_b ? u.time_a_id : u.time_b_id;
+        const perdedor = vencedor === u.time_a_id ? u.time_b_id : u.time_a_id;
+        timeAId = vencedor;
+        timeBId = perdedor;
+      }
+      timeForaId = null; // SEMPRE null com 2 times
 
-      timeAId = vencedor;
-      timeBId = perdedor;
-      timeForaId = null; // NUNCA haverá time fora com 2 times
     } else {
       // Com 3+ times: rodízio normal
       const u: any = ultima;

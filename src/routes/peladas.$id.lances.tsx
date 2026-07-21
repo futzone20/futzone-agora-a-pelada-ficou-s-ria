@@ -218,13 +218,12 @@ function LancesPage() {
         }
       }
 
-      // Abrir drawer do goleiro adversário
-      // Time adversário = o outro time (não o timeId do gol)
+      // Abrir drawer do goleiro adversário — mostrar TODOS os jogadores do time adversário
       const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
       const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
-      const goleirosAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId && j.eh_goleiro);
+      const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
 
-      if (goleirosAdversario.length > 0 && timeAdversario) {
+      if (jogadoresAdversario.length > 0 && timeAdversario) {
         setPendingGol({ userId, tipo, timeId });
         setDrawerGoleiro({
           goleiroTimeId: timeAdversarioId,
@@ -232,6 +231,7 @@ function LancesPage() {
           goleiroTimeCor: timeAdversario.cor,
         });
       }
+
 
       return;
     }
@@ -432,7 +432,7 @@ function LancesPage() {
           >
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold">Quem sofreu o gol? 🧤</h3>
+                <h3 className="text-sm font-bold">Quem tomou o gol? 🧤</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Goleiro do <span className="font-bold" style={{ color: drawerGoleiro.goleiroTimeCor }}>{drawerGoleiro.goleiroTimeNome}</span>
                 </p>
@@ -443,19 +443,19 @@ function LancesPage() {
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
               {timeJogadores
-                .filter((j: any) => j.time_id === drawerGoleiro.goleiroTimeId && j.eh_goleiro)
+                .filter((j: any) => j.time_id === drawerGoleiro.goleiroTimeId)
                 .map((j: any) => (
                   <button
                     key={j.user_id}
                     onClick={() => marcarGoleiro(j.user_id)}
                     className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold transition active:scale-95"
                   >
-                    <span>🧤</span>
-                    <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Goleiro"}</span>
+                    <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
                   </button>
                 ))
               }
             </div>
+
             <button
               onClick={() => marcarGoleiro(null)}
               className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-muted-foreground hover:text-foreground"
