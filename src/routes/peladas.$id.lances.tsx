@@ -306,12 +306,13 @@ function LancesPage() {
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", height: "100vh", background: "#0D0D0D", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "#0D0D0D", display: "flex", flexDirection: "column" }}>
+      <style>{`body { overflow-x: hidden; } ::-webkit-scrollbar { display: none; } * { scrollbar-width: none; }`}</style>
       {/* BLOCO 1 — HERO */}
       <div
         className="relative shrink-0"
         style={{
-          minHeight: 340,
+          paddingBottom: 16,
           backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.5) 100%), url(${STADIUM_BG})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
@@ -390,7 +391,7 @@ function LancesPage() {
       </div>
 
       {/* BLOCO 2 — GRID DE LANCES */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto p-3">
+      <div className="relative p-3">
         <div className="grid grid-cols-2 gap-3 relative">
           {/* VS separator */}
           <div className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
@@ -424,7 +425,7 @@ function LancesPage() {
       </div>
 
       {/* BLOCO 3 — LANCES RECENTES (agrupados por partida) */}
-      <div className="shrink-0 border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5 overflow-y-auto" style={{ maxHeight: 400 }}>
+      <div className="border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" style={{ color: "#00FF87" }} />
@@ -500,7 +501,7 @@ function LancesPage() {
 
       {/* BLOCO 4 — ENCERRAR */}
       {ehAuxiliar && (
-        <div className="shrink-0 px-3 py-2">
+        <div className="px-3 py-2">
           <button
             onClick={() => encerrarPartidaAuto()}
             disabled={encerrando}
@@ -517,7 +518,7 @@ function LancesPage() {
       )}
 
       {/* NAV INFERIOR */}
-      <nav className="shrink-0 border-t border-[#2A2A2A] bg-[#0D0D0D]" style={{ height: 64 }}>
+      <nav className="sticky bottom-0 border-t border-[#2A2A2A] bg-[#0D0D0D]" style={{ height: 64 }}>
         <div className="grid h-full grid-cols-4">
           <button onClick={() => navigate({ to: "/jogador" })} className="flex flex-col items-center justify-center gap-0.5 text-white/60">
             <Home className="h-5 w-5" />
