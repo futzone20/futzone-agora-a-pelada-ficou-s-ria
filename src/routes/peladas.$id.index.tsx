@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { mediaSkill, mediaTime, type Jogador } from "@/lib/sorteio";
 import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
 import { StatsPeladaModal } from "@/components/StatsPeladaModal";
+import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
 
 export const Route = createFileRoute("/peladas/$id/")({
   component: Wrapper,
@@ -248,6 +249,7 @@ function PeladaDetail() {
   const encerrarPeladaAuto = async () => {
     await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
     await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
+    void notificarVencedoresPelada(id);
     toast.success("⏱ Tempo de aluguel encerrado! Pelada finalizada.");
     void load();
   };
