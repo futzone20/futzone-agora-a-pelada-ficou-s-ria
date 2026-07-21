@@ -2,8 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RequireAuth } from "@/components/RequireAuth";
-import { MobileShell } from "@/components/MobileShell";
-import { ArrowLeft, Trash2, Home, CircleDot, Trophy, User } from "lucide-react";
+import { ArrowLeft, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -11,25 +10,22 @@ import { sugerirTrocaGoleiro } from "@/lib/sorteio";
 
 export const Route = createFileRoute("/peladas/$id/lances")({ component: Wrapper });
 
-const items = [
-  { to: "/jogador", label: "Início", icon: Home },
-  { to: "/jogador/peladas", label: "Peladas", icon: CircleDot },
-  { to: "/jogador/ranking", label: "Ranking", icon: Trophy },
-  { to: "/jogador/perfil", label: "Perfil", icon: User },
-];
-
 const TIPOS = [
-  { v: "gol", label: "GOL", icon: "⚽" },
-  { v: "passe_decisivo", label: "PASSE", icon: "🤝" },
-  { v: "defesa", label: "DEFESA", icon: "🧤" },
-  { v: "falta", label: "FALTA", icon: "🟨" },
-  { v: "outro", label: "OUTRO", icon: "•" },
+  { v: "gol", label: "Gol", icon: "⚽" },
+  { v: "passe_decisivo", label: "Passe", icon: "🤝" },
+  { v: "defesa", label: "Defesa", icon: "🧤" },
+  { v: "falta", label: "Falta", icon: "🟨" },
+  { v: "entrada_forte", label: "Entrada", icon: "🦵" },
+  { v: "frango", label: "Frango", icon: "🐔" },
+  { v: "cartao_vermelho", label: "C. Vermelho", icon: "🟥" },
+  { v: "cartao_amarelo", label: "C. Amarelo", icon: "⚠️" },
+  { v: "outro", label: "Outro", icon: "•" },
 ] as const;
 
 function Wrapper() {
   return (
     <RequireAuth allow={["jogador", "capitao", "admin"]}>
-      <MobileShell items={items as any}><LancesPage /></MobileShell>
+      <LancesPage />
     </RequireAuth>
   );
 }
@@ -37,20 +33,26 @@ function Wrapper() {
 function LancesPage() {
   const { id } = Route.useParams();
   const { user } = useAuth();
+  const [pelada, setPelada] = useState<any>(null);
   const [partida, setPartida] = useState<any>(null);
   const [times, setTimes] = useState<any[]>([]);
   const [timeJogadores, setTimeJogadores] = useState<any[]>([]);
   const [lances, setLances] = useState<any[]>([]);
   const [auxiliar, setAuxiliar] = useState<any>(null);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
-  const [tipoSel, setTipoSel] = useState<string | null>(null);
-  const [timeSel, setTimeSel] = useState<string | null>(null);
+  const [drawer, setDrawer] = useState<{ tipo: string; timeId: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [isCapitao, setIsCapitao] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
 
-
   const load = async () => {
+    const { data: pelData } = await supabase
+      .from("peladas")
+      .select("aluguel_iniciado_em, tempo_locado_minutos, grupo_id, gols_para_encerrar, modalidade_goleiro")
+      .eq("id", id)
+      .maybeSingle();
+    setPelada(pelData);
+
     const { data: ps } = await supabase.from("partidas").select("*").eq("pelada_id", id).order("numero_partida");
     const ativa = (ps || []).find((p: any) => p.status === "em_andamento") || (ps || []).find((p: any) => p.status === "aguardando");
     setPartida(ativa);
@@ -64,11 +66,10 @@ function LancesPage() {
       const { data: ls } = await supabase.from("lances").select("*").eq("partida_id", ativa.id).order("criado_em", { ascending: false });
       setLances(ls || []);
     }
-    const { data: pelada } = await supabase.from("peladas").select("grupo_id").eq("id", id).maybeSingle();
-    if (pelada && user) {
+    if (pelData && user) {
       const { data: membro } = await supabase.from("grupo_membros")
         .select("papel")
-        .eq("grupo_id", pelada.grupo_id)
+        .eq("grupo_id", pelData.grupo_id)
         .eq("user_id", user.id)
         .eq("status", "ativo")
         .maybeSingle();
@@ -95,6 +96,12 @@ function LancesPage() {
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
 
+  const tempoAluguelSec = useMemo(() => {
+    if (!pelada?.aluguel_iniciado_em) return (pelada?.tempo_locado_minutos || 60) * 60;
+    const fim = new Date(pelada.aluguel_iniciado_em).getTime() + (pelada.tempo_locado_minutos || 60) * 60_000;
+    return Math.max(0, Math.floor((fim - now) / 1000));
+  }, [pelada, now]);
+
   const ehAuxiliar = isCapitao || (auxiliar && auxiliar.user_id === user?.id);
   const restanteSec = useMemo(() => {
     if (!partida?.iniciada_em || partida.status !== "em_andamento") return partida ? partida.duracao_minutos * 60 : 0;
@@ -104,10 +111,14 @@ function LancesPage() {
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   const nomeTime = (tid: string) => times.find((t) => t.id === tid)?.nome || "—";
+  const corTime = (tid: string) => times.find((t) => t.id === tid)?.cor || "#00FF87";
   const timeA = partida && times.find((t) => t.id === partida.time_a_id);
   const timeB = partida && times.find((t) => t.id === partida.time_b_id);
 
   const jogadoresDoTime = (tid: string) => timeJogadores.filter((x) => x.time_id === tid);
+
+  const corCronoAluguel = tempoAluguelSec > 1200 ? "#00FF87" : tempoAluguelSec > 300 ? "#FFD700" : "#FF4D4D";
+  const pulseAluguel = tempoAluguelSec <= 300 ? "animate-pulse" : "";
 
   const encerrarPartidaAuto = async () => {
     if (!partida || encerrando) return;
@@ -116,7 +127,6 @@ function LancesPage() {
     const vencedor = p.placar_a > p.placar_b ? p.time_a_id : p.placar_b > p.placar_a ? p.time_b_id : null;
     const { data: pel }: any = await supabase.from("peladas").select("*").eq("id", id).single();
 
-    // Aplica sugestão de troca de goleiro ANTES de encerrar (main page cria próxima via realtime)
     if (pel?.modalidade_goleiro === "fixo" && vencedor && p.time_fora_id) {
       const { data: tmsData } = await supabase.from("times").select("*").eq("pelada_id", id);
       const { data: tjData } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
@@ -163,15 +173,16 @@ function LancesPage() {
   };
 
   const marcar = async (userId: string) => {
-    if (!partida || !user || !tipoSel || !timeSel) return;
+    if (!partida || !user || !drawer) return;
+    const { tipo, timeId } = drawer;
     const { error } = await supabase.from("lances").insert({
-      partida_id: partida.id, pelada_id: id, tipo: tipoSel, user_id: userId, time_id: timeSel, marcado_por: user.id,
+      partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
     } as never);
     if (error) toast.error(error.message);
-    else toast.success("Lance marcado");
-    setTipoSel(null); setTimeSel(null);
+    else toast.success("Lance marcado ✓");
+    setDrawer(null);
 
-    if (tipoSel === "gol") {
+    if (tipo === "gol") {
       const { data: p }: any = await supabase.from("partidas").select("placar_a, placar_b").eq("id", partida.id).single();
       const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
       if (pel?.gols_para_encerrar && (p.placar_a >= pel.gols_para_encerrar || p.placar_b >= pel.gols_para_encerrar)) {
@@ -188,94 +199,132 @@ function LancesPage() {
 
   if (!partida) {
     return (
-      <div className="space-y-3">
+      <div className="min-h-screen bg-[#0D0D0D] p-4 space-y-3">
         <Link to="/peladas/$id" params={{ id }} className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Voltar</Link>
         <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Nenhuma partida em andamento.</div>
       </div>
     );
   }
 
-  if (!ehAuxiliar) {
-    return (
-      <div className="space-y-3">
-        <Link to="/peladas/$id" params={{ id }} className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Voltar</Link>
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-sm">Você não é o auxiliar desta partida. Apenas pode visualizar.</p>
-          <div className="mt-3 text-center text-3xl font-black">{partida.placar_a} x {partida.placar_b}</div>
-          <div className="mt-1 text-center text-xs text-muted-foreground">{nomeTime(partida.time_a_id)} vs {nomeTime(partida.time_b_id)}</div>
-        </div>
-      </div>
-    );
-  }
+  const renderGridLances = (timeId: string) => (
+    <div className="grid grid-cols-3 gap-1.5 p-2">
+      {TIPOS.map((t) => (
+        <button
+          key={t.v}
+          onClick={() => ehAuxiliar && setDrawer({ tipo: t.v, timeId })}
+          disabled={!ehAuxiliar}
+          className="flex h-14 flex-col items-center justify-center rounded-lg border border-[#2A2A2A] bg-[#1A1A1A] transition active:scale-95 disabled:opacity-50"
+        >
+          <span className="text-xl leading-none">{t.icon}</span>
+          <span className="mt-0.5 text-[9px] uppercase tracking-wide text-muted-foreground">{t.label}</span>
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="space-y-3">
-      <Link to="/peladas/$id" params={{ id }} className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Voltar</Link>
-
-
-      <div className="rounded-2xl border border-border bg-card p-4 text-center">
-        {restanteSec > 0 && restanteSec <= 30 && (
-          <div className="mb-2 text-sm font-bold text-red-500 animate-pulse">⚡ {restanteSec}s restantes</div>
-        )}
+    <div className="flex min-h-screen flex-col bg-[#0D0D0D]">
+      {/* BLOCO 1 — Cronômetros */}
+      <div className="border-b border-[#2A2A2A] bg-[#1A1A1A] p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="flex-1"><div className="text-xs text-muted-foreground">{nomeTime(partida.time_a_id)}</div><div className="text-4xl font-black text-primary">{partida.placar_a}</div></div>
-          <div className={`text-2xl font-black tabular-nums ${restanteSec <= 30 ? "text-red-500 animate-pulse" : restanteSec <= 120 ? "text-red-500" : ""}`}>{fmt(restanteSec)}</div>
-          <div className="flex-1"><div className="text-xs text-muted-foreground">{nomeTime(partida.time_b_id)}</div><div className="text-4xl font-black text-primary">{partida.placar_b}</div></div>
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">⏱ Pelada</span>
+          <span className={`text-[28px] font-black tabular-nums ${pulseAluguel}`} style={{ color: corCronoAluguel }}>
+            {fmt(tempoAluguelSec)}
+          </span>
+          <span className="w-16" />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">⚽ Partida {partida.numero_partida}</span>
+          <span className={`text-[22px] font-black tabular-nums ${restanteSec <= 30 ? "text-red-500 animate-pulse" : "text-foreground"}`}>
+            {fmt(restanteSec)}
+          </span>
+          <span className="text-lg font-black text-primary tabular-nums w-16 text-right">{partida.placar_a} x {partida.placar_b}</span>
         </div>
       </div>
 
-      {!tipoSel ? (
-        <div className="grid grid-cols-2 gap-2">
-          {TIPOS.map((t) => (
-            <Button key={t.v} onClick={() => setTipoSel(t.v)} className="h-16 bg-secondary text-foreground text-base font-bold hover:bg-secondary/80">
-              <span className="mr-2 text-2xl">{t.icon}</span>{t.label}
-            </Button>
-          ))}
-        </div>
-      ) : !timeSel ? (
-        <div className="space-y-2">
-          <p className="text-sm font-bold">De qual time?</p>
-          {[timeA, timeB].filter(Boolean).map((t: any) => (
-            <Button key={t.id} onClick={() => setTimeSel(t.id)} className="h-14 w-full text-base font-bold" style={{ background: t.cor, color: "#000" }}>
-              {t.nome}
-            </Button>
-          ))}
-          <Button variant="ghost" onClick={() => setTipoSel(null)} className="w-full">Cancelar</Button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-sm font-bold">Qual jogador?</p>
-          <div className="grid gap-2">
-            {jogadoresDoTime(timeSel).map((j) => (
-              <Button key={j.user_id} onClick={() => marcar(j.user_id)} className="h-14 justify-start bg-secondary text-foreground font-bold hover:bg-secondary/80">
-                {j.eh_goleiro ? "🧤 " : ""}{profiles[j.user_id]?.nome || "Jogador"}
-              </Button>
-            ))}
+      {/* BLOCO 2 — Tabela de Lances (2 colunas) */}
+      <div className="flex flex-1 divide-x divide-[#2A2A2A]">
+        {[timeA, timeB].map((t: any, i) => t && (
+          <div key={t.id} className="flex flex-1 flex-col">
+            <div className="flex items-center justify-center gap-2 border-b border-[#2A2A2A] py-2">
+              <span className="inline-block h-3 w-3 rounded-full" style={{ background: t.cor }} />
+              <span className="text-sm font-bold" style={{ color: t.cor }}>{t.nome}</span>
+            </div>
+            {renderGridLances(t.id)}
           </div>
-          <Button variant="ghost" onClick={() => setTimeSel(null)} className="w-full">Voltar</Button>
+        ))}
+      </div>
+
+      {ehAuxiliar && (
+        <div className="border-t border-[#2A2A2A] p-2">
+          <Button onClick={() => encerrarPartidaAuto()} disabled={encerrando} className="h-11 w-full bg-red-600 font-bold hover:bg-red-700">
+            Encerrar Partida
+          </Button>
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">Lances ({lances.length})</h3>
-        {lances.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nenhum lance marcado.</p>
-        ) : (
-          <div className="grid gap-1">
-            {lances.map((l) => {
-              const tipo = TIPOS.find((t) => t.v === l.tipo);
-              return (
-                <div key={l.id} className="flex items-center gap-2 rounded bg-secondary/40 px-2 py-1.5 text-sm">
-                  <span className="text-lg">{tipo?.icon}</span>
-                  <span className="flex-1">{profiles[l.user_id]?.nome || "—"} — {nomeTime(l.time_id)}</span>
-                  <span className="text-xs text-muted-foreground">{new Date(l.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                  <button onClick={() => excluir(l.id)} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+      {/* BLOCO 4 — Histórico */}
+      <div className="border-t border-[#2A2A2A] bg-[#1A1A1A] p-2" style={{ height: 120 }}>
+        <div className="mb-1 flex items-center justify-between">
+          <Link to="/peladas/$id" params={{ id }} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <ArrowLeft className="h-3 w-3" />Voltar
+          </Link>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Lances ({lances.length})</span>
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ maxHeight: 84 }}>
+          {lances.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum lance marcado.</p>
+          ) : lances.map((l) => {
+            const tipo = TIPOS.find((t) => t.v === l.tipo);
+            return (
+              <div key={l.id} className="flex shrink-0 items-center gap-1.5 rounded bg-[#2A2A2A] px-2 py-1.5 text-xs">
+                <span className="text-base">{tipo?.icon}</span>
+                <div className="flex flex-col leading-tight">
+                  <span className="font-bold">{profiles[l.user_id]?.nome || "—"}</span>
+                  <span className="text-[10px]" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                {ehAuxiliar && (
+                  <button onClick={() => excluir(l.id)} className="ml-1 text-muted-foreground hover:text-red-500">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* BLOCO 3 — Drawer seletor de jogador */}
+      {drawer && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => setDrawer(null)}>
+          <div
+            className="w-full rounded-t-2xl bg-[#1A1A1A] p-4 shadow-xl transition-transform duration-300"
+            style={{ transform: "translateY(0)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-bold">
+                Quem fez o {TIPOS.find((t) => t.v === drawer.tipo)?.label}?
+              </h3>
+              <button onClick={() => setDrawer(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto">
+              {jogadoresDoTime(drawer.timeId).map((j) => (
+                <button
+                  key={j.user_id}
+                  onClick={() => marcar(j.user_id)}
+                  className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold transition active:scale-95"
+                >
+                  {j.eh_goleiro && <span>🧤</span>}
+                  <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
