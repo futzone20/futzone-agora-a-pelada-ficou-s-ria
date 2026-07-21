@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { slugify, calcularTabela } from "@/lib/placar";
+import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
 
 export const Route = createFileRoute("/peladas/$id/controle")({ component: Wrapper });
 
@@ -182,6 +183,7 @@ function Controle() {
     if (!confirm("Encerrar pelada?")) return;
     await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
     await supabase.from("placar_sessao").update({ ativa: false, encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id);
+    void notificarVencedoresPelada(id);
     toast.success("Pelada encerrada");
     navigate({ to: "/capitao" });
   };
