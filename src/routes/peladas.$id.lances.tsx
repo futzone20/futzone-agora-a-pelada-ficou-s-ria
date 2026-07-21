@@ -182,10 +182,17 @@ function LancesPage() {
     else toast.success("Lance marcado ✓");
     setDrawer(null);
 
-    if (tipo === "gol") {
-      const { data: p }: any = await supabase.from("partidas").select("placar_a, placar_b").eq("id", partida.id).single();
+    // Refetch partida para refletir placar atualizado pelo trigger
+    const { data: partidaAtualizada }: any = await supabase
+      .from("partidas")
+      .select("*")
+      .eq("id", partida.id)
+      .single();
+    if (partidaAtualizada) setPartida(partidaAtualizada);
+
+    if (tipo === "gol" && partidaAtualizada) {
       const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
-      if (pel?.gols_para_encerrar && (p.placar_a >= pel.gols_para_encerrar || p.placar_b >= pel.gols_para_encerrar)) {
+      if (pel?.gols_para_encerrar && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
         void encerrarPartidaAuto();
       }
     }
