@@ -54,7 +54,7 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
   return (
     <div className="min-h-screen bg-[#0D0D0D] pb-24 text-foreground">
       <header className="sticky top-0 z-20 flex items-center justify-between border-none bg-[#0D0D0D] px-4 py-3">
-        <div className="text-lg font-bold">FUT<span className="text-[#00FF87]">Z</span>ONE</div>
+        <div className="text-lg font-bold">MR<span className="text-[#00FF87]">FUT</span></div>
         <div className="flex items-center gap-1">
           <Sheet open={openNotif} onOpenChange={(o) => { setOpenNotif(o); if (o) void markAll(); }}>
             <SheetTrigger asChild>
