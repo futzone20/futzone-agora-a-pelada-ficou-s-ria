@@ -306,7 +306,8 @@ function LancesPage() {
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", height: "100vh", background: "#0D0D0D", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "#0D0D0D", display: "flex", flexDirection: "column" }}>
+      <style>{`body { overflow-x: hidden; } ::-webkit-scrollbar { display: none; } * { scrollbar-width: none; }`}</style>
       {/* BLOCO 1 — HERO */}
       <div
         className="relative shrink-0"
