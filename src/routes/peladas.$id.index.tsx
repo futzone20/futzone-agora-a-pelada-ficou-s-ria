@@ -216,11 +216,14 @@ function PeladaDetail() {
 
   // Auto-encerrar pelada quando aluguel zera
   useEffect(() => {
-    if (pelada?.status === "em_andamento" && pelada?.aluguel_iniciado_em && tempoAluguelSec === 0 && !alertaAluguelEmitido) {
-      setAlertaAluguelEmitido(true);
-      void encerrarPeladaAuto();
-    }
-  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em]);
+    if (loading) return;
+    if (!pelada?.aluguel_iniciado_em) return;
+    if (pelada?.status !== "em_andamento") return;
+    if (tempoAluguelSec !== 0) return;
+    if (alertaAluguelEmitido) return;
+    setAlertaAluguelEmitido(true);
+    void encerrarPeladaAuto();
+  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, loading, alertaAluguelEmitido]);
 
   // Quando uma partida encerra e ainda há tempo de aluguel, cria próxima automaticamente
   useEffect(() => {
@@ -281,53 +284,39 @@ function PeladaDetail() {
   const iniciarPelada = async (comAtraso: boolean = false) => {
     if (!pelada || !isCapitao || acting) return;
     setActing(true);
-    try {
-      const agora = new Date().toISOString();
-      const { error: errPelada } = await supabase
-        .from("peladas")
-        .update({
-          status: "em_andamento",
-          aluguel_iniciado_em: agora,
-          ...(comAtraso ? { atraso_registrado_em: agora } : {}),
-        } as never)
-        .eq("id", id);
-      if (errPelada) throw errPelada;
+    const agora = new Date().toISOString();
 
-      const { data: tms } = await supabase
-        .from("times").select("*").eq("pelada_id", id).order("ordem");
-      if (!tms || tms.length < 2) {
-        toast.error("Sorteio não encontrado. Faça o sorteio antes de iniciar.");
-        setActing(false);
-        return;
-      }
-
-      const { error: errPartida } = await supabase.from("partidas").insert({
-        pelada_id: id,
-        numero_partida: 1,
-        time_a_id: (tms[0] as any).id,
-        time_b_id: (tms[1] as any).id,
-        time_fora_id: (tms[2] as any)?.id ?? null,
-        placar_a: 0,
-        placar_b: 0,
+    const { error: errPelada } = await supabase
+      .from("peladas")
+      .update({
         status: "em_andamento",
-        duracao_minutos: pelada.duracao_partida_minutos ?? 8,
-        iniciada_em: agora,
-      } as never);
-      if (errPartida) {
-        console.error('Erro ao criar partida:', errPartida);
-        toast.error(`Erro ao criar partida: ${errPartida.message || errPartida.code || JSON.stringify(errPartida)}`);
-        setActing(false);
-        return;
-      }
+        aluguel_iniciado_em: agora,
+        ...(comAtraso ? { atraso_registrado_em: agora } : {}),
+      } as never)
+      .eq("id", id);
+    if (errPelada) { toast.error(errPelada.message); setActing(false); return; }
 
-      toast.success(comAtraso ? "⏰ Pelada iniciada com atraso!" : "🟢 Pelada iniciada!");
-      void load();
-    } catch (err: any) {
-      console.error('Erro iniciarPelada:', err);
-      toast.error(err?.message || err?.code || JSON.stringify(err) || "Erro ao iniciar pelada.");
-    } finally {
-      setActing(false);
-    }
+    const { data: tms, error: errTimes } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
+    if (errTimes) { toast.error(errTimes.message); setActing(false); return; }
+    if (!tms || tms.length < 2) { toast.error("Times não encontrados. Faça o sorteio primeiro."); setActing(false); return; }
+
+    const { error: errPartida } = await supabase.from("partidas").insert({
+      pelada_id: id,
+      numero_partida: 1,
+      time_a_id: (tms[0] as any).id,
+      time_b_id: (tms[1] as any).id,
+      time_fora_id: (tms[2] as any)?.id ?? null,
+      placar_a: 0,
+      placar_b: 0,
+      status: "em_andamento",
+      duracao_minutos: pelada.duracao_partida_minutos ?? 8,
+      iniciada_em: agora,
+    } as never);
+    if (errPartida) { toast.error(errPartida.message); setActing(false); return; }
+
+    toast.success(comAtraso ? "⏰ Pelada iniciada com atraso!" : "🟢 Pelada iniciada!");
+    void load();
+    setActing(false);
   };
 
 
