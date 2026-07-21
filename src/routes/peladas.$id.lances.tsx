@@ -41,6 +41,8 @@ function LancesPage() {
   const [auxiliar, setAuxiliar] = useState<any>(null);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [drawer, setDrawer] = useState<{ tipo: string; timeId: string } | null>(null);
+  const [drawerGoleiro, setDrawerGoleiro] = useState<{ goleiroTimeId: string; goleiroTimeNome: string; goleiroTimeCor: string } | null>(null);
+  const [pendingGol, setPendingGol] = useState<{ userId: string; tipo: string; timeId: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [isCapitao, setIsCapitao] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
@@ -191,30 +193,81 @@ function LancesPage() {
   const marcar = async (userId: string) => {
     if (!partida || !user || !drawer) return;
     const { tipo, timeId } = drawer;
+
+    // Se for gol: primeiro registrar o gol, depois perguntar goleiro adversário
+    if (tipo === "gol") {
+      // Inserir o gol
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Gol registrado! ⚽");
+      setDrawer(null);
+      void load();
+
+      // Refetch placar
+      const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+      if (partidaAtualizada) setPartida(partidaAtualizada);
+
+      // Verificar encerramento por gols
+      if (partidaAtualizada) {
+        const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
+        if (pel?.gols_para_encerrar && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
+          void encerrarPartidaAuto();
+          return;
+        }
+      }
+
+      // Abrir drawer do goleiro adversário
+      // Time adversário = o outro time (não o timeId do gol)
+      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+      const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
+      const goleirosAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId && j.eh_goleiro);
+
+      if (goleirosAdversario.length > 0 && timeAdversario) {
+        setPendingGol({ userId, tipo, timeId });
+        setDrawerGoleiro({
+          goleiroTimeId: timeAdversarioId,
+          goleiroTimeNome: timeAdversario.nome,
+          goleiroTimeCor: timeAdversario.cor,
+        });
+      }
+
+      return;
+    }
+
+    // Outros lances: fluxo normal
     const { error } = await supabase.from("lances").insert({
       partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
     } as never);
     if (error) toast.error(error.message);
     else toast.success("Lance marcado ✓");
     setDrawer(null);
-
-    // Recarregar lances imediatamente após marcar (não esperar realtime)
     void load();
 
-    // Refetch partida para refletir placar atualizado pelo trigger
-    const { data: partidaAtualizada }: any = await supabase
-      .from("partidas")
-      .select("*")
-      .eq("id", partida.id)
-      .single();
+    const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
     if (partidaAtualizada) setPartida(partidaAtualizada);
+  };
 
-    if (tipo === "gol" && partidaAtualizada) {
-      const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
-      if (pel?.gols_para_encerrar && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
-        void encerrarPartidaAuto();
-      }
+  const marcarGoleiro = async (goleiroUserId: string | null) => {
+    if (!partida || !user || !drawerGoleiro) return;
+
+    if (goleiroUserId) {
+      // Registrar lance de "frango" para o goleiro que sofreu
+      await supabase.from("lances").insert({
+        partida_id: partida.id,
+        pelada_id: id,
+        tipo: "frango",
+        user_id: goleiroUserId,
+        time_id: drawerGoleiro.goleiroTimeId,
+        marcado_por: user.id,
+      } as never);
+      toast.success("Goleiro registrado 🧤");
     }
+
+    setDrawerGoleiro(null);
+    setPendingGol(null);
+    void load();
   };
 
   const excluir = async (lid: string) => {
@@ -366,6 +419,49 @@ function LancesPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* BLOCO 3b — Drawer seletor de goleiro adversário */}
+      {drawerGoleiro && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => { setDrawerGoleiro(null); setPendingGol(null); }}>
+          <div
+            className="w-full rounded-t-2xl bg-[#1A1A1A] p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold">Quem sofreu o gol? 🧤</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Goleiro do <span className="font-bold" style={{ color: drawerGoleiro.goleiroTimeCor }}>{drawerGoleiro.goleiroTimeNome}</span>
+                </p>
+              </div>
+              <button onClick={() => { setDrawerGoleiro(null); setPendingGol(null); void load(); }} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
+              {timeJogadores
+                .filter((j: any) => j.time_id === drawerGoleiro.goleiroTimeId && j.eh_goleiro)
+                .map((j: any) => (
+                  <button
+                    key={j.user_id}
+                    onClick={() => marcarGoleiro(j.user_id)}
+                    className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold transition active:scale-95"
+                  >
+                    <span>🧤</span>
+                    <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Goleiro"}</span>
+                  </button>
+                ))
+              }
+            </div>
+            <button
+              onClick={() => marcarGoleiro(null)}
+              className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              Pular — sem goleiro definido
+            </button>
           </div>
         </div>
       )}
