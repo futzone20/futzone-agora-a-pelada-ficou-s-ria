@@ -3151,7 +3151,16 @@ export type Database = {
         | "em_andamento"
         | "encerrada"
         | "cancelada"
-      tipo_lance: "gol" | "passe_decisivo" | "defesa" | "falta" | "outro"
+      tipo_lance:
+        | "gol"
+        | "passe_decisivo"
+        | "defesa"
+        | "falta"
+        | "outro"
+        | "frango"
+        | "entrada_forte"
+        | "cartao_vermelho"
+        | "cartao_amarelo"
       tipo_superficie: "society" | "futsal" | "campo" | "outro"
     }
     CompositeTypes: {
@@ -3298,7 +3307,17 @@ export const Constants = {
         "encerrada",
         "cancelada",
       ],
-      tipo_lance: ["gol", "passe_decisivo", "defesa", "falta", "outro"],
+      tipo_lance: [
+        "gol",
+        "passe_decisivo",
+        "defesa",
+        "falta",
+        "outro",
+        "frango",
+        "entrada_forte",
+        "cartao_vermelho",
+        "cartao_amarelo",
+      ],
       tipo_superficie: ["society", "futsal", "campo", "outro"],
     },
   },
