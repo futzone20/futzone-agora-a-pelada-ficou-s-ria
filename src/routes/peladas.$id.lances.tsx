@@ -41,6 +41,8 @@ function LancesPage() {
   const [auxiliar, setAuxiliar] = useState<any>(null);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [drawer, setDrawer] = useState<{ tipo: string; timeId: string } | null>(null);
+  const [drawerGoleiro, setDrawerGoleiro] = useState<{ goleiroTimeId: string; goleiroTimeNome: string; goleiroTimeCor: string } | null>(null);
+  const [pendingGol, setPendingGol] = useState<{ userId: string; tipo: string; timeId: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [isCapitao, setIsCapitao] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
