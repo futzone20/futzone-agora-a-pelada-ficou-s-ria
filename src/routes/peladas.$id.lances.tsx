@@ -193,30 +193,81 @@ function LancesPage() {
   const marcar = async (userId: string) => {
     if (!partida || !user || !drawer) return;
     const { tipo, timeId } = drawer;
+
+    // Se for gol: primeiro registrar o gol, depois perguntar goleiro adversário
+    if (tipo === "gol") {
+      // Inserir o gol
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Gol registrado! ⚽");
+      setDrawer(null);
+      void load();
+
+      // Refetch placar
+      const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+      if (partidaAtualizada) setPartida(partidaAtualizada);
+
+      // Verificar encerramento por gols
+      if (partidaAtualizada) {
+        const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
+        if (pel?.gols_para_encerrar && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
+          void encerrarPartidaAuto();
+          return;
+        }
+      }
+
+      // Abrir drawer do goleiro adversário
+      // Time adversário = o outro time (não o timeId do gol)
+      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+      const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
+      const goleirosAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId && j.eh_goleiro);
+
+      if (goleirosAdversario.length > 0 && timeAdversario) {
+        setPendingGol({ userId, tipo, timeId });
+        setDrawerGoleiro({
+          goleiroTimeId: timeAdversarioId,
+          goleiroTimeNome: timeAdversario.nome,
+          goleiroTimeCor: timeAdversario.cor,
+        });
+      }
+
+      return;
+    }
+
+    // Outros lances: fluxo normal
     const { error } = await supabase.from("lances").insert({
       partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
     } as never);
     if (error) toast.error(error.message);
     else toast.success("Lance marcado ✓");
     setDrawer(null);
-
-    // Recarregar lances imediatamente após marcar (não esperar realtime)
     void load();
 
-    // Refetch partida para refletir placar atualizado pelo trigger
-    const { data: partidaAtualizada }: any = await supabase
-      .from("partidas")
-      .select("*")
-      .eq("id", partida.id)
-      .single();
+    const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
     if (partidaAtualizada) setPartida(partidaAtualizada);
+  };
 
-    if (tipo === "gol" && partidaAtualizada) {
-      const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
-      if (pel?.gols_para_encerrar && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
-        void encerrarPartidaAuto();
-      }
+  const marcarGoleiro = async (goleiroUserId: string | null) => {
+    if (!partida || !user || !drawerGoleiro) return;
+
+    if (goleiroUserId) {
+      // Registrar lance de "frango" para o goleiro que sofreu
+      await supabase.from("lances").insert({
+        partida_id: partida.id,
+        pelada_id: id,
+        tipo: "frango",
+        user_id: goleiroUserId,
+        time_id: drawerGoleiro.goleiroTimeId,
+        marcado_por: user.id,
+      } as never);
+      toast.success("Goleiro registrado 🧤");
     }
+
+    setDrawerGoleiro(null);
+    setPendingGol(null);
+    void load();
   };
 
   const excluir = async (lid: string) => {
