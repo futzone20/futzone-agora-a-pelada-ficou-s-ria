@@ -180,6 +180,7 @@ export function StatsPeladaModal({
         backgroundColor: "#0D0D0D",
         scale: 2.7,
         useCORS: true,
+        logging: true,
       });
       const blob: Blob | null = await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 1));
       if (!blob) throw new Error("Falha ao gerar imagem");
