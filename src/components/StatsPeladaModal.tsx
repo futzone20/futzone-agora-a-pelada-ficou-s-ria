@@ -481,20 +481,23 @@ export function StatsPeladaModal({
         <div className="pointer-events-none fixed -left-[9999px] top-0" aria-hidden>
           <div
             ref={storyRef}
-            className="flex h-[711px] w-[400px] flex-col justify-between bg-[#0D0D0D] p-8"
-            style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif" }}
+            className="flex h-[711px] w-[400px] flex-col justify-between p-8"
+            style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif", backgroundColor: "#0D0D0D" }}
           >
             <div>
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/50 bg-primary/10">
-                  <BarChart3 className="h-4 w-4 text-primary" />
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-lg"
+                  style={{ borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,255,135,0.5)", backgroundColor: "rgba(0,255,135,0.1)" }}
+                >
+                  <BarChart3 className="h-4 w-4" style={{ color: "#00FF87" }} />
                 </div>
                 <span className="text-xl font-black text-white">
-                  FUT<span className="text-primary">ZONE</span>
+                  FUT<span style={{ color: "#00FF87" }}>ZONE</span>
                 </span>
               </div>
               {peladaInfo && (
-                <div className="mt-1 text-xs text-white/50">
+                <div className="mt-1 text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
                   {peladaInfo.nome} • {new Date(peladaInfo.data).toLocaleDateString("pt-BR")}
                 </div>
               )}
@@ -508,12 +511,17 @@ export function StatsPeladaModal({
                     {tabela.map((t, i) => (
                       <div
                         key={t.id}
-                        className={`flex items-center justify-between rounded-xl px-4 py-3 ${i === 0 ? "border border-primary/60 bg-primary/10" : "bg-white/5"}`}
+                        className="flex items-center justify-between rounded-xl px-4 py-3"
+                        style={
+                          i === 0
+                            ? { borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,255,135,0.6)", backgroundColor: "rgba(0,255,135,0.1)" }
+                            : { backgroundColor: "rgba(255,255,255,0.05)" }
+                        }
                       >
                         <span className="flex items-center gap-2 font-bold text-white">
                           {i + 1}º <span className="h-3 w-3 rounded-full" style={{ background: t.cor }} /> {t.nome}
                         </span>
-                        <span className={`text-lg font-extrabold ${i === 0 ? "text-primary" : "text-white"}`}>{t.pts} pts</span>
+                        <span className="text-lg font-extrabold" style={{ color: i === 0 ? "#00FF87" : "#FFFFFF" }}>{t.pts} pts</span>
                       </div>
                     ))}
                   </div>
@@ -526,12 +534,17 @@ export function StatsPeladaModal({
                     {artilheiros.slice(0, 6).map((a, i) => (
                       <div
                         key={a.uid}
-                        className={`flex items-center justify-between rounded-xl px-4 py-3 ${i === 0 ? "border border-primary/60 bg-primary/10" : "bg-white/5"}`}
+                        className="flex items-center justify-between rounded-xl px-4 py-3"
+                        style={
+                          i === 0
+                            ? { borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,255,135,0.6)", backgroundColor: "rgba(0,255,135,0.1)" }
+                            : { backgroundColor: "rgba(255,255,255,0.05)" }
+                        }
                       >
                         <span className="font-bold text-white">
                           {i + 1}º {a.nome}
                         </span>
-                        <span className={`text-lg font-extrabold ${i === 0 ? "text-primary" : "text-white"}`}>{a.gols} gols</span>
+                        <span className="text-lg font-extrabold" style={{ color: i === 0 ? "#00FF87" : "#FFFFFF" }}>{a.gols} gols</span>
                       </div>
                     ))}
                   </div>
@@ -542,7 +555,7 @@ export function StatsPeladaModal({
                   <h3 className="mb-4 text-2xl font-extrabold text-white">📅 Partidas</h3>
                   <div className="space-y-3">
                     {partidas.slice(-6).map((p) => (
-                      <div key={p.id} className="rounded-xl bg-white/5 px-4 py-3">
+                      <div key={p.id} className="rounded-xl px-4 py-3" style={{ backgroundColor: "rgba(255,255,255,0.05)" }}>
                         <span className="text-sm font-bold text-white">
                           {timeNome(p.time_a_id)} {p.placar_a} x {p.placar_b} {timeNome(p.time_b_id)}
                         </span>
@@ -555,16 +568,22 @@ export function StatsPeladaModal({
                 <>
                   <h3 className="mb-4 text-2xl font-extrabold text-white">🧤 Goleiros</h3>
                   <div className="space-y-3">
-                    <div className="rounded-xl border border-primary/60 bg-primary/10 px-4 py-3">
-                      <div className="text-[11px] font-semibold uppercase text-primary">Menos vazado</div>
+                    <div
+                      className="rounded-xl px-4 py-3"
+                      style={{ borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,255,135,0.6)", backgroundColor: "rgba(0,255,135,0.1)" }}
+                    >
+                      <div className="text-[11px] font-semibold uppercase" style={{ color: "#00FF87" }}>Menos vazado</div>
                       <div className="text-lg font-bold text-white">{menosVazado.nome}</div>
-                      <div className="text-2xl font-extrabold text-primary">{menosVazado.sofridos} gols sofridos</div>
+                      <div className="text-2xl font-extrabold" style={{ color: "#00FF87" }}>{menosVazado.sofridos} gols sofridos</div>
                     </div>
                     {maisVazado && (
-                      <div className="rounded-xl border border-destructive/60 bg-destructive/10 px-4 py-3">
-                        <div className="text-[11px] font-semibold uppercase text-destructive">Mais vazado</div>
+                      <div
+                        className="rounded-xl px-4 py-3"
+                        style={{ borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,77,77,0.6)", backgroundColor: "rgba(255,77,77,0.1)" }}
+                      >
+                        <div className="text-[11px] font-semibold uppercase" style={{ color: "#FF4D4D" }}>Mais vazado</div>
                         <div className="text-lg font-bold text-white">{maisVazado.nome}</div>
-                        <div className="text-2xl font-extrabold text-destructive">{maisVazado.sofridos} gols sofridos</div>
+                        <div className="text-2xl font-extrabold" style={{ color: "#FF4D4D" }}>{maisVazado.sofridos} gols sofridos</div>
                       </div>
                     )}
                   </div>
@@ -572,8 +591,11 @@ export function StatsPeladaModal({
               )}
             </div>
 
-            <div className="flex items-center justify-center gap-2 border-t border-white/10 pt-4">
-              <div className="h-1 w-16 rounded-full bg-primary shadow-[0_0_10px_2px_rgba(0,255,135,0.7)]" />
+            <div
+              className="flex items-center justify-center gap-2 pt-4"
+              style={{ borderTopWidth: 1, borderTopStyle: "solid", borderTopColor: "rgba(255,255,255,0.1)" }}
+            >
+              <div className="h-1 w-16 rounded-full" style={{ backgroundColor: "#00FF87", boxShadow: "0 0 10px 2px rgba(0,255,135,0.7)" }} />
             </div>
           </div>
         </div>
