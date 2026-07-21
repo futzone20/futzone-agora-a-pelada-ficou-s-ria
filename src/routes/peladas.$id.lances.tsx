@@ -80,15 +80,17 @@ function LancesPage() {
     const { data: ps } = await supabase.from("partidas").select("*").eq("pelada_id", id).order("numero_partida");
     const ativa = (ps || []).find((p: any) => p.status === "em_andamento") || (ps || []).find((p: any) => p.status === "aguardando");
     setPartida(ativa);
+    setPartidasAll(ps || []);
     const { data: ts } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
     setTimes(ts || []);
     const { data: tj } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
     setTimeJogadores(tj || []);
+    const { data: lsAll } = await supabase.from("lances").select("*").eq("pelada_id", id).order("criado_em", { ascending: false });
+    setLancesAll(lsAll || []);
     if (ativa) {
       const { data: ax } = await supabase.from("auxiliares_partida").select("*").eq("partida_id", ativa.id).maybeSingle();
       setAuxiliar(ax);
-      const { data: ls } = await supabase.from("lances").select("*").eq("partida_id", ativa.id).order("criado_em", { ascending: false });
-      setLances(ls || []);
+      setLances((lsAll || []).filter((l: any) => l.partida_id === ativa.id));
     }
     if (pelData && user) {
       const { data: membro } = await supabase.from("grupo_membros")
