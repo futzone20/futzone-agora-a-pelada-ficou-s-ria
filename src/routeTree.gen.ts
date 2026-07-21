@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ParceiroRouteImport } from './routes/parceiro'
@@ -66,6 +67,11 @@ import { Route as PeladasIdCardRouteImport } from './routes/peladas.$id.card'
 import { Route as PeladasIdAvaliarRouteImport } from './routes/peladas.$id.avaliar'
 import { Route as JogadorParceirosSlugRouteImport } from './routes/jogador.parceiros.$slug'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
@@ -358,6 +364,7 @@ export interface FileRoutesByFullPath {
   '/parceiro': typeof ParceiroRouteWithChildren
   '/ranking': typeof RankingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin/ads': typeof AdminAdsRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
@@ -411,6 +418,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/ranking': typeof RankingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin/ads': typeof AdminAdsRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
@@ -470,6 +478,7 @@ export interface FileRoutesById {
   '/parceiro': typeof ParceiroRouteWithChildren
   '/ranking': typeof RankingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin/ads': typeof AdminAdsRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
@@ -530,6 +539,7 @@ export interface FileRouteTypes {
     | '/parceiro'
     | '/ranking'
     | '/recuperar-senha'
+    | '/reset-password'
     | '/admin/ads'
     | '/admin/comunicacao'
     | '/admin/financeiro'
@@ -583,6 +593,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/ranking'
     | '/recuperar-senha'
+    | '/reset-password'
     | '/admin/ads'
     | '/admin/comunicacao'
     | '/admin/financeiro'
@@ -641,6 +652,7 @@ export interface FileRouteTypes {
     | '/parceiro'
     | '/ranking'
     | '/recuperar-senha'
+    | '/reset-password'
     | '/admin/ads'
     | '/admin/comunicacao'
     | '/admin/financeiro'
@@ -700,6 +712,7 @@ export interface RootRouteChildren {
   ParceiroRoute: typeof ParceiroRouteWithChildren
   RankingRoute: typeof RankingRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ConviteCodigoRoute: typeof ConviteCodigoRoute
   GoleirosIdRoute: typeof GoleirosIdRoute
   GruposIdRoute: typeof GruposIdRoute
@@ -716,6 +729,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recuperar-senha': {
       id: '/recuperar-senha'
       path: '/recuperar-senha'
@@ -1234,6 +1254,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParceiroRoute: ParceiroRouteWithChildren,
   RankingRoute: RankingRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ConviteCodigoRoute: ConviteCodigoRoute,
   GoleirosIdRoute: GoleirosIdRoute,
   GruposIdRoute: GruposIdRoute,
@@ -1250,13 +1271,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
