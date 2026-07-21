@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
-import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, Trophy, User } from "lucide-react";
+import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, Trophy, User, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
