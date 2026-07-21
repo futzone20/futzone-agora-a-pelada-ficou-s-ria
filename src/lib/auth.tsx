@@ -100,8 +100,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn: AuthCtx["signIn"] = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message === "Invalid login credentials" ? "Credenciais inválidas" : error.message);
-    const p = await loadProfile(data.user.id);
-    if (!p) throw new Error("Perfil não encontrado");
+    let p = await loadProfile(data.user.id);
+    if (!p) {
+      await supabase.from("profiles").insert({
+        user_id: data.user.id,
+        nome: (data.user.user_metadata as any)?.nome || data.user.email?.split("@")[0] || "Usuário",
+        email: data.user.email || "",
+        role: ((data.user.user_metadata as any)?.role as string) || "jogador",
+      } as never);
+      await supabase.from("skills").insert({ user_id: data.user.id } as never).then(() => {});
+      await supabase.from("ofensivas").insert({ user_id: data.user.id, sequencia_atual: 0, maior_sequencia: 0 } as never).then(() => {});
+      p = await loadProfile(data.user.id);
+    }
+    if (!p) throw new Error("Erro ao carregar perfil. Tente novamente.");
     setUser(p);
     return p;
   };
