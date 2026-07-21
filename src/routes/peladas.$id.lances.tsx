@@ -518,7 +518,7 @@ function LancesPage() {
       )}
 
       {/* NAV INFERIOR */}
-      <nav className="shrink-0 border-t border-[#2A2A2A] bg-[#0D0D0D]" style={{ height: 64 }}>
+      <nav className="sticky bottom-0 border-t border-[#2A2A2A] bg-[#0D0D0D]" style={{ height: 64 }}>
         <div className="grid h-full grid-cols-4">
           <button onClick={() => navigate({ to: "/jogador" })} className="flex flex-col items-center justify-center gap-0.5 text-white/60">
             <Home className="h-5 w-5" />
