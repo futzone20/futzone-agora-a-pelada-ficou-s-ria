@@ -312,7 +312,7 @@ function LancesPage() {
       <div
         className="relative shrink-0"
         style={{
-          minHeight: 340,
+          paddingBottom: 16,
           backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.5) 100%), url(${STADIUM_BG})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
