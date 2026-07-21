@@ -510,7 +510,7 @@ export function StatsPeladaModal({
                   <BarChart3 className="h-4 w-4 text-primary" />
                 </div>
                 <span className="text-xl font-black text-white">
-                  FUT<span className="text-primary">ZONE</span>
+                  MR<span className="text-primary">FUT</span>
                 </span>
               </div>
               {peladaInfo && (
