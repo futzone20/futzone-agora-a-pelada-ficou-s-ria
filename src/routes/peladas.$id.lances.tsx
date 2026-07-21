@@ -432,7 +432,7 @@ function LancesPage() {
           >
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold">Quem sofreu o gol? 🧤</h3>
+                <h3 className="text-sm font-bold">Quem tomou o gol? 🧤</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Goleiro do <span className="font-bold" style={{ color: drawerGoleiro.goleiroTimeCor }}>{drawerGoleiro.goleiroTimeNome}</span>
                 </p>
@@ -443,19 +443,19 @@ function LancesPage() {
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
               {timeJogadores
-                .filter((j: any) => j.time_id === drawerGoleiro.goleiroTimeId && j.eh_goleiro)
+                .filter((j: any) => j.time_id === drawerGoleiro.goleiroTimeId)
                 .map((j: any) => (
                   <button
                     key={j.user_id}
                     onClick={() => marcarGoleiro(j.user_id)}
                     className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold transition active:scale-95"
                   >
-                    <span>🧤</span>
-                    <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Goleiro"}</span>
+                    <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
                   </button>
                 ))
               }
             </div>
+
             <button
               onClick={() => marcarGoleiro(null)}
               className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-muted-foreground hover:text-foreground"
