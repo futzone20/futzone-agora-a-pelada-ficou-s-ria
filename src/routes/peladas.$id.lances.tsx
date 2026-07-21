@@ -153,10 +153,26 @@ function LancesPage() {
     return `${d}/${m}/${y}`;
   }, [pelada]);
 
-  const minutoLance = (l: any) => {
-    if (!partida?.iniciada_em) return "?'";
-    const diff = Math.floor((new Date(l.criado_em).getTime() - new Date(partida.iniciada_em).getTime()) / 60000);
+  const minutoLance = (l: any, partidaRef?: any) => {
+    const ref = partidaRef ?? partida;
+    if (!ref?.iniciada_em) return "?'";
+    const diff = Math.floor((new Date(l.criado_em).getTime() - new Date(ref.iniciada_em).getTime()) / 60000);
     return `${Math.max(1, diff)}'`;
+  };
+
+  const ordinal = (n: number) => {
+    if (n === 1) return "1ª";
+    if (n === 2) return "2ª";
+    if (n === 3) return "3ª";
+    return `${n}ª`;
+  };
+
+  const excluirLance = async (lanceId: string) => {
+    if (!ehAuxiliar) return;
+    const { error } = await supabase.from("lances").delete().eq("id", lanceId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Lance removido");
+    void load();
   };
 
   const encerrarPartidaAuto = async () => {
