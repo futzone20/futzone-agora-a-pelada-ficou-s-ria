@@ -391,7 +391,7 @@ function LancesPage() {
       </div>
 
       {/* BLOCO 2 — GRID DE LANCES */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto p-3">
+      <div className="relative p-3">
         <div className="grid grid-cols-2 gap-3 relative">
           {/* VS separator */}
           <div className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
