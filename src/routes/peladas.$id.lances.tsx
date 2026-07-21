@@ -425,7 +425,7 @@ function LancesPage() {
       </div>
 
       {/* BLOCO 3 — LANCES RECENTES (agrupados por partida) */}
-      <div className="shrink-0 border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5 overflow-y-auto" style={{ maxHeight: 400 }}>
+      <div className="border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Activity className="h-3.5 w-3.5" style={{ color: "#00FF87" }} />
