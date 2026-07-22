@@ -870,19 +870,101 @@ function PeladaDetail() {
             </Button>
           )}
 
-          {pelada.status === "encerrada" && (
-            <>
-              {pelada.avaliacao_aberta && (
-                <Button asChild className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl">
-                  <Link to="/peladas/$id/avaliar" params={{ id }}><Star className="mr-2 h-4 w-4" /> Avaliar pelada</Link>
-                </Button>
-              )}
-              <Button onClick={() => setStatsOpen(true)} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><BarChart3 className="mr-2 h-4 w-4" /> Ver estatísticas</Button>
-              <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl">
-                <Link to="/peladas/$id/card" params={{ id }}><Trophy className="mr-2 h-4 w-4" /> Card de vitória</Link>
-              </Button>
-            </>
-          )}
+          {pelada.status === "encerrada" && (() => {
+            const vencedor = resumoEncerrada?.vencedor;
+            const corVenc = vencedor ? corTextoLegivel(vencedor.cor, "#9CA3AF") : "#00FF87";
+            const souVencedor = !!vencedor && times.find((t) => t.id === vencedor.id)?.membros.some((m) => m.user_id === user?.id);
+            return (
+              <div className="col-span-2 space-y-4">
+                {vencedor && (
+                  <div
+                    className="rounded-2xl border-2 p-5 text-center"
+                    style={{ borderColor: vencedor.cor, background: `linear-gradient(135deg, ${vencedor.cor}22, #1A1A1A)` }}
+                  >
+                    <Crown className="mx-auto h-8 w-8" style={{ color: corVenc }} />
+                    <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Time vencedor</div>
+                    <div className="mt-1 text-2xl font-black" style={{ color: corVenc }}>{vencedor.nome}</div>
+                    <div className="text-xs text-gray-400">campeão da rodada</div>
+                  </div>
+                )}
+
+                {souVencedor && (
+                  <div className="rounded-xl border border-[#00FF87]/40 bg-[#00FF87]/10 p-3 text-center text-sm font-bold text-[#00FF87]">
+                    🎉 Parabéns! Seu time foi o campeão dessa pelada!
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  {pelada.avaliacao_aberta && (
+                    <Link to="/peladas/$id/avaliar" params={{ id }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3">
+                      <Star className="h-5 w-5 text-[#00FF87]" />
+                      <div className="mt-2 text-sm font-bold text-white">Avaliar Jogadores</div>
+                      <div className="text-[10px] text-gray-400">Dê suas notas, escolha o MVP e ganhe XP</div>
+                      <div className="mt-2 flex justify-end text-[#00FF87]"><ChevronRight className="h-4 w-4" /></div>
+                    </Link>
+                  )}
+                  <Link to="/peladas/$id/card" params={{ id }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3">
+                    <Trophy className="h-5 w-5 text-[#00FF87]" />
+                    <div className="mt-2 text-sm font-bold text-white">Card da Vitória</div>
+                    <div className="text-[10px] text-gray-400">Gere e compartilhe com o time</div>
+                    <div className="mt-2 flex items-center justify-end gap-1 text-[10px] font-bold text-[#00FF87]">Compartilhe <ChevronRight className="h-4 w-4" /></div>
+                  </Link>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-sm font-bold text-white">Estatísticas</div>
+                    <button onClick={() => { setStatsInitialTab("times"); setStatsOpen(true); }} className="flex items-center gap-1 text-xs font-bold text-[#00FF87]">
+                      Ver tudo <ChevronRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => { setStatsInitialTab("times"); setStatsOpen(true); }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3 text-left">
+                      <Users className="h-5 w-5 text-[#00FF87]" />
+                      <div className="mt-2 text-sm font-bold text-white">Times</div>
+                      <div className="text-[10px] text-gray-400">Ranking e pontos</div>
+                    </button>
+                    <button onClick={() => { setStatsInitialTab("artilheiros"); setStatsOpen(true); }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3 text-left">
+                      <span className="text-lg">⚽</span>
+                      <div className="mt-2 text-sm font-bold text-white">Artilheiros</div>
+                      <div className="text-[10px] text-gray-400">Quem fez os gols</div>
+                    </button>
+                    <button onClick={() => { setStatsInitialTab("partidas"); setStatsOpen(true); }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3 text-left">
+                      <ClipboardList className="h-5 w-5 text-[#00FF87]" />
+                      <div className="mt-2 text-sm font-bold text-white">Partidas</div>
+                      <div className="text-[10px] text-gray-400">Resumo dos jogos</div>
+                    </button>
+                    <button onClick={() => { setStatsInitialTab("goleiros"); setStatsOpen(true); }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3 text-left">
+                      <Hand className="h-5 w-5 text-[#00FF87]" />
+                      <div className="mt-2 text-sm font-bold text-white">Goleiros</div>
+                      <div className="text-[10px] text-gray-400">Menos e mais vazados</div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3">
+                  <div className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">Resumo rápido</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <Star className="mx-auto h-4 w-4 text-[#FACC15]" />
+                      <div className="mt-1 text-[10px] uppercase text-gray-400">MVP</div>
+                      <div className="truncate text-xs font-bold text-white">{resumoEncerrada?.mvpNome || "—"}</div>
+                    </div>
+                    <div>
+                      <Crown className="mx-auto h-4 w-4 text-[#00FF87]" />
+                      <div className="mt-1 text-[10px] uppercase text-gray-400">Líder</div>
+                      <div className="truncate text-xs font-bold text-white">{vencedor?.nome || "—"}</div>
+                    </div>
+                    <div>
+                      <span className="text-sm">⚽</span>
+                      <div className="mt-1 text-[10px] uppercase text-gray-400">Destaque</div>
+                      <div className="truncate text-xs font-bold text-white">{resumoEncerrada?.artilheiroGols ? `${resumoEncerrada.artilheiroGols} gols` : "—"}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
