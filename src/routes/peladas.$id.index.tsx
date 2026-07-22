@@ -538,33 +538,36 @@ function PeladaDetail() {
           };
           return (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-white font-bold"><Users className="h-5 w-5" /> Times sorteados</div>
+              <div className="flex items-center gap-2 text-white font-bold uppercase tracking-wide text-sm"><Users className="h-5 w-5" /> Times sorteados</div>
 
               {meuTime && (
                 <div className="rounded-2xl border-2 bg-[#1A1A1A] p-4 relative overflow-hidden" style={{ borderColor: meuTime.cor }}>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 font-bold text-lg" style={{ color: corTextoLegivel(meuTime.cor) }}>
-                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${estaDeFora(meuTime) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(meuTime)}</span>
-                      Seu time: {meuTime.nome} <Trophy className="h-4 w-4" />
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: meuTime.cor }}>
+                        <Star className="h-5 w-5" style={{ color: corTextoLegivel(meuTime.cor) }} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: corTextoLegivel(meuTime.cor) }}>Seu time</div>
+                        <div className="text-lg font-black text-white leading-tight">{meuTime.nome}</div>
+                      </div>
                     </div>
-                    {temRodizio && estaDeFora(meuTime) && (
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-[#AAA]">⏳ fora na 1ª</span>
-                    )}
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${estaDeFora(meuTime) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(meuTime)}</span>
                   </div>
+                  {temRodizio && estaDeFora(meuTime) && (
+                    <div className="mb-2 flex items-center gap-1 text-[10px] font-bold text-[#AAA]"><User className="h-3 w-3" /> fora na 1ª rodada</div>
+                  )}
                   <div className="flex gap-4">
-                    <div className="h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20" style={{ backgroundColor: meuTime.cor }}>
-                      <Users className="h-8 w-8 text-white" />
-                    </div>
                     <div className="flex-1 space-y-1">
                       {meuTime.membros.map((m) => (
                         <div key={m.user_id} className="text-sm text-white">
-                          {m.nome}{m.user_id === user?.id && <span className="text-[#888] ml-1">(você)</span>}
+                          {m.nome}{m.user_id === user?.id && <span className="ml-1 font-bold" style={{ color: corTextoLegivel(meuTime.cor) }}>(você)</span>}
                         </div>
                       ))}
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] text-[#888] uppercase">FORÇA</div>
-                      <div className="text-2xl font-bold" style={{ color: corTextoLegivel(meuTime.cor) }}>{mediaTime(meuTime.membros).toFixed(2)}</div>
+                      <div className="text-[10px] text-[#888] uppercase">Força</div>
+                      <div className="text-2xl font-bold border-b-2 pb-0.5" style={{ color: corTextoLegivel(meuTime.cor), borderColor: meuTime.cor }}>{mediaTime(meuTime.membros).toFixed(2)}</div>
                     </div>
                   </div>
                   <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: meuTime.cor, opacity: 0.3 }} />
@@ -575,19 +578,20 @@ function PeladaDetail() {
               <div className="grid grid-cols-2 gap-3">
                 {times.filter((t) => t !== meuTime).map((t) => (
                   <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
+                    {temRodizio && estaDeFora(t) && (
+                      <span className="absolute right-3 top-3 flex items-center gap-1 text-[9px] font-bold text-[#AAA]"><User className="h-3 w-3" /> 1 fora</span>
+                    )}
                     <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
-                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${estaDeFora(t) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(t)}</span>
-                      <div className="h-10 w-10 rounded-full flex items-center justify-center bg-white/10" style={{ backgroundColor: t.cor }}>
-                        <Users className="h-5 w-5 text-white" />
+                      <div className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: t.cor }}>
+                        <Shirt className="h-5 w-5 text-white" />
                       </div>
                       <span className="truncate">{t.nome}</span>
-                      {temRodizio && estaDeFora(t) && <span className="ml-auto shrink-0 text-[9px] font-bold text-[#AAA]">⏳ fora</span>}
                     </div>
                     <div className="space-y-1 mb-4">
                       {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
                     </div>
                     <div className="absolute right-3 bottom-3 text-right">
-                      <div className="text-[9px] text-[#888] uppercase">FORÇA</div>
+                      <div className="text-[9px] text-[#888] uppercase">Força</div>
                       <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
                     </div>
                     <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
