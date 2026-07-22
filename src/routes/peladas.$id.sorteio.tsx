@@ -265,6 +265,35 @@ function SorteioPage() {
         </Button>
       </div>
 
+      <AlertDialog open={confirmacaoOpen} onOpenChange={setConfirmacaoOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar sorteio?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Você tem {totalLinha} jogador(es) de linha e {totalGoleirosDisp} goleiro(s) confirmado(s).</p>
+                <p>
+                  Isso vai formar {numTimesDinamico} times de {pelada?.jogadores_por_time} jogadores na linha
+                  {totalGoleirosDisp > 0 && totalGoleirosDisp < numTimesDinamico
+                    ? ", com os goleiros revezando entre os times (não tem um pra cada time ainda)."
+                    : totalGoleirosDisp >= numTimesDinamico
+                      ? ", com um goleiro fixo em cada time."
+                      : "."}
+                </p>
+                {numTimesDinamico === 3 && totalGoleirosDisp === 2 && (
+                  <p>O sistema vai equilibrar automaticamente colocando o goleiro mais fraco no time mais forte, e vice-versa, nos 2 times que começam jogando.</p>
+                )}
+                <p>Deseja sortear mesmo assim?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConfirmacaoOpen(false); gerarInterno(); }}>Sortear</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {times.length > 0 && (
         <>
           <div className="grid gap-3 md:grid-cols-2">
