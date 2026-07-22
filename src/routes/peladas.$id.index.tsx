@@ -43,6 +43,7 @@ function PeladaDetail() {
   const [pelada, setPelada] = useState<any>(null);
   const [quadra, setQuadra] = useState<any>(null);
   const [confirmacoes, setConfirmacoes] = useState<any[]>([]);
+  const [convidados, setConvidados] = useState<any[]>([]);
   const [profilesMap, setProfilesMap] = useState<Record<string, { nome: string }>>({});
   const [skillsMap, setSkillsMap] = useState<Record<string, any>>({});
   const [times, setTimes] = useState<{ id: string; nome: string; cor: string; ordem: number; membros: Jogador[] }[]>([]);
