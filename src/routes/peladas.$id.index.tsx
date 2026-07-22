@@ -617,7 +617,7 @@ function PeladaDetail() {
       </div>
 
       <div className="mt-4 space-y-4 px-4">
-        {times.length === 0 && (
+        {times.length === 0 && pelada.status !== "encerrada" && (
           <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
             <div>
               <div className="flex items-center gap-1 mb-3 text-white font-bold"><Users className="h-4 w-4" /> Jogadores ({confirmados.length})</div>
@@ -643,7 +643,7 @@ function PeladaDetail() {
           </div>
         )}
 
-        {times.length > 0 && pelada.status !== "em_andamento" && (
+        {times.length > 0 && pelada.status !== "em_andamento" && pelada.status !== "encerrada" && (
           <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
             <div className="flex items-center gap-1 mb-1 text-xs font-bold text-[#888]"><Users className="h-3.5 w-3.5" /> {confirmados.length} confirmados no sorteio</div>
           </div>
@@ -677,7 +677,7 @@ function PeladaDetail() {
           );
         })()}
 
-        {times.length > 0 && (() => {
+        {times.length > 0 && pelada.status !== "encerrada" && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
           const temRodizio = pelada.sistema_disputa === "rodizio" && times.length >= 3;
           const foraPrimeira = temRodizio ? [...times].sort((a, b) => a.ordem - b.ordem)[0] : null;
@@ -820,57 +820,60 @@ function PeladaDetail() {
           );
         })()}
 
-        <div className="grid grid-cols-2 gap-3">
-          {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
-            <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
-          ) : minhaConf?.status === "confirmado" ? (
-            <>
-              <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
-              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
-            </>
-          ) : (
-            <>
-              <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold uppercase tracking-wide h-13 rounded-xl">Em lista de espera</Button>
-              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
-            </>
-          )}
+        {pelada.status !== "encerrada" && (
+          <div className="grid grid-cols-2 gap-3">
+            {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
+              <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
+            ) : minhaConf?.status === "confirmado" ? (
+              <>
+                <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
+                <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
+              </>
+            ) : (
+              <>
+                <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold uppercase tracking-wide h-13 rounded-xl">Em lista de espera</Button>
+                <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
+              </>
+            )}
 
-          {!pelada.sorteio_feito && isCapitao && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
-            <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
-          )}
+            {!pelada.sorteio_feito && isCapitao && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
+              <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
+            )}
 
-          {isCapitao && pelada.sorteio_feito && pelada.status !== "em_andamento" && pelada.status !== "encerrada" && (
-            <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
-          )}
+            {isCapitao && pelada.sorteio_feito && pelada.status !== "em_andamento" && (
+              <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
+            )}
 
-          {isCapitao && pelada.status !== "encerrada" && (
-            <div className="col-span-2 grid grid-cols-3 gap-2">
-              <button onClick={() => setPresencasOpen(true)} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
-                <Users className="h-5 w-5" />
-                <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Gerenciar<br />presenças</span>
-              </button>
-              {pelada.sorteio_feito && (
-                <button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
-                  <RefreshCw className="h-5 w-5" />
-                  <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Refazer<br />sorteio</span>
+            {isCapitao && (
+              <div className="col-span-2 grid grid-cols-3 gap-2">
+                <button onClick={() => setPresencasOpen(true)} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                  <Users className="h-5 w-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Gerenciar<br />presenças</span>
                 </button>
-              )}
-              {pelada.status === "em_andamento" && (
-                <Link to="/peladas/$id/lances" params={{ id }} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
-                  <Shield className="h-5 w-5" />
-                  <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Painel de<br />lances</span>
-                </Link>
-              )}
-            </div>
-          )}
+                {pelada.sorteio_feito && (
+                  <button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                    <RefreshCw className="h-5 w-5" />
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Refazer<br />sorteio</span>
+                  </button>
+                )}
+                {pelada.status === "em_andamento" && (
+                  <Link to="/peladas/$id/lances" params={{ id }} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                    <Shield className="h-5 w-5" />
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Painel de<br />lances</span>
+                  </Link>
+                )}
+              </div>
+            )}
 
-          {!isCapitao && pelada.status === "em_andamento" && (
-            <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white uppercase tracking-wide h-12 rounded-xl">
-              <Link to="/peladas/$id/lances" params={{ id }}><ClipboardList className="mr-2 h-4 w-4" /> Painel de Lances</Link>
-            </Button>
-          )}
+            {!isCapitao && pelada.status === "em_andamento" && (
+              <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white uppercase tracking-wide h-12 rounded-xl">
+                <Link to="/peladas/$id/lances" params={{ id }}><ClipboardList className="mr-2 h-4 w-4" /> Painel de Lances</Link>
+              </Button>
+            )}
+          </div>
+        )}
 
-          {pelada.status === "encerrada" && (() => {
+        {pelada.status === "encerrada" && (() => {
             const vencedor = resumoEncerrada?.vencedor;
             const corVenc = vencedor ? corTextoLegivel(vencedor.cor, "#9CA3AF") : "#00FF87";
             const souVencedor = !!vencedor && times.find((t) => t.id === vencedor.id)?.membros.some((m) => m.user_id === user?.id);
@@ -965,7 +968,6 @@ function PeladaDetail() {
               </div>
             );
           })()}
-        </div>
       </div>
 
       <StatsPeladaModal open={statsOpen} onOpenChange={setStatsOpen} peladaId={id} initialTab={statsInitialTab} />
