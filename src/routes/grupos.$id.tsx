@@ -709,7 +709,7 @@ function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: 
   };
   const excluir = async () => {
     if (temAtiva) return toast.error("Existem peladas em andamento");
-    if (!confirm("Excluir grupo definitivamente?")) return;
+    if (!(await confirm({ title: "Excluir grupo", description: "Excluir grupo definitivamente? Essa ação não pode ser desfeita.", variant: "destructive", confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("grupos").delete().eq("id", grupo.id);
     if (error) return toast.error(error.message);
     toast.success("Grupo excluído"); onDeleted();
