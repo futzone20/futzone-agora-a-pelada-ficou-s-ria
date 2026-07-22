@@ -144,11 +144,15 @@ function SorteioPage() {
     setTimes(ui);
   };
 
-  const gerar = () => {
+  const gerar = async () => {
     if (!pelada) return;
     if (pendentes.length > 0) {
       const nomes = pendentes.map((p) => p.nome).join(", ");
-      if (!confirm(`⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`)) return;
+      if (!(await confirm({
+        title: "Jogadores sem skills",
+        description: `⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`,
+        confirmLabel: "Continuar mesmo assim",
+      }))) return;
     }
     if (times.length === 0) { setConfirmacaoOpen(true); return; }
     gerarInterno();
