@@ -82,83 +82,88 @@ function PeladaDetail() {
 
   const load = async () => {
     setLoading(true);
-    const { data: p } = await supabase.from("peladas").select("*").eq("id", id).maybeSingle();
-    setPelada(p);
-    if (p?.quadra_id) {
-      const { data: q } = await supabase.from("quadras_publicas").select("*").eq("id", p.quadra_id).maybeSingle();
-      setQuadra(q);
-    }
-    if (p && user) {
-      const { data: m } = await supabase.from("grupo_membros").select("papel").eq("grupo_id", p.grupo_id).eq("user_id", user.id).eq("status", "ativo").maybeSingle();
-      setIsCapitao(!!m && (m.papel === "capitao" || m.papel === "auxiliar"));
-    }
-    const { data: cc } = await supabase.from("pelada_confirmacoes").select("*").eq("pelada_id", id).order("confirmado_em");
-    setConfirmacoes(cc || []);
-    const { data: conv } = await supabase.from("pelada_convidados").select("*").eq("pelada_id", id);
-    setConvidados(conv || []);
-    const confUserIds = (cc || []).map((r: any) => r.user_id);
-    const safeConfIds = confUserIds.length > 0 ? confUserIds : ["00000000-0000-0000-0000-000000000000"];
-    const { data: confProfs } = await supabase.from("profiles").select("user_id, nome, email, foto_url").in("user_id", safeConfIds);
-    const { data: confSks } = await supabase.from("skills").select("user_id, velocidade, drible, passe, chute, resistencia, posicionamento").in("user_id", safeConfIds);
-    const profMap: Record<string, { nome: string }> = {};
-    const skMap: Record<string, any> = {};
-    (cc || []).forEach((r: any) => {
-      const pr: any = (confProfs || []).find((x: any) => x.user_id === r.user_id);
-      const sk: any = (confSks || []).find((x: any) => x.user_id === r.user_id);
-      profMap[r.user_id] = { nome: pr?.nome || pr?.email?.split("@")[0] || "Usuário" };
-      skMap[r.user_id] = sk || {};
-    });
-    setProfilesMap(profMap);
-    setSkillsMap(skMap);
-
-    if (p?.sorteio_feito) {
-      const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
-      const { data: tj } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
-      const nomesConvidados: Record<string, string> = {};
-      (conv || []).forEach((c: any) => { nomesConvidados[c.id] = `${c.nome} (convidado)`; });
-      const ts = (tms || []).map((t: any) => ({
-        id: t.id, nome: t.nome, cor: t.cor, ordem: t.ordem,
-        membros: (tj || []).filter((x: any) => x.time_id === t.id).map((x: any): Jogador => ({
-          user_id: x.user_id,
-          nome: profMap[x.user_id]?.nome || nomesConvidados[x.user_id] || "Jogador",
-          media: mediaSkill(skMap[x.user_id]),
-          eh_goleiro: x.eh_goleiro,
-        })),
-      }));
-      setTimes(ts);
-    } else {
-      setTimes([]);
-    }
-
-    if (p?.status === "em_andamento") {
-      const { data: pa } = await supabase.from("partidas").select("*").eq("pelada_id", id).eq("status", "em_andamento").order("numero_partida", { ascending: false }).limit(1).maybeSingle();
-      setPartidaAtual(pa || null);
-    } else {
-      setPartidaAtual(null);
-    }
-
-    if (p) {
-      const cap = (p.jogadores_por_time + p.goleiros_por_time) * p.numero_times;
-      const nConf = (cc || []).filter((c: any) => c.status === "confirmado").length;
-      if (p.status === "aguardando" && nConf >= cap) {
-        await supabase.from("peladas").update({ status: "confirmada" } as never).eq("id", id);
-        const { data: cap_user } = await supabase.from("grupo_membros").select("user_id").eq("grupo_id", p.grupo_id).eq("papel", "capitao").eq("status", "ativo").maybeSingle();
-        if (cap_user) {
-          await supabase.from("notificacoes").insert({
-            user_id: (cap_user as any).user_id,
-            titulo: "✅ Escalação completa!",
-            mensagem: `Todos os ${cap} jogadores confirmaram para "${p.nome_pelada}".`,
-            link: `/peladas/${id}`,
-          } as never);
-        }
-        setPelada({ ...p, status: "confirmada" });
-      } else if (p.status === "confirmada" && nConf < cap) {
-        await supabase.from("peladas").update({ status: "aguardando" } as never).eq("id", id);
-        setPelada({ ...p, status: "aguardando" });
+    try {
+      const { data: p } = await supabase.from("peladas").select("*").eq("id", id).maybeSingle();
+      setPelada(p);
+      if (p?.quadra_id) {
+        const { data: q } = await supabase.from("quadras_publicas").select("*").eq("id", p.quadra_id).maybeSingle();
+        setQuadra(q);
       }
-    }
+      if (p && user) {
+        const { data: m } = await supabase.from("grupo_membros").select("papel").eq("grupo_id", p.grupo_id).eq("user_id", user.id).eq("status", "ativo").maybeSingle();
+        setIsCapitao(!!m && (m.papel === "capitao" || m.papel === "auxiliar"));
+      }
+      const { data: cc } = await supabase.from("pelada_confirmacoes").select("*").eq("pelada_id", id).order("confirmado_em");
+      setConfirmacoes(cc || []);
+      const { data: conv } = await supabase.from("pelada_convidados").select("*").eq("pelada_id", id);
+      setConvidados(conv || []);
+      const confUserIds = (cc || []).map((r: any) => r.user_id);
+      const safeConfIds = confUserIds.length > 0 ? confUserIds : ["00000000-0000-0000-0000-000000000000"];
+      const { data: confProfs } = await supabase.from("profiles").select("user_id, nome, email, foto_url").in("user_id", safeConfIds);
+      const { data: confSks } = await supabase.from("skills").select("user_id, velocidade, drible, passe, chute, resistencia, posicionamento").in("user_id", safeConfIds);
+      const profMap: Record<string, { nome: string }> = {};
+      const skMap: Record<string, any> = {};
+      (cc || []).forEach((r: any) => {
+        const pr: any = (confProfs || []).find((x: any) => x.user_id === r.user_id);
+        const sk: any = (confSks || []).find((x: any) => x.user_id === r.user_id);
+        profMap[r.user_id] = { nome: pr?.nome || pr?.email?.split("@")[0] || "Usuário" };
+        skMap[r.user_id] = sk || {};
+      });
+      setProfilesMap(profMap);
+      setSkillsMap(skMap);
 
-    setLoading(false);
+      if (p?.sorteio_feito) {
+        const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
+        const { data: tj } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
+        const nomesConvidados: Record<string, string> = {};
+        (conv || []).forEach((c: any) => { nomesConvidados[c.id] = `${c.nome} (convidado)`; });
+        const ts = (tms || []).map((t: any) => ({
+          id: t.id, nome: t.nome, cor: t.cor, ordem: t.ordem,
+          membros: (tj || []).filter((x: any) => x.time_id === t.id).map((x: any): Jogador => ({
+            user_id: x.user_id,
+            nome: profMap[x.user_id]?.nome || nomesConvidados[x.user_id] || "Jogador",
+            media: mediaSkill(skMap[x.user_id]),
+            eh_goleiro: x.eh_goleiro,
+          })),
+        }));
+        setTimes(ts);
+      } else {
+        setTimes([]);
+      }
+
+      if (p?.status === "em_andamento") {
+        const { data: pa } = await supabase.from("partidas").select("*").eq("pelada_id", id).eq("status", "em_andamento").order("numero_partida", { ascending: false }).limit(1).maybeSingle();
+        setPartidaAtual(pa || null);
+      } else {
+        setPartidaAtual(null);
+      }
+
+      if (p) {
+        const cap = (p.jogadores_por_time + p.goleiros_por_time) * p.numero_times;
+        const nConf = (cc || []).filter((c: any) => c.status === "confirmado").length;
+        if (p.status === "aguardando" && nConf >= cap) {
+          await supabase.from("peladas").update({ status: "confirmada" } as never).eq("id", id);
+          const { data: cap_user } = await supabase.from("grupo_membros").select("user_id").eq("grupo_id", p.grupo_id).eq("papel", "capitao").eq("status", "ativo").maybeSingle();
+          if (cap_user) {
+            await supabase.from("notificacoes").insert({
+              user_id: (cap_user as any).user_id,
+              titulo: "✅ Escalação completa!",
+              mensagem: `Todos os ${cap} jogadores confirmaram para "${p.nome_pelada}".`,
+              link: `/peladas/${id}`,
+            } as never);
+          }
+          setPelada({ ...p, status: "confirmada" });
+        } else if (p.status === "confirmada" && nConf < cap) {
+          await supabase.from("peladas").update({ status: "aguardando" } as never).eq("id", id);
+          setPelada({ ...p, status: "aguardando" });
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao carregar dados da pelada:", err);
+      toast.error("Erro ao carregar a pelada. Puxe pra atualizar ou recarregue a página.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { void load(); }, [id, user?.id]);
@@ -319,9 +324,9 @@ function PeladaDetail() {
 
   const encerrarPeladaAuto = async () => {
     const { error: errP } = await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
-    if (errP) { console.error("Erro ao encerrar partidas da pelada:", errP); toast.error("Não foi possível encerrar a pelada automaticamente. Tente encerrar manualmente."); return; }
+    if (errP) { console.error("Erro ao encerrar partidas da pelada:", errP); toast.error(`Erro ao encerrar partidas: ${errP.message} (código: ${errP.code})`); return; }
     const { error: errPel } = await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
-    if (errPel) { console.error("Erro ao encerrar pelada:", errPel); toast.error("Não foi possível encerrar a pelada automaticamente. Tente encerrar manualmente."); return; }
+    if (errPel) { console.error("Erro ao encerrar pelada:", errPel); toast.error(`Erro ao encerrar pelada: ${errPel.message} (código: ${errPel.code})`); return; }
     void notificarVencedoresPelada(id);
     toast.success("⏱ Tempo de aluguel encerrado! Pelada finalizada.");
     setAvisoAluguelOpen(false);
@@ -354,7 +359,7 @@ function PeladaDetail() {
   const registrarAtrasoAluguel = async (minutos: number) => {
     if (!pelada) return;
     const { error } = await supabase.from("peladas").update({ tempo_locado_minutos: (pelada.tempo_locado_minutos ?? 60) + minutos } as never).eq("id", id);
-    if (error) { console.error("Erro ao registrar atraso:", error); toast.error("Não foi possível registrar o atraso. Tente de novo."); return; }
+    if (error) { console.error("Erro ao registrar atraso:", error); toast.error(`Erro ao registrar atraso: ${error.message} (código: ${error.code})`); return; }
     setAvisoAluguelOpen(false);
     toast.success(`+${minutos}min adicionados ao aluguel da quadra`);
     void load();
