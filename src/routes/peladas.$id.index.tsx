@@ -847,6 +847,57 @@ function PeladaDetail() {
         jogadoresPorTime={pelada.jogadores_por_time}
         onDone={() => { setSorteioOpen(false); void load(); }}
       />
+
+      <AlertDialog open={!!proximaPreview && !!partidaAtual === false && pelada.status === "em_andamento" && isCapitao} onOpenChange={(v) => { if (!v) setProximaPreview(null); }}>
+        <AlertDialogContent className="bg-[#0D0D0D] border-[#2A2A2A] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">🏁 Partida encerrada!</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-[#CCC]">
+                {proximaPreview && (
+                  <div className="text-base font-bold text-white">
+                    Próxima partida: {times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time"}{" "}x{" "}
+                    {times.find((t) => t.id === proximaPreview.timeBId)?.nome || "Time"}
+                  </div>
+                )}
+                <p>Quando o time estiver pronto, toque em "Iniciar Partida".</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={confirmarProximaPartida} className="bg-[#00FF87] text-black hover:bg-[#00E676] font-bold">
+              ▶ Iniciar Partida
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={avisoAluguelOpen} onOpenChange={(v) => { if (!v) setAvisoAluguelOpen(false); }}>
+        <AlertDialogContent className="bg-[#0D0D0D] border-[#CC0000] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">⏰ O horário da pelada acabou!</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-[#CCC]">
+                <p>O tempo de aluguel configurado já passou. O que você quer fazer?</p>
+                <p className="text-yellow-400 font-bold">
+                  Se ninguém decidir nada, a pelada encerra sozinha em {Math.floor(graceSec / 60)}:{(graceSec % 60).toString().padStart(2, "0")}.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(15)} className="w-full bg-white/10 text-white hover:bg-white/20">
+              + 15 min de atraso
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(30)} className="w-full bg-white/10 text-white hover:bg-white/20">
+              + 30 min de atraso
+            </AlertDialogAction>
+            <AlertDialogCancel onClick={encerrarPeladaAuto} className="w-full bg-[#CC0000] text-white hover:bg-[#AA0000] border-0">
+              Encerrar pelada agora
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
