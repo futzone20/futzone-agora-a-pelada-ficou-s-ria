@@ -4,8 +4,8 @@ export type PeladaStatus = "aguardando" | "confirmada" | "em_andamento" | "encer
 
 export const statusLabel = (s: PeladaStatus): string => {
   switch (s) {
-    case "aguardando": return "Aguardando Lista";
-    case "confirmada": return "Escalação Completa";
+    case "aguardando": return "Lista Liberada";
+    case "confirmada": return "Lista Encerrada";
     case "em_andamento": return "Em Andamento";
     case "encerrada": return "Encerrada";
     case "cancelada": return "Cancelada";
