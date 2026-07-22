@@ -106,11 +106,13 @@ function PeladaDetail() {
     if (p?.sorteio_feito) {
       const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
       const { data: tj } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
+      const nomesConvidados: Record<string, string> = {};
+      (conv || []).forEach((c: any) => { nomesConvidados[c.id] = `${c.nome} (convidado)`; });
       const ts = (tms || []).map((t: any) => ({
         id: t.id, nome: t.nome, cor: t.cor, ordem: t.ordem,
         membros: (tj || []).filter((x: any) => x.time_id === t.id).map((x: any): Jogador => ({
           user_id: x.user_id,
-          nome: profMap[x.user_id]?.nome || "Jogador",
+          nome: profMap[x.user_id]?.nome || nomesConvidados[x.user_id] || "Jogador",
           media: mediaSkill(skMap[x.user_id]),
           eh_goleiro: x.eh_goleiro,
         })),
