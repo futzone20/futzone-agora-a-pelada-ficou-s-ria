@@ -32,6 +32,7 @@ function CompletarCadastroPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [posicao, setPosicao] = useState<"linha" | "goleiro">("linha");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
