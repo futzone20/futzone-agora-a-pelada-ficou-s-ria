@@ -77,6 +77,7 @@ function CompletarCadastroPage() {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         whatsapp: whatsapp.trim(),
+        quer_ser_goleiro: posicao === "goleiro",
         cadastro_completo: true,
       } as never).eq("user_id", user.id);
       if (profError) throw new Error(profError.message);
