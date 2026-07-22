@@ -12,7 +12,8 @@ import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuf
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { mediaSkill, mediaTime, type Jogador } from "@/lib/sorteio";
+import { mediaSkill, mediaTime, corTextoLegivel, type Jogador } from "@/lib/sorteio";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
 import { StatsPeladaModal } from "@/components/StatsPeladaModal";
 import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
