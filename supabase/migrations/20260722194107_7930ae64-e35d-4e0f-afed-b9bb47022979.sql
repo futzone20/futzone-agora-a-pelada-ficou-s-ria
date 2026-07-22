@@ -1,0 +1,3 @@
+ALTER TABLE public.partidas
+  ADD COLUMN IF NOT EXISTS pausada_em TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS tempo_pausado_total_seg INTEGER NOT NULL DEFAULT 0;

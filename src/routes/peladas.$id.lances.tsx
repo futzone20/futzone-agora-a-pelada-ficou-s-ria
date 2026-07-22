@@ -5,7 +5,7 @@ import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, T
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { sugerirTrocaGoleiro } from "@/lib/sorteio";
+
 
 export const Route = createFileRoute("/peladas/$id/lances")({ component: Wrapper });
 
@@ -178,49 +178,6 @@ function LancesPage() {
   const encerrarPartidaAuto = async () => {
     if (!partida || encerrando) return;
     setEncerrando(true);
-    const { data: p }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
-    const vencedor = p.placar_a > p.placar_b ? p.time_a_id : p.placar_b > p.placar_a ? p.time_b_id : null;
-    const { data: pel }: any = await supabase.from("peladas").select("*").eq("id", id).single();
-
-    if (pel?.modalidade_goleiro === "fixo" && vencedor && p.time_fora_id) {
-      const { data: tmsData } = await supabase.from("times").select("*").eq("pelada_id", id);
-      const { data: tjData } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
-      const userIds = (tjData || []).map((x: any) => x.user_id);
-      const safe = userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"];
-      const { data: sksData } = await supabase.from("skills")
-        .select("user_id, velocidade, drible, passe, chute, resistencia, posicionamento").in("user_id", safe);
-      const { data: profsData } = await supabase.from("profiles").select("user_id, nome").in("user_id", safe);
-      const timesComNivel = (tmsData || []).map((t: any) => {
-        const jogs = (tjData || []).filter((j: any) => j.time_id === t.id && !j.eh_goleiro);
-        const gk = (tjData || []).find((j: any) => j.time_id === t.id && j.eh_goleiro);
-        const nivelGeral = jogs.length > 0
-          ? jogs.reduce((acc: number, j: any) => {
-              const sk: any = (sksData || []).find((s: any) => s.user_id === j.user_id);
-              const m = sk ? (sk.velocidade + sk.drible + sk.passe + sk.chute + sk.resistencia + sk.posicionamento) / 6 : 3;
-              return acc + m;
-            }, 0) / jogs.length
-          : 3;
-        const gkProf: any = gk ? (profsData || []).find((x: any) => x.user_id === gk.user_id) : null;
-        const gkSk: any = gk ? (sksData || []).find((x: any) => x.user_id === gk.user_id) : null;
-        return {
-          id: t.id, nome: t.nome, cor: t.cor, nivelGeral,
-          goleiro: gk ? { user_id: gk.user_id, nome: gkProf?.nome || "Goleiro", nivel: gkSk ? (gkSk.velocidade + gkSk.drible + gkSk.passe + gkSk.chute + gkSk.resistencia + gkSk.posicionamento) / 6 : 3 } : null,
-        };
-      });
-      const proximoPerdedor = vencedor === p.time_a_id ? p.time_b_id : p.time_a_id;
-      const { sugestao: temSug, trocas } = sugerirTrocaGoleiro({
-        times: timesComNivel,
-        timeVencedorId: vencedor,
-        timePerdedorId: proximoPerdedor,
-        timeForaId: p.time_fora_id,
-      });
-      if (temSug && trocas.length > 0) {
-        for (const tr of trocas) {
-          await supabase.from("time_jogadores").update({ time_id: tr.paraTimeId } as never).eq("pelada_id", id).eq("user_id", tr.goleiroId);
-        }
-      }
-    }
-
     await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("id", partida.id);
     toast.success("Partida encerrada");
     setEncerrando(false);

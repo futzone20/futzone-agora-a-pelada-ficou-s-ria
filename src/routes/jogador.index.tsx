@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -96,6 +97,7 @@ export function Inicio() {
       const { data: tj } = await supabase.from("time_jogadores").select("pelada_id").eq("user_id", user.id);
       const peladaIds = Array.from(new Set((tj || []).map((x: any) => x.pelada_id)));
       if (peladaIds.length) {
+        await encerrarPeladasVencidas(peladaIds);
         const { data: pAoVivo } = await supabase.from("peladas").select("id, nome_pelada").in("id", peladaIds).eq("status", "em_andamento").limit(1).maybeSingle();
         if (pAoVivo) {
           const { data: partida } = await supabase.from("partidas").select("*").eq("pelada_id", pAoVivo.id).eq("status", "em_andamento").maybeSingle();

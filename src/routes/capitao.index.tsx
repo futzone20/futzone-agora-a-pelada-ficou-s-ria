@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Flame, Star, CircleDot } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
+import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 
 export const Route = createFileRoute("/capitao/")({
   component: Inicio,
@@ -21,6 +22,7 @@ function Inicio() {
       const { data: tj } = await supabase.from("time_jogadores").select("pelada_id").eq("user_id", user.id);
       const peladaIds = Array.from(new Set((tj || []).map((x: any) => x.pelada_id)));
       if (!peladaIds.length) return;
+      await encerrarPeladasVencidas(peladaIds);
       const { data: pAoVivo } = await supabase.from("peladas").select("id, nome_pelada").in("id", peladaIds).eq("status", "em_andamento").limit(1).maybeSingle();
       if (!pAoVivo) return;
       const { data: partida } = await supabase.from("partidas").select("*").eq("pelada_id", pAoVivo.id).eq("status", "em_andamento").maybeSingle();

@@ -1914,10 +1914,12 @@ export type Database = {
           id: string
           iniciada_em: string | null
           numero_partida: number
+          pausada_em: string | null
           pelada_id: string
           placar_a: number
           placar_b: number
           status: Database["public"]["Enums"]["status_partida"]
+          tempo_pausado_total_seg: number
           time_a_id: string
           time_b_id: string
           time_fora_id: string | null
@@ -1930,10 +1932,12 @@ export type Database = {
           id?: string
           iniciada_em?: string | null
           numero_partida: number
+          pausada_em?: string | null
           pelada_id: string
           placar_a?: number
           placar_b?: number
           status?: Database["public"]["Enums"]["status_partida"]
+          tempo_pausado_total_seg?: number
           time_a_id: string
           time_b_id: string
           time_fora_id?: string | null
@@ -1946,10 +1950,12 @@ export type Database = {
           id?: string
           iniciada_em?: string | null
           numero_partida?: number
+          pausada_em?: string | null
           pelada_id?: string
           placar_a?: number
           placar_b?: number
           status?: Database["public"]["Enums"]["status_partida"]
+          tempo_pausado_total_seg?: number
           time_a_id?: string
           time_b_id?: string
           time_fora_id?: string | null
