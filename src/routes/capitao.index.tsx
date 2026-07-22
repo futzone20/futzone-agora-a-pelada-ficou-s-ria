@@ -1,24 +1,32 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { Flame, Star, CircleDot } from "lucide-react";
+import { Flame, Star, CircleDot, Calendar, Clock, MapPin } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
+import { PeladaStatusOuContagem, ConfirmadosProgress, useAgora } from "@/lib/pelada-status";
 
 export const Route = createFileRoute("/capitao/")({
   component: Inicio,
 });
 
+type ProximaRow = {
+  id: string; nome_pelada: string; data: string; horario_inicio: string; status: string;
+  quadra: { nome: string } | null;
+  confirmados: number; capacidade: number;
+};
+
 function Inicio() {
   const { user } = useAuth();
   const first = user?.nome.split(" ")[0] || "capitão";
   const [aoVivo, setAoVivo] = useState<{ pelada: any; partida: any; timeA: any; timeB: any } | null>(null);
+  const [proximas, setProximas] = useState<ProximaRow[]>([]);
+  const agora = useAgora();
 
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      // Pelada ao vivo em que o capitão está escalado (mesmo widget da home do jogador)
       const { data: tj } = await supabase.from("time_jogadores").select("pelada_id").eq("user_id", user.id);
       const peladaIds = Array.from(new Set((tj || []).map((x: any) => x.pelada_id)));
       if (!peladaIds.length) return;
@@ -30,6 +38,35 @@ function Inicio() {
       const timeA = (timesAoVivo || []).find((t: any) => t.id === partida?.time_a_id) || null;
       const timeB = (timesAoVivo || []).find((t: any) => t.id === partida?.time_b_id) || null;
       setAoVivo({ pelada: pAoVivo, partida, timeA, timeB });
+    })();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      const { data: ms } = await supabase.from("grupo_membros").select("grupo_id").eq("user_id", user.id).eq("status", "ativo").in("papel", ["capitao", "auxiliar"]);
+      const grupoIds = Array.from(new Set((ms || []).map((m: any) => m.grupo_id)));
+      if (!grupoIds.length) { setProximas([]); return; }
+      const { data: peladas } = await supabase
+        .from("peladas")
+        .select("id, nome_pelada, data, horario_inicio, status, quadra_id, jogadores_por_time, goleiros_por_time, numero_times")
+        .in("grupo_id", grupoIds)
+        .not("status", "in", "(encerrada,cancelada)")
+        .order("data", { ascending: true })
+        .limit(5);
+      const peladaIds = (peladas || []).map((p: any) => p.id);
+      const quadraIds = Array.from(new Set((peladas || []).map((p: any) => p.quadra_id).filter(Boolean)));
+      const { data: confs } = peladaIds.length ? await supabase.from("pelada_confirmacoes").select("pelada_id, status").in("pelada_id", peladaIds) : { data: [] as any[] };
+      const { data: quadras } = quadraIds.length ? await supabase.from("quadras_publicas").select("id, nome").in("id", quadraIds) : { data: [] as any[] };
+      const quadraMap: Record<string, { nome: string }> = {};
+      (quadras || []).forEach((q: any) => { quadraMap[q.id] = { nome: q.nome }; });
+      const out: ProximaRow[] = (peladas || []).map((p: any) => ({
+        id: p.id, nome_pelada: p.nome_pelada, data: p.data, horario_inicio: p.horario_inicio, status: p.status,
+        quadra: p.quadra_id ? quadraMap[p.quadra_id] : null,
+        confirmados: (confs || []).filter((c: any) => c.pelada_id === p.id && c.status === "confirmado").length,
+        capacidade: (p.jogadores_por_time + p.goleiros_por_time) * p.numero_times,
+      }));
+      setProximas(out);
     })();
   }, [user?.id]);
 
@@ -88,7 +125,26 @@ function Inicio() {
 
       <section>
         <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">Próximas peladas</h3>
-        <EmptyState icon={CircleDot} title="Nenhuma pelada agendada" description="Crie um grupo e marque a próxima pelada." />
+        {proximas.length === 0 ? (
+          <EmptyState icon={CircleDot} title="Nenhuma pelada agendada" description="Crie um grupo e marque a próxima pelada." />
+        ) : (
+          <div className="space-y-2">
+            {proximas.map((p) => (
+              <Link key={p.id} to="/peladas/$id" params={{ id: p.id }} className="block rounded-2xl border border-border bg-card p-4 transition hover:border-primary/50">
+                <div className="flex items-start justify-between">
+                  <div className="font-bold">{p.nome_pelada}</div>
+                  <PeladaStatusOuContagem status={p.status} data={p.data} horarioInicio={p.horario_inicio} agora={agora} />
+                </div>
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {p.data.split("-").reverse().join("/")}</span>
+                  <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {p.horario_inicio.slice(0, 5)}</span>
+                  {p.quadra && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {p.quadra.nome}</span>}
+                </div>
+                <ConfirmadosProgress confirmados={p.confirmados} capacidade={p.capacidade} />
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
