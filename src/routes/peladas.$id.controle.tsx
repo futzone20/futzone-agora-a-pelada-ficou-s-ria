@@ -164,26 +164,31 @@ function Controle() {
   };
 
   const encerrarPartida = async (p: any) => {
-    // Busca a partida mais atualizada do banco para garantir que estamos usando
-    // o placar real ao calcular vencedor/perdedor e herança de goleiro.
-    const { data: partidaAtual } = await supabase
+    await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("id", p.id);
+
+    // Busca a partida atualizada do banco antes de calcular vencedor/perdedor — o placar pode ter
+    // mudado fora da UI (ex: gols marcados na tela de lances) e o estado local (`p`) pode estar
+    // desatualizado nesse momento.
+    const { data: partidaAtual, error: fetchError } = await supabase
       .from("partidas")
       .select("*")
       .eq("id", p.id)
-      .single();
-    const partida = partidaAtual || p;
+      .maybeSingle();
 
-    await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("id", partida.id);
+    if (fetchError) {
+      console.error("Erro ao buscar partida atualizada:", fetchError);
+    }
+
+    const partidaParaCalculo = partidaAtual || p; // fallback pro estado local só se a busca falhar de verdade
+
     // próxima partida (rodízio): vencedor + time fora, perdedor sai
-    if (pelada.sistema_disputa === "rodizio" && partida.time_fora_id) {
-      const vencedor = partida.placar_a > partida.placar_b ? partida.time_a_id : partida.placar_b > partida.placar_a ? partida.time_b_id : null;
-      const perdedor = vencedor === partida.time_a_id ? partida.time_b_id : vencedor === partida.time_b_id ? partida.time_a_id : partida.time_b_id;
-      const novoA = vencedor || partida.time_a_id;
-      const novoB = partida.time_fora_id;
+    if (pelada.sistema_disputa === "rodizio" && partidaParaCalculo.time_fora_id) {
+      const vencedor = partidaParaCalculo.placar_a > partidaParaCalculo.placar_b ? partidaParaCalculo.time_a_id : partidaParaCalculo.placar_b > partidaParaCalculo.placar_a ? partidaParaCalculo.time_b_id : null;
+      const perdedor = vencedor === partidaParaCalculo.time_a_id ? partidaParaCalculo.time_b_id : vencedor === partidaParaCalculo.time_b_id ? partidaParaCalculo.time_a_id : partidaParaCalculo.time_b_id;
+      const novoA = vencedor || partidaParaCalculo.time_a_id;
+      const novoB = partidaParaCalculo.time_fora_id;
       const novoFora = perdedor;
-      // Goleiro "fixo por lado de campo": o time que está ENTRANDO herda o(s) goleiro(s) do time
-      // que está SAINDO — mas só se o time entrante ainda não tiver goleiro próprio (senão ele já
-      // tem o dele desde o sorteio e não deve ganhar um segundo).
+
       if (perdedor && novoB) {
         const novoBTemGoleiro = timeJogadores.some((x) => x.time_id === novoB && x.eh_goleiro);
         if (!novoBTemGoleiro) {
@@ -191,8 +196,9 @@ function Controle() {
             .eq("pelada_id", id).eq("time_id", perdedor).eq("eh_goleiro", true);
         }
       }
+
       const { data: nova } = await supabase.from("partidas").insert({
-        pelada_id: id, numero_partida: partida.numero_partida + 1,
+        pelada_id: id, numero_partida: partidaParaCalculo.numero_partida + 1,
         time_a_id: novoA, time_b_id: novoB, time_fora_id: novoFora,
         duracao_minutos: pelada.duracao_partida_minutos,
       } as never).select().single();
