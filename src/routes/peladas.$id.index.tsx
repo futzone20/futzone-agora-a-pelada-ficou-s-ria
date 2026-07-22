@@ -106,11 +106,13 @@ function PeladaDetail() {
     if (p?.sorteio_feito) {
       const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
       const { data: tj } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
+      const nomesConvidados: Record<string, string> = {};
+      (conv || []).forEach((c: any) => { nomesConvidados[c.id] = `${c.nome} (convidado)`; });
       const ts = (tms || []).map((t: any) => ({
         id: t.id, nome: t.nome, cor: t.cor, ordem: t.ordem,
         membros: (tj || []).filter((x: any) => x.time_id === t.id).map((x: any): Jogador => ({
           user_id: x.user_id,
-          nome: profMap[x.user_id]?.nome || "Jogador",
+          nome: profMap[x.user_id]?.nome || nomesConvidados[x.user_id] || "Jogador",
           media: mediaSkill(skMap[x.user_id]),
           eh_goleiro: x.eh_goleiro,
         })),
@@ -453,38 +455,28 @@ function PeladaDetail() {
 
         {times.length > 0 && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
-          // O time que fica de fora na 1ª rodada é sempre o de ordem 0 — é a mesma regra usada
-          // de fato ao iniciar a pelada (peladas.$id.controle.tsx), então isso aqui só espelha
-          // o que vai acontecer, sem risco de mostrar um time diferente do que realmente começa de fora.
           const temRodizio = pelada.sistema_disputa === "rodizio" && times.length >= 3;
           const foraPrimeira = temRodizio ? [...times].sort((a, b) => a.ordem - b.ordem)[0] : null;
           const estaDeFora = (t: typeof times[number]) => !!foraPrimeira && t.id === foraPrimeira.id;
+          const jogamPrimeiro = temRodizio ? [...times].filter((t) => !estaDeFora(t)).sort((a, b) => a.ordem - b.ordem) : [];
+          const numeroTime = (t: typeof times[number]) => {
+            if (!temRodizio) return t.ordem + 1;
+            if (estaDeFora(t)) return times.length;
+            return jogamPrimeiro.findIndex((x) => x.id === t.id) + 1;
+          };
           return (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-white font-bold"><Users className="h-5 w-5" /> Times sorteados</div>
-
-              {temRodizio && (
-                <div className="flex items-start gap-2 rounded-xl border border-[#2A2A2A] bg-[#141414] p-3 text-xs text-[#AAA]">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#00FF87]" />
-                  <div className="space-y-1">
-                    <div>A 1ª partida é entre os 2 times marcados <span className="text-[#00FF87] font-bold">▶ Começa jogando</span>.</div>
-                    <div>O time marcado <span className="text-yellow-400 font-bold">⏳ Começa de fora</span> entra no rodízio depois, revezando com quem perder.</div>
-                  </div>
-                </div>
-              )}
 
               {meuTime && (
                 <div className="rounded-2xl border-2 bg-[#1A1A1A] p-4 relative overflow-hidden" style={{ borderColor: meuTime.cor }}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 font-bold text-lg" style={{ color: corTextoLegivel(meuTime.cor) }}>
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${estaDeFora(meuTime) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(meuTime)}</span>
                       Seu time: {meuTime.nome} <Trophy className="h-4 w-4" />
                     </div>
-                    {temRodizio && (
-                      estaDeFora(meuTime) ? (
-                        <span className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 text-[10px] font-bold text-yellow-400">⏳ Começa de fora</span>
-                      ) : (
-                        <span className="rounded-full bg-[#00FF87]/10 border border-[#00FF87]/30 px-2 py-0.5 text-[10px] font-bold text-[#00FF87]">▶ Começa jogando</span>
-                      )
+                    {temRodizio && estaDeFora(meuTime) && (
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-[#AAA]">⏳ fora na 1ª</span>
                     )}
                   </div>
                   <div className="flex gap-4">
@@ -512,18 +504,13 @@ function PeladaDetail() {
                 {times.filter((t) => t !== meuTime).map((t) => (
                   <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
                     <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${estaDeFora(t) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(t)}</span>
                       <div className="h-10 w-10 rounded-full flex items-center justify-center bg-white/10" style={{ backgroundColor: t.cor }}>
                         <Users className="h-5 w-5 text-white" />
                       </div>
                       <span className="truncate">{t.nome}</span>
+                      {temRodizio && estaDeFora(t) && <span className="ml-auto shrink-0 text-[9px] font-bold text-[#AAA]">⏳ fora</span>}
                     </div>
-                    {temRodizio && (
-                      estaDeFora(t) ? (
-                        <div className="mb-2 inline-block rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 text-[10px] font-bold text-yellow-400">⏳ De fora</div>
-                      ) : (
-                        <div className="mb-2 inline-block rounded-full bg-[#00FF87]/10 border border-[#00FF87]/30 px-2 py-0.5 text-[10px] font-bold text-[#00FF87]">▶ Joga já</div>
-                      )
-                    )}
                     <div className="space-y-1 mb-4">
                       {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
                     </div>
