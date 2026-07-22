@@ -377,12 +377,18 @@ function PeladaDetail() {
     if (errTimes) { toast.error(errTimes.message); setActing(false); return; }
     if (!tms || tms.length < 2) { toast.error("Times não encontrados. Faça o sorteio primeiro."); setActing(false); return; }
 
+    const { data: tjGoleiros } = await supabase.from("time_jogadores").select("time_id").eq("pelada_id", id).eq("eh_goleiro", true);
+    const idsComGoleiro = new Set((tjGoleiros || []).map((x: any) => x.time_id));
+    const { jogam, fila } = escolherTimesIniciais(tms as any[], idsComGoleiro);
+    const filaIds = fila.map((t: any) => t.id);
+
     const { error: errPartida } = await supabase.from("partidas").insert({
       pelada_id: id,
       numero_partida: 1,
-      time_a_id: (tms[0] as any).id,
-      time_b_id: (tms[1] as any).id,
-      time_fora_id: (tms[2] as any)?.id ?? null,
+      time_a_id: (jogam[0] as any).id,
+      time_b_id: (jogam[1] as any).id,
+      time_fora_id: filaIds[0] ?? null,
+      fila_espera: filaIds,
       placar_a: 0,
       placar_b: 0,
       status: "em_andamento",
