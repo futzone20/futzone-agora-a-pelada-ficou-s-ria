@@ -41,6 +41,7 @@ function PeladaDetail() {
   const { id } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [pelada, setPelada] = useState<any>(null);
   const [quadra, setQuadra] = useState<any>(null);
   const [confirmacoes, setConfirmacoes] = useState<any[]>([]);
