@@ -139,14 +139,15 @@ function Controle() {
     await supabase.from("peladas").update({ status: "em_andamento" } as never).eq("id", id);
     await supabase.from("placar_sessao").insert({ pelada_id: id, ativa: true } as never);
     if (partidas.length === 0) {
-      const tabela = calcularTabela([], times);
-      const ordenados = pelada.sistema_disputa === "rodizio"
-        ? [...times].sort((a, b) => 0) // ordem original; fora = maior força
-        : [...times];
-      // time fora = maior força inicial; pra simplificar usamos ordem definida no sorteio
-      const fora = ordenados.length >= 3 ? ordenados[0] : null;
-      const restantes = ordenados.filter((t) => t.id !== fora?.id);
-      const [a, b] = [restantes[0], restantes[1] || ordenados[1]];
+      // O time que fica de fora na 1ª partida precisa SEMPRE ser um time sem goleiro fixo
+      // escalado (se existir exatamente um assim) — os 2 que começam jogando sempre têm goleiro.
+      const timesComGoleiro = new Set(timeJogadores.filter((x) => x.eh_goleiro).map((x) => x.time_id));
+      const semGoleiro = times.filter((t) => !timesComGoleiro.has(t.id));
+      const fora = times.length >= 3
+        ? (semGoleiro.length === 1 ? semGoleiro[0] : times[0])
+        : null;
+      const restantes = times.filter((t) => t.id !== fora?.id);
+      const [a, b] = [restantes[0], restantes[1] || times[1]];
       const { data: nova } = await supabase.from("partidas").insert({
         pelada_id: id, numero_partida: 1, time_a_id: a.id, time_b_id: b.id, time_fora_id: fora?.id || null,
         duracao_minutos: pelada.duracao_partida_minutos,
