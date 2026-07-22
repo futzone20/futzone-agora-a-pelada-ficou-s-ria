@@ -686,19 +686,19 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
           <div className="grid gap-2">
             <button
               type="button"
-              onClick={() => setForm({ ...form, regra_empate_rodizio: "time_atual_sai" })}
-              className={`rounded-xl border p-3 text-left text-sm ${form.regra_empate_rodizio === "time_atual_sai" ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
-            >
-              <div className="font-bold">🚪 Time atual sai no empate</div>
-              <div className="text-xs text-muted-foreground">Quem já estava jogando dá lugar pro time que estava de fora.</div>
-            </button>
-            <button
-              type="button"
               onClick={() => setForm({ ...form, regra_empate_rodizio: "time_atual_fica" })}
               className={`rounded-xl border p-3 text-left text-sm ${form.regra_empate_rodizio === "time_atual_fica" ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
             >
-              <div className="font-bold">🛡️ Time atual fica no empate</div>
-              <div className="text-xs text-muted-foreground">Quem já estava jogando continua, o time de fora segue esperando.</div>
+              <div className="font-bold">🛡️ Time que está ganhando FICA</div>
+              <div className="text-xs text-muted-foreground">O time que ganhou a rodada anterior continua jogando. O adversário atual sai, e quem estava de fora entra.</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, regra_empate_rodizio: "time_atual_sai" })}
+              className={`rounded-xl border p-3 text-left text-sm ${form.regra_empate_rodizio === "time_atual_sai" ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
+            >
+              <div className="font-bold">🚪 Time que está ganhando SAI</div>
+              <div className="text-xs text-muted-foreground">O time que ganhou a rodada anterior sai. Quem estava jogando contra ele continua, e quem estava de fora entra.</div>
             </button>
           </div>
         </div>
