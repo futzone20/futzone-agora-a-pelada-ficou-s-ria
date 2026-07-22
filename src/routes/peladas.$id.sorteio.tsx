@@ -209,12 +209,15 @@ function SorteioPage() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Sorteio — {pelada.nome_pelada}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {confirmados.length} confirmados · {pelada.numero_times} times de {pelada.jogadores_por_time} + {pelada.goleiros_por_time} goleiro(s)
+          {totalLinha} de linha + {totalGoleirosDisp} goleiro(s) confirmados · dá pra formar {numTimesDinamico} times de {pelada.jogadores_por_time}
+          {pelada.numero_times !== numTimesDinamico && (
+            <> (configurado para {pelada.numero_times}, mas ajustado pelo número real de confirmados)</>
+          )}
         </p>
         {!minimoOk && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-yellow-500/10 p-3 text-xs text-yellow-500">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            Mínimo de jogadores não atingido ({pelada.jogadores_por_time * pelada.numero_times}).
+            Mínimo de jogadores não atingido (precisa de pelo menos {pelada.jogadores_por_time * 2} de linha, pra formar 2 times).
           </div>
         )}
         {totalGoleirosConfirmados < totalGoleirosNecessarios && (
@@ -223,7 +226,7 @@ function SorteioPage() {
             Goleiros confirmados ({totalGoleirosConfirmados}) abaixo do ideal ({totalGoleirosNecessarios}). Você pode prosseguir mesmo assim.
           </div>
         )}
-        {pelada.numero_times === 3 && confirmados.filter((c) => c.eh_goleiro).length === 2 && (
+        {numTimesDinamico === 3 && totalGoleirosDisp === 2 && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-blue-500/10 p-3 text-xs text-blue-400">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             3 times com 2 goleiros: o sistema já equilibra automaticamente, colocando o goleiro mais fraco no time de linha mais forte (e vice-versa) nos 2 times que começam jogando. O 3º time (que começa de fora) fica sem goleiro fixo por enquanto.
