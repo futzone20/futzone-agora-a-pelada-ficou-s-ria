@@ -272,14 +272,14 @@ function SorteioPage() {
               <div className="space-y-2 text-sm">
                 <p>Você tem {totalLinha} jogador(es) de linha e {totalGoleirosDisp} goleiro(s) confirmado(s).</p>
                 <p>
-                  Isso vai formar {numTimesDinamico} times de {pelada?.jogadores_por_time} jogadores na linha
-                  {totalGoleirosDisp > 0 && totalGoleirosDisp < numTimesDinamico
+                  Isso vai formar os <b>{numTimes} times</b> configurados, com {linhaComSobra > 0 ? `${linhaPorTimeAprox} ou ${linhaPorTimeAprox + 1}` : linhaPorTimeAprox} jogadores de linha em cada
+                  {totalGoleirosDisp > 0 && totalGoleirosDisp < numTimes
                     ? ", com os goleiros revezando entre os times (não tem um pra cada time ainda)."
-                    : totalGoleirosDisp >= numTimesDinamico
+                    : totalGoleirosDisp >= numTimes
                       ? ", com um goleiro fixo em cada time."
                       : "."}
                 </p>
-                {numTimesDinamico === 3 && totalGoleirosDisp === 2 && (
+                {numTimes === 3 && totalGoleirosDisp === 2 && (
                   <p>O sistema vai equilibrar automaticamente colocando o goleiro mais fraco no time mais forte, e vice-versa, nos 2 times que começam jogando.</p>
                 )}
                 <p>Deseja sortear mesmo assim?</p>
