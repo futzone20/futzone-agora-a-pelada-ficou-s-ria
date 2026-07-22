@@ -432,6 +432,45 @@ function PeladaDetail() {
   }, [tempoRestante, partidaAtual?.id, partidaAtual?.pausada_em, isCapitao, loading]);
 
 
+  useEffect(() => {
+    if (!pelada || pelada.status !== "encerrada" || !times.length) { setResumoEncerrada(null); return; }
+    void (async () => {
+      const { data: partidasAll } = await supabase.from("partidas").select("time_a_id, time_b_id, placar_a, placar_b, status").eq("pelada_id", id);
+      const tabela = Object.values(calcularTabela((partidasAll as any) || [], times)).sort(
+        (a, b) => b.pts - a.pts || (b.gp - b.gc) - (a.gp - a.gc),
+      );
+      const vencedorRow = tabela[0];
+      const vencedorTime = vencedorRow ? times.find((t) => t.id === vencedorRow.time_id) || null : null;
+
+      let mvpNome: string | null = null;
+      if (pelada.mvp_user_id) {
+        const { data: mvpProf } = await supabase.from("profiles").select("nome").eq("user_id", pelada.mvp_user_id).maybeSingle();
+        mvpNome = (mvpProf as any)?.nome || null;
+      }
+
+      const { data: lancesGol } = await supabase.from("lances").select("user_id").eq("pelada_id", id).eq("tipo", "gol");
+      const contagem: Record<string, number> = {};
+      (lancesGol || []).forEach((l: any) => { contagem[l.user_id] = (contagem[l.user_id] || 0) + 1; });
+      const topId = Object.keys(contagem).sort((a, b) => contagem[b] - contagem[a])[0];
+      let artilheiroNome: string | null = null;
+      let artilheiroGols = 0;
+      if (topId) {
+        artilheiroGols = contagem[topId];
+        const timeComTop = times.find((t) => t.membros.some((m) => m.user_id === topId));
+        artilheiroNome = timeComTop?.membros.find((m) => m.user_id === topId)?.nome || null;
+        if (!artilheiroNome) {
+          const { data: p2 } = await supabase.from("profiles").select("nome").eq("user_id", topId).maybeSingle();
+          artilheiroNome = (p2 as any)?.nome || "Jogador";
+        }
+      }
+
+      setResumoEncerrada({
+        vencedor: vencedorTime ? { id: vencedorTime.id, nome: vencedorTime.nome, cor: vencedorTime.cor } : null,
+        mvpNome, artilheiroNome, artilheiroGols,
+      });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pelada?.status, times, id]);
 
   if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!pelada) return <EmptyState icon={CircleDot} title="Pelada não encontrada" />;
