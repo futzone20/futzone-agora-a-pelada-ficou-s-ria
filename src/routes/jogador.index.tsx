@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
