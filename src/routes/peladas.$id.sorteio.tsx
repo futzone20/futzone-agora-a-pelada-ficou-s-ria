@@ -194,6 +194,12 @@ function SorteioPage() {
             Goleiros confirmados ({totalGoleirosConfirmados}) abaixo do ideal ({totalGoleirosNecessarios}). Você pode prosseguir mesmo assim.
           </div>
         )}
+        {pelada.numero_times === 3 && confirmados.filter((c) => c.eh_goleiro).length === 2 && (
+          <div className="mt-3 flex items-start gap-2 rounded-lg bg-blue-500/10 p-3 text-xs text-blue-400">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            3 times com 2 goleiros: o sistema já equilibra automaticamente, colocando o goleiro mais fraco no time de linha mais forte (e vice-versa) nos 2 times que começam jogando. O 3º time (que começa de fora) fica sem goleiro fixo por enquanto.
+          </div>
+        )}
       </div>
 
       {pendentes.length > 0 && (
