@@ -52,12 +52,13 @@ function CompletarCadastroPage() {
       }
       const { data, error } = await supabase.auth.signInWithPassword({ email: tempEmail, password: tempPassword });
       if (error || !data.user) { setEstado("invalido"); return; }
-      const { data: prof } = await supabase.from("profiles").select("nome, cadastro_completo").eq("user_id", data.user.id).maybeSingle();
+      const { data: prof } = await supabase.from("profiles").select("nome, cadastro_completo, quer_ser_goleiro").eq("user_id", data.user.id).maybeSingle();
       if ((prof as any)?.cadastro_completo) {
         setEstado("concluido");
         return;
       }
       setNome((prof as any)?.nome || "");
+      setPosicao((prof as any)?.quer_ser_goleiro ? "goleiro" : "linha");
       setEstado("pronto");
     })();
   }, []);
