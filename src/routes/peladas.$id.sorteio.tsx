@@ -61,7 +61,7 @@ function SorteioPage() {
     const profMap = new Map((profs || []).map((x: any) => [x.user_id, x]));
     const skMap = new Map((skills || []).map((x: any) => [x.user_id, x]));
 
-    const list: Jogador[] = (confs || []).map((c: any) => {
+    const list: JogadorSorteio[] = (confs || []).map((c: any) => {
       const prof: any = profMap.get(c.user_id) || {};
       const sk: any = skMap.get(c.user_id);
       const pendente = !sk || !sk.origem_ultima_atualizacao;
@@ -71,9 +71,20 @@ function SorteioPage() {
         media: pendente ? 3.0 : mediaSkill(sk as any),
         eh_goleiro: !!c.eh_goleiro || prof.posicao_preferida === "goleiro" || !!prof.quer_ser_goleiro,
         skills_pendentes: pendente,
-      } as Jogador & { skills_pendentes: boolean };
+      };
     });
-    setConfirmados(list);
+
+    const { data: convs } = await supabase.from("pelada_convidados").select("*").eq("pelada_id", id);
+    const listaConvidados: JogadorSorteio[] = (convs || []).map((c: any) => ({
+      user_id: c.id,
+      nome: `${c.nome} (convidado)`,
+      media: c.nivel_geral || 3,
+      eh_goleiro: c.posicao === "goleiro",
+      convidado: true,
+    }));
+
+    setConfirmados([...list, ...listaConvidados]);
+    const todosCandidatos = [...list, ...listaConvidados];
 
     // se já existe sorteio, carrega
     const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
@@ -82,7 +93,7 @@ function SorteioPage() {
       const ui: TimeUI[] = tms.map((t: any) => {
         const membros = (tj || []).filter((x: any) => x.time_id === t.id);
         const toJ = (m: any): Jogador => {
-          const fonte = list.find((l) => l.user_id === m.user_id);
+          const fonte = todosCandidatos.find((l) => l.user_id === m.user_id);
           return fonte || { user_id: m.user_id, nome: profMap.get(m.user_id)?.nome || "Jogador", media: mediaSkill(skMap.get(m.user_id) as any), eh_goleiro: m.eh_goleiro };
         };
         return {
@@ -98,23 +109,26 @@ function SorteioPage() {
 
   useEffect(() => { void load(); }, [id]);
 
+  const totalLinha = confirmados.filter((c) => !c.eh_goleiro).length;
+  const totalGoleirosDisp = confirmados.filter((c) => c.eh_goleiro).length;
+
+  const numTimesDinamico = pelada
+    ? Math.max(2, Math.min(6, Math.floor(totalLinha / Math.max(1, pelada.jogadores_por_time))))
+    : 2;
+
   const minimoOk = useMemo(() => {
     if (!pelada) return false;
-    return confirmados.length >= pelada.jogadores_por_time * pelada.numero_times;
-  }, [pelada, confirmados]);
+    return totalLinha >= pelada.jogadores_por_time * 2;
+  }, [pelada, totalLinha]);
 
-  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * pelada.numero_times : 0;
-  const totalGoleirosConfirmados = confirmados.filter((c) => c.eh_goleiro).length;
+  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * numTimesDinamico : 0;
+  const totalGoleirosConfirmados = totalGoleirosDisp;
 
   const pendentes = (confirmados as any[]).filter((c) => c.skills_pendentes);
 
-  const gerar = () => {
+  const gerarInterno = () => {
     if (!pelada) return;
-    if (pendentes.length > 0) {
-      const nomes = pendentes.map((p) => p.nome).join(", ");
-      if (!confirm(`⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`)) return;
-    }
-    const numTimes = pelada.numero_times;
+    const numTimes = numTimesDinamico;
     const modalidade = ((pelada as any).modalidade_goleiro || "fixo") as "fixo" | "sorteado";
     const { jogadores, goleiros } = sortear(confirmados, numTimes, modalidade);
     const cores = CORES_TIMES[numTimes] || [];
@@ -125,6 +139,16 @@ function SorteioPage() {
       goleiros: goleiros[i] || [],
     }));
     setTimes(ui);
+  };
+
+  const gerar = () => {
+    if (!pelada) return;
+    if (pendentes.length > 0) {
+      const nomes = pendentes.map((p) => p.nome).join(", ");
+      if (!confirm(`⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`)) return;
+    }
+    if (times.length === 0) { setConfirmacaoOpen(true); return; }
+    gerarInterno();
   };
 
   const confirmar = async () => {
