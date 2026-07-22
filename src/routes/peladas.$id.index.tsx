@@ -18,6 +18,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
 import { StatsPeladaModal } from "@/components/StatsPeladaModal";
 import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/peladas/$id/")({
   component: Wrapper,
@@ -60,7 +61,13 @@ function PeladaDetail() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [tempoAluguelSec, setTempoAluguelSec] = useState<number>(0);
-  const [alertaAluguelEmitido, setAlertaAluguelEmitido] = useState(false);
+  const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
+  const [proximaPreview, setProximaPreview] = useState<{
+    timeAId: string; timeBId: string; timeForaId: string | null; novaFila: string[];
+    saidas: { entrouEm: "A" | "B"; timeQueSaiu: string }[]; numeroPartida: number; empateSorteio: boolean;
+  } | null>(null);
+  const [avisoAluguelOpen, setAvisoAluguelOpen] = useState(false);
+  const [graceSec, setGraceSec] = useState(180);
 
   const minutosAtraso = useMemo(() => {
     if (!pelada?.data || !pelada?.horario_inicio) return 0;
@@ -168,13 +175,24 @@ function PeladaDetail() {
   useEffect(() => {
     if (!partidaAtual?.iniciada_em || !partidaAtual?.duracao_minutos) { setTempoRestante(0); return; }
     const calc = () => {
-      const fim = new Date(partidaAtual.iniciada_em).getTime() + partidaAtual.duracao_minutos * 60_000;
-      setTempoRestante(Math.max(0, Math.floor((fim - Date.now()) / 1000)));
+      const fim = new Date(partidaAtual.iniciada_em).getTime()
+        + partidaAtual.duracao_minutos * 60_000
+        + (partidaAtual.tempo_pausado_total_seg || 0) * 1000;
+      const agora = partidaAtual.pausada_em ? new Date(partidaAtual.pausada_em).getTime() : Date.now();
+      setTempoRestante(Math.max(0, Math.floor((fim - agora) / 1000)));
     };
     calc();
     const i = setInterval(calc, 1000);
     return () => clearInterval(i);
-  }, [partidaAtual?.id, partidaAtual?.iniciada_em, partidaAtual?.duracao_minutos]);
+  }, [partidaAtual?.id, partidaAtual?.iniciada_em, partidaAtual?.duracao_minutos, partidaAtual?.pausada_em, partidaAtual?.tempo_pausado_total_seg]);
+
+  useEffect(() => {
+    if (!partidaAtual?.pausada_em) { setTempoPausadoAtual(0); return; }
+    const calc = () => setTempoPausadoAtual(Math.max(0, Math.floor((Date.now() - new Date(partidaAtual.pausada_em).getTime()) / 1000)));
+    calc();
+    const i = setInterval(calc, 1000);
+    return () => clearInterval(i);
+  }, [partidaAtual?.pausada_em]);
 
   useEffect(() => {
     if (!pelada?.aluguel_iniciado_em) { setTempoAluguelSec(0); return; }
