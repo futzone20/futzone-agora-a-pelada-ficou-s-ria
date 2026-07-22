@@ -207,8 +207,8 @@ function PeladaDetail() {
     return () => clearInterval(i);
   }, [pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos, pelada?.status]);
 
-  const criarProximaPartida = async () => {
-    if (!pelada) return;
+  const calcularProximaPartida = async () => {
+    if (!pelada) return null;
     const { data: ultima } = await supabase
       .from("partidas")
       .select("numero_partida, time_a_id, time_b_id, time_fora_id, fila_espera, placar_a, placar_b")
@@ -219,11 +219,12 @@ function PeladaDetail() {
 
     const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
 
-    if (!tms || tms.length < 2) return;
+    if (!tms || tms.length < 2) return null;
 
     let timeAId: string, timeBId: string, timeForaId: string | null = null;
     let novaFila: string[] = [];
     let saidas: { entrouEm: "A" | "B"; timeQueSaiu: string }[] = [];
+    let empateSorteio = false;
 
     if (!ultima) {
       const { data: tjGoleiros } = await supabase.from("time_jogadores").select("time_id").eq("pelada_id", id).eq("eh_goleiro", true);
@@ -260,19 +261,25 @@ function PeladaDetail() {
         numeroPartida: u.numero_partida,
         regraEmpate: (pelada as any).regra_empate_rodizio || "time_atual_sai",
       });
-      if (!resultado) return;
+      if (!resultado) return null;
 
       timeAId = resultado.novoA;
       timeBId = resultado.novoB;
       novaFila = resultado.novaFila;
       timeForaId = novaFila[0] ?? null;
       saidas = resultado.saidas;
-
-      if (resultado.empateResolvidoPorSorteio) {
-        const nomeTime = (tms as any[]).find((t: any) => t.id === resultado.novoA)?.nome || "Time";
-        toast.info(`Empate na 1ª partida — sorteio decidiu que o ${nomeTime} fica! 🎲`);
-      }
+      empateSorteio = !!resultado.empateResolvidoPorSorteio;
     }
+
+    return {
+      timeAId, timeBId, timeForaId, novaFila, saidas,
+      numeroPartida: ((ultima as any)?.numero_partida || 0) + 1,
+      empateSorteio,
+    };
+  };
+
+  const iniciarProximaPartida = async (preview: NonNullable<Awaited<ReturnType<typeof calcularProximaPartida>>>) => {
+    const { timeAId, timeBId, timeForaId, novaFila, saidas, numeroPartida } = preview;
 
     for (const s of saidas) {
       const timeEntrante = s.entrouEm === "A" ? timeAId : timeBId;
@@ -286,7 +293,7 @@ function PeladaDetail() {
 
     await supabase.from("partidas").insert({
       pelada_id: id,
-      numero_partida: ((ultima as any)?.numero_partida || 0) + 1,
+      numero_partida: numeroPartida,
       time_a_id: timeAId,
       time_b_id: timeBId,
       time_fora_id: timeForaId,
@@ -294,12 +301,21 @@ function PeladaDetail() {
       placar_a: 0,
       placar_b: 0,
       status: "em_andamento",
-      duracao_minutos: pelada.duracao_partida_minutos || 8,
+      duracao_minutos: pelada!.duracao_partida_minutos || 8,
       iniciada_em: new Date().toISOString(),
     } as never);
+    setProximaPreview(null);
     void load();
   };
 
+  const confirmarProximaPartida = async () => {
+    if (!proximaPreview) return;
+    if (proximaPreview.empateSorteio) {
+      const nomeTime = times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time";
+      toast.info(`Empate na 1ª partida — sorteio decidiu que o ${nomeTime} fica! 🎲`);
+    }
+    await iniciarProximaPartida(proximaPreview);
+  };
 
   const encerrarPeladaAuto = async () => {
     const { error: errP } = await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
@@ -308,35 +324,94 @@ function PeladaDetail() {
     if (errPel) { console.error("Erro ao encerrar pelada:", errPel); toast.error("Não foi possível encerrar a pelada automaticamente. Tente encerrar manualmente."); return; }
     void notificarVencedoresPelada(id);
     toast.success("⏱ Tempo de aluguel encerrado! Pelada finalizada.");
+    setAvisoAluguelOpen(false);
     void load();
   };
 
-  // Auto-encerrar pelada quando aluguel zera
   useEffect(() => {
     if (loading) return;
     if (!pelada?.aluguel_iniciado_em) return;
     if (pelada?.status !== "em_andamento") return;
-    if (tempoAluguelSec !== 0) return;
-    if (alertaAluguelEmitido) return;
-    setAlertaAluguelEmitido(true);
-    void encerrarPeladaAuto();
-  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, loading, alertaAluguelEmitido]);
+    if (!isCapitao) return;
+    if (tempoAluguelSec !== 0) { if (avisoAluguelOpen) setAvisoAluguelOpen(false); return; }
+    if (avisoAluguelOpen) return;
+    setGraceSec(180);
+    setAvisoAluguelOpen(true);
+  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, loading, isCapitao, avisoAluguelOpen]);
 
-  // Quando uma partida encerra e ainda há tempo de aluguel, cria próxima automaticamente
+  useEffect(() => {
+    if (!avisoAluguelOpen) return;
+    const i = setInterval(() => {
+      setGraceSec((s) => {
+        if (s <= 1) { void encerrarPeladaAuto(); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avisoAluguelOpen]);
+
+  const registrarAtrasoAluguel = async (minutos: number) => {
+    if (!pelada) return;
+    const { error } = await supabase.from("peladas").update({ tempo_locado_minutos: (pelada.tempo_locado_minutos ?? 60) + minutos } as never).eq("id", id);
+    if (error) { console.error("Erro ao registrar atraso:", error); toast.error("Não foi possível registrar o atraso. Tente de novo."); return; }
+    setAvisoAluguelOpen(false);
+    toast.success(`+${minutos}min adicionados ao aluguel da quadra`);
+    void load();
+  };
+
+  const pausarPartida = async () => {
+    if (!partidaAtual || partidaAtual.pausada_em || !user) return;
+    const agora = new Date().toISOString();
+    await supabase.from("partidas").update({ pausada_em: agora } as never).eq("id", partidaAtual.id);
+    await supabase.from("lances").insert({
+      partida_id: partidaAtual.id, pelada_id: id, tipo: "outro",
+      descricao: "⏸️ Tempo pausado", user_id: user.id, time_id: partidaAtual.time_a_id, marcado_por: user.id,
+    } as never);
+    toast.info("⏸️ Tempo pausado");
+    void load();
+  };
+
+  const retomarPartida = async () => {
+    if (!partidaAtual?.pausada_em || !user) return;
+    const segundosPausado = Math.max(0, Math.floor((Date.now() - new Date(partidaAtual.pausada_em).getTime()) / 1000));
+    await supabase.from("partidas").update({
+      pausada_em: null,
+      tempo_pausado_total_seg: (partidaAtual.tempo_pausado_total_seg || 0) + segundosPausado,
+    } as never).eq("id", partidaAtual.id);
+    const mm = Math.floor(segundosPausado / 60), ss = segundosPausado % 60;
+    await supabase.from("lances").insert({
+      partida_id: partidaAtual.id, pelada_id: id, tipo: "outro",
+      descricao: `▶️ Tempo retomado — ficou pausado por ${mm}min ${ss}s`, user_id: user.id, time_id: partidaAtual.time_a_id, marcado_por: user.id,
+    } as never);
+    toast.success("▶️ Tempo retomado");
+    void load();
+  };
+
   useEffect(() => {
     if (loading) return;
     if (!pelada || pelada.status !== "em_andamento" || !isCapitao) return;
     if (partidaAtual) return;
+    if (proximaPreview) return;
     if (!pelada.aluguel_iniciado_em) return;
     const tempoLocado = pelada.tempo_locado_minutos ?? 60;
     const fim = new Date(pelada.aluguel_iniciado_em).getTime() + tempoLocado * 60_000;
     const restanteMin = (fim - Date.now()) / 60000;
     const dur = pelada.duracao_partida_minutos ?? 8;
     if (restanteMin >= dur * 0.5) {
-      void criarProximaPartida();
+      void calcularProximaPartida().then((p) => { if (p) setProximaPreview(p); });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, partidaAtual, pelada?.status, isCapitao]);
+  }, [loading, partidaAtual, pelada?.status, isCapitao, proximaPreview]);
+
+  useEffect(() => {
+    if (loading || !partidaAtual || !isCapitao) return;
+    if (partidaAtual.pausada_em) return;
+    if (tempoRestante !== 0) return;
+    if (partidaAtual.status !== "em_andamento") return;
+    void supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("id", partidaAtual.id).then(() => void load());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tempoRestante, partidaAtual?.id, partidaAtual?.pausada_em, isCapitao, loading]);
 
 
 
