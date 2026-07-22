@@ -658,35 +658,50 @@ function PeladaDetail() {
 
         <div className="grid grid-cols-2 gap-3">
           {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
-            <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
+            <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
           ) : minhaConf?.status === "confirmado" ? (
             <>
-              <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
-              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
+              <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
+              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
             </>
           ) : (
             <>
-              <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold h-13 rounded-xl">Em lista de espera</Button>
-              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
+              <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold uppercase tracking-wide h-13 rounded-xl">Em lista de espera</Button>
+              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
             </>
           )}
 
-          {isCapitao && (
-            <>
-              <Button onClick={() => setPresencasOpen(true)} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><Users className="mr-2 h-4 w-4" /> Gerenciar presenças</Button>
-              {pelada.sorteio_feito && <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><RefreshCw className="mr-2 h-4 w-4" /> Refazer sorteio</Button>}
-              {!pelada.sorteio_feito && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
-                <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
-              )}
-            </>
+          {!pelada.sorteio_feito && isCapitao && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
+            <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
           )}
 
           {isCapitao && pelada.sorteio_feito && pelada.status !== "em_andamento" && pelada.status !== "encerrada" && (
-            <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
+            <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
           )}
 
-          {pelada.status === "em_andamento" && (
-            <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl">
+          {isCapitao && (
+            <div className="col-span-2 grid grid-cols-3 gap-2">
+              <button onClick={() => setPresencasOpen(true)} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                <Users className="h-5 w-5" />
+                <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Gerenciar<br />presenças</span>
+              </button>
+              {pelada.sorteio_feito && (
+                <button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                  <RefreshCw className="h-5 w-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Refazer<br />sorteio</span>
+                </button>
+              )}
+              {pelada.status === "em_andamento" && (
+                <Link to="/peladas/$id/lances" params={{ id }} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                  <Shield className="h-5 w-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Painel de<br />lances</span>
+                </Link>
+              )}
+            </div>
+          )}
+
+          {!isCapitao && pelada.status === "em_andamento" && (
+            <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white uppercase tracking-wide h-12 rounded-xl">
               <Link to="/peladas/$id/lances" params={{ id }}><ClipboardList className="mr-2 h-4 w-4" /> Painel de Lances</Link>
             </Button>
           )}
