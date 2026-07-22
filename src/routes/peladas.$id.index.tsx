@@ -590,7 +590,7 @@ function PeladaDetail() {
             <>
               <Button onClick={() => setPresencasOpen(true)} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><Users className="mr-2 h-4 w-4" /> Gerenciar presenças</Button>
               {pelada.sorteio_feito && <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><RefreshCw className="mr-2 h-4 w-4" /> Refazer sorteio</Button>}
-              {!pelada.sorteio_feito && (confirmados.length + convidados.length) >= pelada.jogadores_por_time * 2 && (
+              {!pelada.sorteio_feito && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
                 <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
               )}
             </>
