@@ -139,14 +139,15 @@ function Controle() {
     await supabase.from("peladas").update({ status: "em_andamento" } as never).eq("id", id);
     await supabase.from("placar_sessao").insert({ pelada_id: id, ativa: true } as never);
     if (partidas.length === 0) {
-      const tabela = calcularTabela([], times);
-      const ordenados = pelada.sistema_disputa === "rodizio"
-        ? [...times].sort((a, b) => 0) // ordem original; fora = maior força
-        : [...times];
-      // time fora = maior força inicial; pra simplificar usamos ordem definida no sorteio
-      const fora = ordenados.length >= 3 ? ordenados[0] : null;
-      const restantes = ordenados.filter((t) => t.id !== fora?.id);
-      const [a, b] = [restantes[0], restantes[1] || ordenados[1]];
+      // O time que fica de fora na 1ª partida precisa SEMPRE ser um time sem goleiro fixo
+      // escalado (se existir exatamente um assim) — os 2 que começam jogando sempre têm goleiro.
+      const timesComGoleiro = new Set(timeJogadores.filter((x) => x.eh_goleiro).map((x) => x.time_id));
+      const semGoleiro = times.filter((t) => !timesComGoleiro.has(t.id));
+      const fora = times.length >= 3
+        ? (semGoleiro.length === 1 ? semGoleiro[0] : times[0])
+        : null;
+      const restantes = times.filter((t) => t.id !== fora?.id);
+      const [a, b] = [restantes[0], restantes[1] || times[1]];
       const { data: nova } = await supabase.from("partidas").insert({
         pelada_id: id, numero_partida: 1, time_a_id: a.id, time_b_id: b.id, time_fora_id: fora?.id || null,
         duracao_minutos: pelada.duracao_partida_minutos,
@@ -163,16 +164,35 @@ function Controle() {
   };
 
   const encerrarPartida = async (p: any) => {
-    await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("id", p.id);
+    // Busca a partida mais atualizada do banco para garantir que estamos usando
+    // o placar real ao calcular vencedor/perdedor e herança de goleiro.
+    const { data: partidaAtual } = await supabase
+      .from("partidas")
+      .select("*")
+      .eq("id", p.id)
+      .single();
+    const partida = partidaAtual || p;
+
+    await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("id", partida.id);
     // próxima partida (rodízio): vencedor + time fora, perdedor sai
-    if (pelada.sistema_disputa === "rodizio" && p.time_fora_id) {
-      const vencedor = p.placar_a > p.placar_b ? p.time_a_id : p.placar_b > p.placar_a ? p.time_b_id : null;
-      const perdedor = vencedor === p.time_a_id ? p.time_b_id : vencedor === p.time_b_id ? p.time_a_id : p.time_b_id;
-      const novoA = vencedor || p.time_a_id;
-      const novoB = p.time_fora_id;
+    if (pelada.sistema_disputa === "rodizio" && partida.time_fora_id) {
+      const vencedor = partida.placar_a > partida.placar_b ? partida.time_a_id : partida.placar_b > partida.placar_a ? partida.time_b_id : null;
+      const perdedor = vencedor === partida.time_a_id ? partida.time_b_id : vencedor === partida.time_b_id ? partida.time_a_id : partida.time_b_id;
+      const novoA = vencedor || partida.time_a_id;
+      const novoB = partida.time_fora_id;
       const novoFora = perdedor;
+      // Goleiro "fixo por lado de campo": o time que está ENTRANDO herda o(s) goleiro(s) do time
+      // que está SAINDO — mas só se o time entrante ainda não tiver goleiro próprio (senão ele já
+      // tem o dele desde o sorteio e não deve ganhar um segundo).
+      if (perdedor && novoB) {
+        const novoBTemGoleiro = timeJogadores.some((x) => x.time_id === novoB && x.eh_goleiro);
+        if (!novoBTemGoleiro) {
+          await supabase.from("time_jogadores").update({ time_id: novoB } as never)
+            .eq("pelada_id", id).eq("time_id", perdedor).eq("eh_goleiro", true);
+        }
+      }
       const { data: nova } = await supabase.from("partidas").insert({
-        pelada_id: id, numero_partida: p.numero_partida + 1,
+        pelada_id: id, numero_partida: partida.numero_partida + 1,
         time_a_id: novoA, time_b_id: novoB, time_fora_id: novoFora,
         duracao_minutos: pelada.duracao_partida_minutos,
       } as never).select().single();
