@@ -492,6 +492,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
     goleiros_por_time: 1,
     modalidade_goleiro: "fixo" as "fixo" | "sorteado",
     sistema_disputa: "rodizio" as const,
+    regra_empate_rodizio: "time_atual_sai" as "time_atual_sai" | "time_atual_fica",
   });
   const [loading, setLoading] = useState(false);
 
@@ -521,7 +522,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
       grupo_id: grupoId,
       criado_por: user.id,
       ...rest,
-      jogadores_por_time: totalPorTime,
+      jogadores_por_time: form.jogadores_linha_por_time,
       gols_para_encerrar: gols_para_encerrar_ativo ? form.gols_para_encerrar : null,
     };
     if (tipo === "publica" && quadraId) payload.quadra_id = quadraId;
@@ -675,6 +676,33 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
           </button>
         </div>
       </div>
+
+      {form.numero_times === 3 && form.sistema_disputa === "rodizio" && (
+        <div>
+          <Label>Regra de empate (a partir da 2ª partida)</Label>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Na 1ª partida, um empate é sempre decidido por sorteio. Da 2ª em diante, você escolhe:
+          </p>
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, regra_empate_rodizio: "time_atual_sai" })}
+              className={`rounded-xl border p-3 text-left text-sm ${form.regra_empate_rodizio === "time_atual_sai" ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
+            >
+              <div className="font-bold">🚪 Time atual sai no empate</div>
+              <div className="text-xs text-muted-foreground">Quem já estava jogando dá lugar pro time que estava de fora.</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, regra_empate_rodizio: "time_atual_fica" })}
+              className={`rounded-xl border p-3 text-left text-sm ${form.regra_empate_rodizio === "time_atual_fica" ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
+            >
+              <div className="font-bold">🛡️ Time atual fica no empate</div>
+              <div className="text-xs text-muted-foreground">Quem já estava jogando continua, o time de fora segue esperando.</div>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl bg-secondary/50 p-3 text-xs text-muted-foreground">
         {form.numero_times} times de {form.jogadores_linha_por_time} na linha + {form.goleiros_por_time} goleiro(s) | Partidas de {form.duracao_partida_minutos}min{form.gols_para_encerrar_ativo ? ` ou ${form.gols_para_encerrar} gols` : ""} | Aluguel de {form.tempo_locado_minutos}min

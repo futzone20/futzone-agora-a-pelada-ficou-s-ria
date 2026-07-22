@@ -1910,6 +1910,7 @@ export type Database = {
           criado_em: string
           duracao_minutos: number
           encerrada_em: string | null
+          fila_espera: Json
           id: string
           iniciada_em: string | null
           numero_partida: number
@@ -1925,6 +1926,7 @@ export type Database = {
           criado_em?: string
           duracao_minutos?: number
           encerrada_em?: string | null
+          fila_espera?: Json
           id?: string
           iniciada_em?: string | null
           numero_partida: number
@@ -1940,6 +1942,7 @@ export type Database = {
           criado_em?: string
           duracao_minutos?: number
           encerrada_em?: string | null
+          fila_espera?: Json
           id?: string
           iniciada_em?: string | null
           numero_partida?: number
@@ -2257,6 +2260,7 @@ export type Database = {
           numero_times: number
           quadra_cliente_id: string | null
           quadra_id: string | null
+          regra_empate_rodizio: string
           sistema_disputa: Database["public"]["Enums"]["sistema_disputa"]
           sorteio_feito: boolean
           status: Database["public"]["Enums"]["status_pelada"]
@@ -2285,6 +2289,7 @@ export type Database = {
           numero_times?: number
           quadra_cliente_id?: string | null
           quadra_id?: string | null
+          regra_empate_rodizio?: string
           sistema_disputa?: Database["public"]["Enums"]["sistema_disputa"]
           sorteio_feito?: boolean
           status?: Database["public"]["Enums"]["status_pelada"]
@@ -2313,6 +2318,7 @@ export type Database = {
           numero_times?: number
           quadra_cliente_id?: string | null
           quadra_id?: string | null
+          regra_empate_rodizio?: string
           sistema_disputa?: Database["public"]["Enums"]["sistema_disputa"]
           sorteio_feito?: boolean
           status?: Database["public"]["Enums"]["status_pelada"]
