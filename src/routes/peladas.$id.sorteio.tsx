@@ -130,7 +130,6 @@ function SorteioPage() {
 
   const gerarInterno = () => {
     if (!pelada) return;
-    const numTimes = numTimesDinamico;
     const modalidade = ((pelada as any).modalidade_goleiro || "fixo") as "fixo" | "sorteado";
     const { jogadores, goleiros } = sortear(confirmados, numTimes, modalidade);
     const cores = CORES_TIMES[numTimes] || [];
