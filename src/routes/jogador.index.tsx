@@ -37,7 +37,9 @@ export function Inicio() {
   const [pontos, setPontos] = useState(0);
   const [ofensiva, setOfensiva] = useState(0);
   const [desafios, setDesafios] = useState<any[]>([]);
+  const [aoVivo, setAoVivo] = useState<{ pelada: any; partida: any; timeA: any; timeB: any } | null>(null);
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     if (!user) return;
