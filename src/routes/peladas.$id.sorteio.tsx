@@ -112,23 +112,24 @@ function SorteioPage() {
   const totalLinha = confirmados.filter((c) => !c.eh_goleiro).length;
   const totalGoleirosDisp = confirmados.filter((c) => c.eh_goleiro).length;
 
-  const numTimesDinamico = pelada
-    ? Math.max(2, Math.min(6, Math.floor(totalLinha / Math.max(1, pelada.jogadores_por_time))))
-    : 2;
+  // O número de times é sempre o configurado na criação da pelada — não recalculamos isso.
+  // O que muda dinamicamente é só a distribuição de jogadores/goleiros dentro desses times.
+  const numTimes = pelada ? pelada.numero_times : 2;
+  const linhaPorTimeAprox = numTimes ? Math.floor(totalLinha / numTimes) : 0;
+  const linhaComSobra = numTimes ? totalLinha % numTimes : 0;
 
   const minimoOk = useMemo(() => {
     if (!pelada) return false;
-    return totalLinha >= pelada.jogadores_por_time * 2;
+    return totalLinha >= pelada.numero_times * 2;
   }, [pelada, totalLinha]);
 
-  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * numTimesDinamico : 0;
+  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * pelada.numero_times : 0;
   const totalGoleirosConfirmados = totalGoleirosDisp;
 
   const pendentes = (confirmados as any[]).filter((c) => c.skills_pendentes);
 
   const gerarInterno = () => {
     if (!pelada) return;
-    const numTimes = numTimesDinamico;
     const modalidade = ((pelada as any).modalidade_goleiro || "fixo") as "fixo" | "sorteado";
     const { jogadores, goleiros } = sortear(confirmados, numTimes, modalidade);
     const cores = CORES_TIMES[numTimes] || [];
@@ -209,15 +210,13 @@ function SorteioPage() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Sorteio — {pelada.nome_pelada}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {totalLinha} de linha + {totalGoleirosDisp} goleiro(s) confirmados · dá pra formar {numTimesDinamico} times de {pelada.jogadores_por_time}
-          {pelada.numero_times !== numTimesDinamico && (
-            <> (configurado para {pelada.numero_times}, mas ajustado pelo número real de confirmados)</>
-          )}
+          {totalLinha} de linha + {totalGoleirosDisp} goleiro(s) confirmados · vai formar os <b>{numTimes} times</b> configurados,
+          com {linhaComSobra > 0 ? `${linhaPorTimeAprox} ou ${linhaPorTimeAprox + 1}` : linhaPorTimeAprox} jogadores de linha em cada
         </p>
         {!minimoOk && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-yellow-500/10 p-3 text-xs text-yellow-500">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            Mínimo de jogadores não atingido (precisa de pelo menos {pelada.jogadores_por_time * 2} de linha, pra formar 2 times).
+            Mínimo de jogadores não atingido (precisa de pelo menos {pelada.numero_times * 2} de linha, pra dar pelo menos 2 por time).
           </div>
         )}
         {totalGoleirosConfirmados < totalGoleirosNecessarios && (
@@ -226,7 +225,7 @@ function SorteioPage() {
             Goleiros confirmados ({totalGoleirosConfirmados}) abaixo do ideal ({totalGoleirosNecessarios}). Você pode prosseguir mesmo assim.
           </div>
         )}
-        {numTimesDinamico === 3 && totalGoleirosDisp === 2 && (
+        {numTimes === 3 && totalGoleirosDisp === 2 && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-blue-500/10 p-3 text-xs text-blue-400">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             3 times com 2 goleiros: o sistema já equilibra automaticamente, colocando o goleiro mais fraco no time de linha mais forte (e vice-versa) nos 2 times que começam jogando. O 3º time (que começa de fora) fica sem goleiro fixo por enquanto.
@@ -273,14 +272,14 @@ function SorteioPage() {
               <div className="space-y-2 text-sm">
                 <p>Você tem {totalLinha} jogador(es) de linha e {totalGoleirosDisp} goleiro(s) confirmado(s).</p>
                 <p>
-                  Isso vai formar {numTimesDinamico} times de {pelada?.jogadores_por_time} jogadores na linha
-                  {totalGoleirosDisp > 0 && totalGoleirosDisp < numTimesDinamico
+                  Isso vai formar os <b>{numTimes} times</b> configurados, com {linhaComSobra > 0 ? `${linhaPorTimeAprox} ou ${linhaPorTimeAprox + 1}` : linhaPorTimeAprox} jogadores de linha em cada
+                  {totalGoleirosDisp > 0 && totalGoleirosDisp < numTimes
                     ? ", com os goleiros revezando entre os times (não tem um pra cada time ainda)."
-                    : totalGoleirosDisp >= numTimesDinamico
+                    : totalGoleirosDisp >= numTimes
                       ? ", com um goleiro fixo em cada time."
                       : "."}
                 </p>
-                {numTimesDinamico === 3 && totalGoleirosDisp === 2 && (
+                {numTimes === 3 && totalGoleirosDisp === 2 && (
                   <p>O sistema vai equilibrar automaticamente colocando o goleiro mais fraco no time mais forte, e vice-versa, nos 2 times que começam jogando.</p>
                 )}
                 <p>Deseja sortear mesmo assim?</p>
