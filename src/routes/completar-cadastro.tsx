@@ -144,6 +144,17 @@ function CompletarCadastroPage() {
                   <Input id="cn-wpp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(11) 91234-5678" />
                 </div>
                 <div>
+                  <Label>Posição</Label>
+                  <RadioGroup value={posicao} onValueChange={(v) => setPosicao(v as "linha" | "goleiro")} className="mt-2 grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-sm cursor-pointer">
+                      <RadioGroupItem value="linha" id="cc-linha" /> De linha
+                    </label>
+                    <label className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-sm cursor-pointer">
+                      <RadioGroupItem value="goleiro" id="cc-goleiro" /> Goleiro 🧤
+                    </label>
+                  </RadioGroup>
+                </div>
+                <div>
                   <Label htmlFor="cn-senha">Crie uma senha</Label>
                   <Input id="cn-senha" type="password" required value={senha} onChange={(e) => setSenha(e.target.value)} />
                 </div>
