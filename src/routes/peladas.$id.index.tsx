@@ -497,6 +497,34 @@ function PeladaDetail() {
           </div>
         )}
 
+        {pelada.status === "em_andamento" && (() => {
+          const aluguelMM = Math.floor(tempoAluguelSec / 60).toString().padStart(2, "0");
+          const aluguelSS = (tempoAluguelSec % 60).toString().padStart(2, "0");
+          const totalLocado = pelada.tempo_locado_minutos ?? 60;
+          const decorrido = Math.max(0, totalLocado * 60 - tempoAluguelSec);
+          const pct = totalLocado > 0 ? Math.min(100, Math.round((decorrido / (totalLocado * 60)) * 100)) : 0;
+          return (
+            <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#888]">Tempo de quadra</div>
+                  <div className="text-4xl font-black text-[#00FF87] mt-1">{aluguelMM}:{aluguelSS}</div>
+                  {partidaAtual && <div className="text-[10px] font-bold uppercase tracking-widest text-[#888] mt-1">Partida {partidaAtual.numero_partida}</div>}
+                </div>
+                <div className="h-10 w-px bg-[#2A2A2A]" />
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#888]">Total <span className="text-white">{Math.floor(totalLocado/60)}h{(totalLocado%60).toString().padStart(2,"0")}</span></div>
+                  <div className="mt-2 h-1.5 w-full rounded-full bg-[#2A2A2A] overflow-hidden">
+                    <div className="h-full bg-[#00FF87]" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="text-[10px] font-bold text-[#00FF87] mt-1">{pct}%</div>
+                </div>
+                <Shield className="h-10 w-10 text-[#00FF87]/40 shrink-0" />
+              </div>
+            </div>
+          );
+        })()}
+
         {times.length > 0 && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
           const temRodizio = pelada.sistema_disputa === "rodizio" && times.length >= 3;
