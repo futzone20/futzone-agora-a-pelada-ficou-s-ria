@@ -172,6 +172,16 @@ function Controle() {
       const novoA = vencedor || p.time_a_id;
       const novoB = p.time_fora_id;
       const novoFora = perdedor;
+      // Goleiro "fixo por lado de campo": o time que está ENTRANDO herda o(s) goleiro(s) do time
+      // que está SAINDO — mas só se o time entrante ainda não tiver goleiro próprio (senão ele já
+      // tem o dele desde o sorteio e não deve ganhar um segundo).
+      if (perdedor && novoB) {
+        const novoBTemGoleiro = timeJogadores.some((x) => x.time_id === novoB && x.eh_goleiro);
+        if (!novoBTemGoleiro) {
+          await supabase.from("time_jogadores").update({ time_id: novoB } as never)
+            .eq("pelada_id", id).eq("time_id", perdedor).eq("eh_goleiro", true);
+        }
+      }
       const { data: nova } = await supabase.from("partidas").insert({
         pelada_id: id, numero_partida: p.numero_partida + 1,
         time_a_id: novoA, time_b_id: novoB, time_fora_id: novoFora,
