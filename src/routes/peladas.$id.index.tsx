@@ -284,8 +284,10 @@ function PeladaDetail() {
 
 
   const encerrarPeladaAuto = async () => {
-    await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
-    await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
+    const { error: errP } = await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
+    if (errP) { console.error("Erro ao encerrar partidas da pelada:", errP); toast.error("Não foi possível encerrar a pelada automaticamente. Tente encerrar manualmente."); return; }
+    const { error: errPel } = await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
+    if (errPel) { console.error("Erro ao encerrar pelada:", errPel); toast.error("Não foi possível encerrar a pelada automaticamente. Tente encerrar manualmente."); return; }
     void notificarVencedoresPelada(id);
     toast.success("⏱ Tempo de aluguel encerrado! Pelada finalizada.");
     void load();
@@ -679,7 +681,7 @@ function PeladaDetail() {
             <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
           )}
 
-          {isCapitao && (
+          {isCapitao && pelada.status !== "encerrada" && (
             <div className="col-span-2 grid grid-cols-3 gap-2">
               <button onClick={() => setPresencasOpen(true)} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
                 <Users className="h-5 w-5" />
