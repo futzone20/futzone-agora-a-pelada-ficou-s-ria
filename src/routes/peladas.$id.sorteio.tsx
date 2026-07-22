@@ -216,7 +216,7 @@ function SorteioPage() {
         {!minimoOk && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-yellow-500/10 p-3 text-xs text-yellow-500">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            Mínimo de jogadores não atingido (precisa de pelo menos {pelada.jogadores_por_time * 2} de linha, pra formar 2 times).
+            Mínimo de jogadores não atingido (precisa de pelo menos {pelada.numero_times * 2} de linha, pra dar pelo menos 2 por time).
           </div>
         )}
         {totalGoleirosConfirmados < totalGoleirosNecessarios && (
