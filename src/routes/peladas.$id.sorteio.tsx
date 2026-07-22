@@ -181,12 +181,14 @@ function SorteioPage() {
     const notifs = times.flatMap((t) => {
       const membros = [...t.jogadores, ...t.goleiros];
       const nomes = membros.map((m) => m.nome).join(", ");
-      return membros.map((m) => ({
-        user_id: m.user_id,
-        titulo: "⚽ Times sorteados!",
-        mensagem: `Você está no ${t.nome}. Companheiros: ${nomes}. Bora!`,
-        link: `/peladas/${id}`,
-      }));
+      return membros
+        .filter((m: any) => !m.convidado)
+        .map((m) => ({
+          user_id: m.user_id,
+          titulo: "⚽ Times sorteados!",
+          mensagem: `Você está no ${t.nome}. Companheiros: ${nomes}. Bora!`,
+          link: `/peladas/${id}`,
+        }));
     });
     if (notifs.length) await supabase.from("notificacoes").insert(notifs as never);
 
