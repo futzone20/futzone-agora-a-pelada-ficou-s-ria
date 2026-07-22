@@ -32,6 +32,7 @@ function Wrapper() {
 }
 
 type TimeUI = { nome: string; cor: string; jogadores: Jogador[]; goleiros: Jogador[] };
+type JogadorSorteio = Jogador & { skills_pendentes?: boolean; convidado?: boolean };
 
 function SorteioPage() {
   const { id } = Route.useParams();
@@ -39,9 +40,10 @@ function SorteioPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [pelada, setPelada] = useState<any>(null);
-  const [confirmados, setConfirmados] = useState<Jogador[]>([]);
+  const [confirmados, setConfirmados] = useState<JogadorSorteio[]>([]);
   const [times, setTimes] = useState<TimeUI[]>([]);
   const [saving, setSaving] = useState(false);
+  const [confirmacaoOpen, setConfirmacaoOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
