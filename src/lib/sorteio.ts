@@ -128,9 +128,7 @@ export function distribuirGoleiros(goleiros: Jogador[], timesLinha: Jogador[][])
   }
   return resultado;
 }
-  if (!t.length) return 0;
-  return t.reduce((a, j) => a + j.media, 0) / t.length;
-}
+
 
 export function sugerirTrocaGoleiro(params: {
   times: { id: string; nome: string; cor: string; nivelGeral: number; goleiro?: { user_id: string; nome: string; nivel: number } | null }[];
