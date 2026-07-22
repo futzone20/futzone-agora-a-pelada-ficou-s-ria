@@ -91,7 +91,23 @@ export function Inicio() {
         .order("criado_em", { ascending: false })
         .limit(5);
       setNotifs(ns || []);
+
+      // Pelada ao vivo em que o usuário está escalado (pra mostrar o resumo fixo na home)
+      const { data: tj } = await supabase.from("time_jogadores").select("pelada_id").eq("user_id", user.id);
+      const peladaIds = Array.from(new Set((tj || []).map((x: any) => x.pelada_id)));
+      if (peladaIds.length) {
+        const { data: pAoVivo } = await supabase.from("peladas").select("id, nome_pelada").in("id", peladaIds).eq("status", "em_andamento").limit(1).maybeSingle();
+        if (pAoVivo) {
+          const { data: partida } = await supabase.from("partidas").select("*").eq("pelada_id", pAoVivo.id).eq("status", "em_andamento").maybeSingle();
+          const { data: timesAoVivo } = await supabase.from("times").select("id, nome, cor").eq("pelada_id", pAoVivo.id);
+          const timeA = (timesAoVivo || []).find((t: any) => t.id === partida?.time_a_id) || null;
+          const timeB = (timesAoVivo || []).find((t: any) => t.id === partida?.time_b_id) || null;
+          setAoVivo({ pelada: pAoVivo, partida, timeA, timeB });
+        }
+      }
+
       setLoading(false);
+
     })();
   }, [user?.id]);
 
