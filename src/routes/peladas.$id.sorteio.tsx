@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { CORES_TIMES, type Jogador, mediaSkill, mediaTime, sortear } from "@/lib/sorteio";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/peladas/$id/sorteio")({
   component: Wrapper,
@@ -31,6 +32,7 @@ function Wrapper() {
 }
 
 type TimeUI = { nome: string; cor: string; jogadores: Jogador[]; goleiros: Jogador[] };
+type JogadorSorteio = Jogador & { skills_pendentes?: boolean; convidado?: boolean };
 
 function SorteioPage() {
   const { id } = Route.useParams();
@@ -38,9 +40,10 @@ function SorteioPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [pelada, setPelada] = useState<any>(null);
-  const [confirmados, setConfirmados] = useState<Jogador[]>([]);
+  const [confirmados, setConfirmados] = useState<JogadorSorteio[]>([]);
   const [times, setTimes] = useState<TimeUI[]>([]);
   const [saving, setSaving] = useState(false);
+  const [confirmacaoOpen, setConfirmacaoOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -58,7 +61,7 @@ function SorteioPage() {
     const profMap = new Map((profs || []).map((x: any) => [x.user_id, x]));
     const skMap = new Map((skills || []).map((x: any) => [x.user_id, x]));
 
-    const list: Jogador[] = (confs || []).map((c: any) => {
+    const list: JogadorSorteio[] = (confs || []).map((c: any) => {
       const prof: any = profMap.get(c.user_id) || {};
       const sk: any = skMap.get(c.user_id);
       const pendente = !sk || !sk.origem_ultima_atualizacao;
@@ -68,9 +71,20 @@ function SorteioPage() {
         media: pendente ? 3.0 : mediaSkill(sk as any),
         eh_goleiro: !!c.eh_goleiro || prof.posicao_preferida === "goleiro" || !!prof.quer_ser_goleiro,
         skills_pendentes: pendente,
-      } as Jogador & { skills_pendentes: boolean };
+      };
     });
-    setConfirmados(list);
+
+    const { data: convs } = await supabase.from("pelada_convidados").select("*").eq("pelada_id", id);
+    const listaConvidados: JogadorSorteio[] = (convs || []).map((c: any) => ({
+      user_id: c.id,
+      nome: `${c.nome} (convidado)`,
+      media: c.nivel_geral || 3,
+      eh_goleiro: c.posicao === "goleiro",
+      convidado: true,
+    }));
+
+    setConfirmados([...list, ...listaConvidados]);
+    const todosCandidatos = [...list, ...listaConvidados];
 
     // se já existe sorteio, carrega
     const { data: tms } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
@@ -79,7 +93,7 @@ function SorteioPage() {
       const ui: TimeUI[] = tms.map((t: any) => {
         const membros = (tj || []).filter((x: any) => x.time_id === t.id);
         const toJ = (m: any): Jogador => {
-          const fonte = list.find((l) => l.user_id === m.user_id);
+          const fonte = todosCandidatos.find((l) => l.user_id === m.user_id);
           return fonte || { user_id: m.user_id, nome: profMap.get(m.user_id)?.nome || "Jogador", media: mediaSkill(skMap.get(m.user_id) as any), eh_goleiro: m.eh_goleiro };
         };
         return {
@@ -95,23 +109,26 @@ function SorteioPage() {
 
   useEffect(() => { void load(); }, [id]);
 
+  const totalLinha = confirmados.filter((c) => !c.eh_goleiro).length;
+  const totalGoleirosDisp = confirmados.filter((c) => c.eh_goleiro).length;
+
+  const numTimesDinamico = pelada
+    ? Math.max(2, Math.min(6, Math.floor(totalLinha / Math.max(1, pelada.jogadores_por_time))))
+    : 2;
+
   const minimoOk = useMemo(() => {
     if (!pelada) return false;
-    return confirmados.length >= pelada.jogadores_por_time * pelada.numero_times;
-  }, [pelada, confirmados]);
+    return totalLinha >= pelada.jogadores_por_time * 2;
+  }, [pelada, totalLinha]);
 
-  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * pelada.numero_times : 0;
-  const totalGoleirosConfirmados = confirmados.filter((c) => c.eh_goleiro).length;
+  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * numTimesDinamico : 0;
+  const totalGoleirosConfirmados = totalGoleirosDisp;
 
   const pendentes = (confirmados as any[]).filter((c) => c.skills_pendentes);
 
-  const gerar = () => {
+  const gerarInterno = () => {
     if (!pelada) return;
-    if (pendentes.length > 0) {
-      const nomes = pendentes.map((p) => p.nome).join(", ");
-      if (!confirm(`⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`)) return;
-    }
-    const numTimes = pelada.numero_times;
+    const numTimes = numTimesDinamico;
     const modalidade = ((pelada as any).modalidade_goleiro || "fixo") as "fixo" | "sorteado";
     const { jogadores, goleiros } = sortear(confirmados, numTimes, modalidade);
     const cores = CORES_TIMES[numTimes] || [];
@@ -122,6 +139,16 @@ function SorteioPage() {
       goleiros: goleiros[i] || [],
     }));
     setTimes(ui);
+  };
+
+  const gerar = () => {
+    if (!pelada) return;
+    if (pendentes.length > 0) {
+      const nomes = pendentes.map((p) => p.nome).join(", ");
+      if (!confirm(`⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`)) return;
+    }
+    if (times.length === 0) { setConfirmacaoOpen(true); return; }
+    gerarInterno();
   };
 
   const confirmar = async () => {
@@ -154,12 +181,14 @@ function SorteioPage() {
     const notifs = times.flatMap((t) => {
       const membros = [...t.jogadores, ...t.goleiros];
       const nomes = membros.map((m) => m.nome).join(", ");
-      return membros.map((m) => ({
-        user_id: m.user_id,
-        titulo: "⚽ Times sorteados!",
-        mensagem: `Você está no ${t.nome}. Companheiros: ${nomes}. Bora!`,
-        link: `/peladas/${id}`,
-      }));
+      return membros
+        .filter((m: any) => !m.convidado)
+        .map((m) => ({
+          user_id: m.user_id,
+          titulo: "⚽ Times sorteados!",
+          mensagem: `Você está no ${t.nome}. Companheiros: ${nomes}. Bora!`,
+          link: `/peladas/${id}`,
+        }));
     });
     if (notifs.length) await supabase.from("notificacoes").insert(notifs as never);
 
@@ -180,12 +209,15 @@ function SorteioPage() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Sorteio — {pelada.nome_pelada}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {confirmados.length} confirmados · {pelada.numero_times} times de {pelada.jogadores_por_time} + {pelada.goleiros_por_time} goleiro(s)
+          {totalLinha} de linha + {totalGoleirosDisp} goleiro(s) confirmados · dá pra formar {numTimesDinamico} times de {pelada.jogadores_por_time}
+          {pelada.numero_times !== numTimesDinamico && (
+            <> (configurado para {pelada.numero_times}, mas ajustado pelo número real de confirmados)</>
+          )}
         </p>
         {!minimoOk && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-yellow-500/10 p-3 text-xs text-yellow-500">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            Mínimo de jogadores não atingido ({pelada.jogadores_por_time * pelada.numero_times}).
+            Mínimo de jogadores não atingido (precisa de pelo menos {pelada.jogadores_por_time * 2} de linha, pra formar 2 times).
           </div>
         )}
         {totalGoleirosConfirmados < totalGoleirosNecessarios && (
@@ -194,7 +226,7 @@ function SorteioPage() {
             Goleiros confirmados ({totalGoleirosConfirmados}) abaixo do ideal ({totalGoleirosNecessarios}). Você pode prosseguir mesmo assim.
           </div>
         )}
-        {pelada.numero_times === 3 && confirmados.filter((c) => c.eh_goleiro).length === 2 && (
+        {numTimesDinamico === 3 && totalGoleirosDisp === 2 && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-blue-500/10 p-3 text-xs text-blue-400">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             3 times com 2 goleiros: o sistema já equilibra automaticamente, colocando o goleiro mais fraco no time de linha mais forte (e vice-versa) nos 2 times que começam jogando. O 3º time (que começa de fora) fica sem goleiro fixo por enquanto.
@@ -232,6 +264,35 @@ function SorteioPage() {
           <Shuffle className="mr-2 h-4 w-4" />{times.length ? "Regerar" : "Gerar Sorteio"}
         </Button>
       </div>
+
+      <AlertDialog open={confirmacaoOpen} onOpenChange={setConfirmacaoOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar sorteio?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Você tem {totalLinha} jogador(es) de linha e {totalGoleirosDisp} goleiro(s) confirmado(s).</p>
+                <p>
+                  Isso vai formar {numTimesDinamico} times de {pelada?.jogadores_por_time} jogadores na linha
+                  {totalGoleirosDisp > 0 && totalGoleirosDisp < numTimesDinamico
+                    ? ", com os goleiros revezando entre os times (não tem um pra cada time ainda)."
+                    : totalGoleirosDisp >= numTimesDinamico
+                      ? ", com um goleiro fixo em cada time."
+                      : "."}
+                </p>
+                {numTimesDinamico === 3 && totalGoleirosDisp === 2 && (
+                  <p>O sistema vai equilibrar automaticamente colocando o goleiro mais fraco no time mais forte, e vice-versa, nos 2 times que começam jogando.</p>
+                )}
+                <p>Deseja sortear mesmo assim?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConfirmacaoOpen(false); gerarInterno(); }}>Sortear</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {times.length > 0 && (
         <>

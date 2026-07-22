@@ -43,6 +43,7 @@ function PeladaDetail() {
   const [pelada, setPelada] = useState<any>(null);
   const [quadra, setQuadra] = useState<any>(null);
   const [confirmacoes, setConfirmacoes] = useState<any[]>([]);
+  const [convidados, setConvidados] = useState<any[]>([]);
   const [profilesMap, setProfilesMap] = useState<Record<string, { nome: string }>>({});
   const [skillsMap, setSkillsMap] = useState<Record<string, any>>({});
   const [times, setTimes] = useState<{ id: string; nome: string; cor: string; ordem: number; membros: Jogador[] }[]>([]);
@@ -83,6 +84,8 @@ function PeladaDetail() {
     }
     const { data: cc } = await supabase.from("pelada_confirmacoes").select("*").eq("pelada_id", id).order("confirmado_em");
     setConfirmacoes(cc || []);
+    const { data: conv } = await supabase.from("pelada_convidados").select("*").eq("pelada_id", id);
+    setConvidados(conv || []);
     const confUserIds = (cc || []).map((r: any) => r.user_id);
     const safeConfIds = confUserIds.length > 0 ? confUserIds : ["00000000-0000-0000-0000-000000000000"];
     const { data: confProfs } = await supabase.from("profiles").select("user_id, nome, email, foto_url").in("user_id", safeConfIds);
@@ -586,9 +589,9 @@ function PeladaDetail() {
           {isCapitao && (
             <>
               <Button onClick={() => setPresencasOpen(true)} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><Users className="mr-2 h-4 w-4" /> Gerenciar presenças</Button>
-              {pelada.sorteio_feito && <Button onClick={() => setSorteioOpen(true)} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><RefreshCw className="mr-2 h-4 w-4" /> Refazer sorteio</Button>}
-              {!pelada.sorteio_feito && confirmados.length >= pelada.jogadores_por_time * pelada.numero_times && (
-                <Button onClick={() => setSorteioOpen(true)} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
+              {pelada.sorteio_feito && <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><RefreshCw className="mr-2 h-4 w-4" /> Refazer sorteio</Button>}
+              {!pelada.sorteio_feito && (confirmados.length + convidados.length) >= pelada.jogadores_por_time * 2 && (
+                <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
               )}
             </>
           )}
