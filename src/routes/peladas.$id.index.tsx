@@ -465,29 +465,37 @@ function PeladaDetail() {
       </div>
 
       <div className="mt-4 space-y-4 px-4">
-        <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
-          <div>
-            <div className="flex items-center gap-1 mb-3 text-white font-bold"><Users className="h-4 w-4" /> Jogadores ({confirmados.length})</div>
-            <div className="grid grid-cols-2 gap-2">
-              {confirmados.slice(0,8).map((c) => {
-                const nome = profilesMap[c.user_id]?.nome || "Jogador";
-                return (
-                  <div key={c.id} className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2A2A2A] text-xs text-white">{initials(nome)}</div>
-                    <span className="text-sm truncate text-white">{nome}</span>
-                  </div>
-                );
-              })}
-              {confirmados.length > 8 && <div className="text-xs text-muted-foreground">+ {confirmados.length - 8} outros</div>}
+        {times.length === 0 && (
+          <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
+            <div>
+              <div className="flex items-center gap-1 mb-3 text-white font-bold"><Users className="h-4 w-4" /> Jogadores ({confirmados.length})</div>
+              <div className="grid grid-cols-2 gap-2">
+                {confirmados.slice(0,8).map((c) => {
+                  const nome = profilesMap[c.user_id]?.nome || "Jogador";
+                  return (
+                    <div key={c.id} className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2A2A2A] text-xs text-white">{initials(nome)}</div>
+                      <span className="text-sm truncate text-white">{nome}</span>
+                    </div>
+                  );
+                })}
+                {confirmados.length > 8 && <div className="text-xs text-muted-foreground">+ {confirmados.length - 8} outros</div>}
+              </div>
+            </div>
+            <div className="border-l border-[#2A2A2A] pl-4">
+              <div className="flex items-center gap-1 mb-3 text-white font-bold"><Clock className="h-4 w-4" /> Espera ({espera.length})</div>
+              <div className="space-y-2">
+                {espera.length === 0 ? <div className="text-xs text-[#888]">Nenhum na espera</div> : espera.map(c => <div key={c.id} className="text-sm text-white truncate">{profilesMap[c.user_id]?.nome}</div>)}
+              </div>
             </div>
           </div>
-          <div className="border-l border-[#2A2A2A] pl-4">
-            <div className="flex items-center gap-1 mb-3 text-white font-bold"><Clock className="h-4 w-4" /> Espera ({espera.length})</div>
-            <div className="space-y-2">
-              {espera.length === 0 ? <div className="text-xs text-[#888]">Nenhum na espera</div> : espera.map(c => <div key={c.id} className="text-sm text-white truncate">{profilesMap[c.user_id]?.nome}</div>)}
-            </div>
+        )}
+
+        {times.length > 0 && pelada.status !== "em_andamento" && (
+          <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
+            <div className="flex items-center gap-1 mb-1 text-xs font-bold text-[#888]"><Users className="h-3.5 w-3.5" /> {confirmados.length} confirmados no sorteio</div>
           </div>
-        </div>
+        )}
 
         {times.length > 0 && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
