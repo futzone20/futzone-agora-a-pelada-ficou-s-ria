@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createTempSupabaseClient } from "@/integrations/supabase/tempClient";
 
-export async function criarMembroManual(grupoId: string, nome: string) {
+export async function criarMembroManual(grupoId: string, nome: string, ehGoleiro: boolean) {
   const nomeLimpo = nome.trim();
   if (!nomeLimpo) throw new Error("Informe o nome do jogador.");
 
@@ -22,7 +22,7 @@ export async function criarMembroManual(grupoId: string, nome: string) {
 
     const { error: updateError } = await temp
       .from("profiles")
-      .update({ nome: nomeLimpo, cadastro_completo: false } as never)
+      .update({ nome: nomeLimpo, cadastro_completo: false, quer_ser_goleiro: ehGoleiro } as never)
       .eq("user_id", novoUserId);
     if (updateError) throw new Error(updateError.message);
 

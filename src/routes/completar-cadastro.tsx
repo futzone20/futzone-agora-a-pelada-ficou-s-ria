@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, rolePath } from "@/lib/auth";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ function CompletarCadastroPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [posicao, setPosicao] = useState<"linha" | "goleiro">("linha");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
@@ -50,12 +52,13 @@ function CompletarCadastroPage() {
       }
       const { data, error } = await supabase.auth.signInWithPassword({ email: tempEmail, password: tempPassword });
       if (error || !data.user) { setEstado("invalido"); return; }
-      const { data: prof } = await supabase.from("profiles").select("nome, cadastro_completo").eq("user_id", data.user.id).maybeSingle();
+      const { data: prof } = await supabase.from("profiles").select("nome, cadastro_completo, quer_ser_goleiro").eq("user_id", data.user.id).maybeSingle();
       if ((prof as any)?.cadastro_completo) {
         setEstado("concluido");
         return;
       }
       setNome((prof as any)?.nome || "");
+      setPosicao((prof as any)?.quer_ser_goleiro ? "goleiro" : "linha");
       setEstado("pronto");
     })();
   }, []);
@@ -74,6 +77,7 @@ function CompletarCadastroPage() {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         whatsapp: whatsapp.trim(),
+        quer_ser_goleiro: posicao === "goleiro",
         cadastro_completo: true,
       } as never).eq("user_id", user.id);
       if (profError) throw new Error(profError.message);
@@ -138,6 +142,17 @@ function CompletarCadastroPage() {
                 <div>
                   <Label htmlFor="cn-wpp">WhatsApp</Label>
                   <Input id="cn-wpp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(11) 91234-5678" />
+                </div>
+                <div>
+                  <Label>Posição</Label>
+                  <RadioGroup value={posicao} onValueChange={(v) => setPosicao(v as "linha" | "goleiro")} className="mt-2 grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-sm cursor-pointer">
+                      <RadioGroupItem value="linha" id="cc-linha" /> De linha
+                    </label>
+                    <label className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-sm cursor-pointer">
+                      <RadioGroupItem value="goleiro" id="cc-goleiro" /> Goleiro 🧤
+                    </label>
+                  </RadioGroup>
                 </div>
                 <div>
                   <Label htmlFor="cn-senha">Crie uma senha</Label>

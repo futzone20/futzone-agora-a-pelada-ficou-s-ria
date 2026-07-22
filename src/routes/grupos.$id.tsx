@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
@@ -735,6 +736,7 @@ function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: 
 
 function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDone: () => void }) {
   const [nome, setNome] = useState("");
+  const [posicao, setPosicao] = useState<"linha" | "goleiro">("linha");
   const [loading, setLoading] = useState(false);
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
 
@@ -743,7 +745,7 @@ function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDo
     if (!nome.trim()) return;
     setLoading(true);
     try {
-      const res = await criarMembroManual(grupoId, nome);
+      const res = await criarMembroManual(grupoId, nome, posicao === "goleiro");
       setLinkGerado(res.linkConvite);
       toast.success("Membro adicionado ao grupo!");
       onDone();
@@ -762,6 +764,7 @@ function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDo
 
   const outro = () => {
     setNome("");
+    setPosicao("linha");
     setLinkGerado(null);
   };
 
@@ -794,6 +797,17 @@ function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDo
         <Label htmlFor="mm-nome">Nome do jogador</Label>
         <Input id="mm-nome" required autoFocus value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: João Silva" />
       </div>
+      <div>
+        <Label>Posição</Label>
+        <RadioGroup value={posicao} onValueChange={(v) => setPosicao(v as "linha" | "goleiro")} className="mt-2 grid grid-cols-2 gap-2">
+          <label className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-sm cursor-pointer">
+            <RadioGroupItem value="linha" id="mm-linha" /> Jogador de linha
+          </label>
+          <label className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-sm cursor-pointer">
+            <RadioGroupItem value="goleiro" id="mm-goleiro" /> Goleiro 🧤
+          </label>
+        </RadioGroup>
+      </div>
       <p className="text-xs text-muted-foreground">
         Vamos criar uma conta provisória e um link único para o jogador completar o cadastro. Ele já entra no grupo imediatamente e pode ser escalado nos sorteios.
       </p>
@@ -805,3 +819,4 @@ function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDo
     </form>
   );
 }
+
