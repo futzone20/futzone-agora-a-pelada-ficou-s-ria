@@ -379,7 +379,7 @@ function PeladaDetail() {
   const encerrarPeladaManual = async () => {
     if (!isCapitao) return;
     const restMin = Math.floor(tempoAluguelSec / 60);
-    if (!confirm(`Tem certeza que deseja encerrar a pelada? Ainda restam ${restMin}min de aluguel.`)) return;
+    if (!(await confirm({ title: "Encerrar pelada", description: `Tem certeza que deseja encerrar a pelada? Ainda restam ${restMin}min de aluguel.`, variant: "destructive", confirmLabel: "Encerrar" }))) return;
     await encerrarPeladaAuto();
   };
 
