@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
 import { GerenciarPresencasModal } from "@/components/GerenciarPresencasModal";
-import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList } from "lucide-react";
+import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -455,12 +455,12 @@ function PeladaDetail() {
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {pelada.horario_inicio.slice(0,5)}</span>
               {quadra && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {quadra.nome}</span>}
             </div>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-green-900/50 px-3 py-1 text-xs text-[#00FF87]">
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#00FF87]/40 bg-[#00FF87]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#00FF87]">
               <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF87]" />
               {pelada.status.replace("_", " ")}
             </div>
           </div>
-          <Shield className="absolute right-0 top-1/2 h-16 w-16 text-[#00FF87]" />
+          <Shield className="absolute right-0 top-1/2 h-20 w-20 text-[#00FF87] drop-shadow-[0_0_12px_rgba(0,255,135,0.6)]" strokeWidth={1.5} />
         </div>
       </div>
 
