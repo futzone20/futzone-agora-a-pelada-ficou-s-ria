@@ -144,6 +144,7 @@ function tituloFor(papel: string) {
 
 function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membros: Membro[]; isCapitao: boolean; onChange: () => void }) {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [convidarOpen, setConvidarOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [skillsMembro, setSkillsMembro] = useState<Membro | null>(null);
