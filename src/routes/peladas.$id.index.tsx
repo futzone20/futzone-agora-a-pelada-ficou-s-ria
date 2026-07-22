@@ -315,7 +315,7 @@ function PeladaDetail() {
     if (!user || !minhaConf) return;
     let novoStatus: "recusado" | "cancelado_tarde" = "recusado";
     if (pelada.sorteio_feito) {
-      if (!confirm("Atenção: cancelar após o sorteio reduzirá seus pontos. Deseja continuar?")) return;
+      if (!(await confirm({ title: "Cancelar presença", description: "Atenção: cancelar após o sorteio reduzirá seus pontos. Deseja continuar?", variant: "destructive", confirmLabel: "Cancelar mesmo assim" }))) return;
       novoStatus = "cancelado_tarde";
     }
     setActing(true);
