@@ -85,12 +85,14 @@ export function sortear(
   // modalidade fixo: goleiros fora do sorteio dos times de linha
   const linha = confirmados.filter((c) => !c.eh_goleiro);
   const gks = confirmados.filter((c) => c.eh_goleiro);
+  const timesLinha = serpentina(shuffle(linha), numTimes);
   return {
-    jogadores: serpentina(shuffle(linha), numTimes),
-    goleiros: serpentina(shuffle(gks), numTimes),
+    jogadores: timesLinha,
+    goleiros: distribuirGoleiros(gks, timesLinha),
     goleirosFixos: shuffle(gks),
   };
 }
+
 
 export function mediaTime(t: Jogador[]): number {
   if (!t.length) return 0;
