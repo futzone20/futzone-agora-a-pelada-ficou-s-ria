@@ -333,28 +333,33 @@ function PeladaDetail() {
     void load();
   };
 
+  const TOLERANCIA_SEC = 180;
+
   useEffect(() => {
     if (loading) return;
     if (!pelada?.aluguel_iniciado_em) return;
     if (pelada?.status !== "em_andamento") return;
     if (!isCapitao) return;
     if (tempoAluguelSec !== 0) { if (avisoAluguelOpen) setAvisoAluguelOpen(false); return; }
-    if (avisoAluguelOpen) return;
-    setGraceSec(180);
-    setAvisoAluguelOpen(true);
+    if (!avisoAluguelOpen) setAvisoAluguelOpen(true);
   }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, loading, isCapitao, avisoAluguelOpen]);
 
   useEffect(() => {
-    if (!avisoAluguelOpen) return;
-    const i = setInterval(() => {
-      setGraceSec((s) => {
-        if (s <= 1) { void encerrarPeladaAuto(); return 0; }
-        return s - 1;
-      });
-    }, 1000);
+    if (!avisoAluguelOpen || !pelada?.aluguel_iniciado_em) return;
+    const tempoLocado = pelada.tempo_locado_minutos ?? 60;
+    const fimAluguel = new Date(pelada.aluguel_iniciado_em).getTime() + tempoLocado * 60_000;
+    const calc = () => {
+      const vencidoSec = Math.floor((Date.now() - fimAluguel) / 1000);
+      const restante = Math.max(0, TOLERANCIA_SEC - vencidoSec);
+      setGraceSec(restante);
+      if (restante <= 0) void encerrarPeladaAuto();
+    };
+    calc();
+    const i = setInterval(calc, 1000);
     return () => clearInterval(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avisoAluguelOpen]);
+  }, [avisoAluguelOpen, pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos]);
+
 
   const registrarAtrasoAluguel = async (minutos: number) => {
     if (!pelada) return;
