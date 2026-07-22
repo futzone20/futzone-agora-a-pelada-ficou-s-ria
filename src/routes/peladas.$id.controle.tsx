@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { slugify, calcularTabela } from "@/lib/placar";
 import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/peladas/$id/controle")({ component: Wrapper });
 
