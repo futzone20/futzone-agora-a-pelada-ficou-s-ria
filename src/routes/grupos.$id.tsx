@@ -18,6 +18,7 @@ import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2,
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { SKILL_KEYS, mediaSkill, type SkillRow } from "@/lib/sorteio";
 import { AvaliarMembroModal } from "@/components/AvaliarMembroModal";
 import { TemporadaTab } from "@/components/TemporadaTab";
