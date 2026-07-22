@@ -37,7 +37,9 @@ export function Inicio() {
   const [pontos, setPontos] = useState(0);
   const [ofensiva, setOfensiva] = useState(0);
   const [desafios, setDesafios] = useState<any[]>([]);
+  const [aoVivo, setAoVivo] = useState<{ pelada: any; partida: any; timeA: any; timeB: any } | null>(null);
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     if (!user) return;
@@ -89,7 +91,23 @@ export function Inicio() {
         .order("criado_em", { ascending: false })
         .limit(5);
       setNotifs(ns || []);
+
+      // Pelada ao vivo em que o usuário está escalado (pra mostrar o resumo fixo na home)
+      const { data: tj } = await supabase.from("time_jogadores").select("pelada_id").eq("user_id", user.id);
+      const peladaIds = Array.from(new Set((tj || []).map((x: any) => x.pelada_id)));
+      if (peladaIds.length) {
+        const { data: pAoVivo } = await supabase.from("peladas").select("id, nome_pelada").in("id", peladaIds).eq("status", "em_andamento").limit(1).maybeSingle();
+        if (pAoVivo) {
+          const { data: partida } = await supabase.from("partidas").select("*").eq("pelada_id", pAoVivo.id).eq("status", "em_andamento").maybeSingle();
+          const { data: timesAoVivo } = await supabase.from("times").select("id, nome, cor").eq("pelada_id", pAoVivo.id);
+          const timeA = (timesAoVivo || []).find((t: any) => t.id === partida?.time_a_id) || null;
+          const timeB = (timesAoVivo || []).find((t: any) => t.id === partida?.time_b_id) || null;
+          setAoVivo({ pelada: pAoVivo, partida, timeA, timeB });
+        }
+      }
+
       setLoading(false);
+
     })();
   }, [user?.id]);
 
@@ -118,8 +136,42 @@ export function Inicio() {
 
   return (
     <div className="space-y-6 pb-20 animate-fade-in scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-      
+
+      {aoVivo && (
+        <section className="px-4">
+          <Link
+            to="/peladas/$id"
+            params={{ id: aoVivo.pelada.id }}
+            className="block rounded-2xl border border-[#00FF87]/60 bg-[#0F1F17] p-4 transition hover:border-[#00FF87]"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#00FF87]">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF87]" /> Ao vivo agora
+              </span>
+              <span className="truncate text-[10px] text-gray-400">{aoVivo.pelada.nome_pelada}</span>
+            </div>
+            {aoVivo.partida ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-1 items-center gap-2 min-w-0">
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: aoVivo.timeA?.cor || "#666" }} />
+                  <span className="truncate text-sm font-bold text-white">{aoVivo.timeA?.nome || "Time A"}</span>
+                </div>
+                <span className="shrink-0 text-2xl font-black text-white">{aoVivo.partida.placar_a} - {aoVivo.partida.placar_b}</span>
+                <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
+                  <span className="truncate text-sm font-bold text-white">{aoVivo.timeB?.nome || "Time B"}</span>
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: aoVivo.timeB?.cor || "#666" }} />
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm font-bold text-white">Sua pelada está rolando — próxima partida já já.</p>
+            )}
+            <p className="mt-2 text-center text-[10px] text-gray-500">Toque para acompanhar ao vivo →</p>
+          </Link>
+        </section>
+      )}
+
       {/* 1. HEADER - Handled by MobileShell, but user wants logic in hero now too */}
+
       
       {/* 2. HERO BANNER */}
       <section className="flex flex-col gap-1 px-4">
