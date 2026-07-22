@@ -42,6 +42,7 @@ function Controle() {
   const { id } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [pelada, setPelada] = useState<any>(null);
   const [quadra, setQuadra] = useState<any>(null);
   const [times, setTimes] = useState<any[]>([]);
