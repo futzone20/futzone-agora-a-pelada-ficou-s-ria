@@ -84,6 +84,8 @@ function PeladaDetail() {
     }
     const { data: cc } = await supabase.from("pelada_confirmacoes").select("*").eq("pelada_id", id).order("confirmado_em");
     setConfirmacoes(cc || []);
+    const { data: conv } = await supabase.from("pelada_convidados").select("*").eq("pelada_id", id);
+    setConvidados(conv || []);
     const confUserIds = (cc || []).map((r: any) => r.user_id);
     const safeConfIds = confUserIds.length > 0 ? confUserIds : ["00000000-0000-0000-0000-000000000000"];
     const { data: confProfs } = await supabase.from("profiles").select("user_id, nome, email, foto_url").in("user_id", safeConfIds);
