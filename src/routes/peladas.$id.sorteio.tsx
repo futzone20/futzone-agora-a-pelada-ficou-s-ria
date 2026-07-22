@@ -112,16 +112,18 @@ function SorteioPage() {
   const totalLinha = confirmados.filter((c) => !c.eh_goleiro).length;
   const totalGoleirosDisp = confirmados.filter((c) => c.eh_goleiro).length;
 
-  const numTimesDinamico = pelada
-    ? Math.max(2, Math.min(6, Math.floor(totalLinha / Math.max(1, pelada.jogadores_por_time))))
-    : 2;
+  // O número de times é sempre o configurado na criação da pelada — não recalculamos isso.
+  // O que muda dinamicamente é só a distribuição de jogadores/goleiros dentro desses times.
+  const numTimes = pelada ? pelada.numero_times : 2;
+  const linhaPorTimeAprox = numTimes ? Math.floor(totalLinha / numTimes) : 0;
+  const linhaComSobra = numTimes ? totalLinha % numTimes : 0;
 
   const minimoOk = useMemo(() => {
     if (!pelada) return false;
-    return totalLinha >= pelada.jogadores_por_time * 2;
+    return totalLinha >= pelada.numero_times * 2;
   }, [pelada, totalLinha]);
 
-  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * numTimesDinamico : 0;
+  const totalGoleirosNecessarios = pelada ? pelada.goleiros_por_time * pelada.numero_times : 0;
   const totalGoleirosConfirmados = totalGoleirosDisp;
 
   const pendentes = (confirmados as any[]).filter((c) => c.skills_pendentes);
