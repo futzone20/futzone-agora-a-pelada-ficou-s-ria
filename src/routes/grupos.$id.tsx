@@ -690,6 +690,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
 }
 
 function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: any; isCapitao: boolean; peladas: Pelada[]; onChange: () => void; onDeleted: () => void }) {
+  const confirm = useConfirm();
   const [nome, setNome] = useState(grupo.nome);
   const temAtiva = peladas.some((p) => p.status === "em_andamento");
 
