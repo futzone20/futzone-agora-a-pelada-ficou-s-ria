@@ -727,6 +727,18 @@ function PeladaDetail() {
                   <div className="h-1 w-12 bg-[#2A2A2A] mx-auto rounded-full overflow-hidden">
                     <div className="h-full bg-[#00FF87]" style={{ width: `${(tempoRestante / (partidaAtual.duracao_minutos * 60)) * 100}%` }} />
                   </div>
+                  {partidaAtual.pausada_em && (
+                    <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-yellow-400">
+                      ⏸ pausado há {Math.floor(tempoPausadoAtual / 60).toString().padStart(2, "0")}:{(tempoPausadoAtual % 60).toString().padStart(2, "0")}
+                    </div>
+                  )}
+                  {isCapitao && (
+                    partidaAtual.pausada_em ? (
+                      <button onClick={retomarPartida} className="mt-2 rounded-full border border-[#00FF87] px-3 py-1 text-[10px] font-bold text-[#00FF87]">▶ Retomar</button>
+                    ) : (
+                      <button onClick={pausarPartida} className="mt-2 rounded-full border border-[#2A2A2A] px-3 py-1 text-[10px] font-bold text-white">⏸ Pausar</button>
+                    )
+                  )}
                 </div>
 
                 <div className="flex-1 text-center">
