@@ -1,0 +1,2 @@
+ALTER TABLE public.peladas ADD COLUMN IF NOT EXISTS regra_empate_rodizio TEXT NOT NULL DEFAULT 'time_atual_sai' CHECK (regra_empate_rodizio IN ('time_atual_sai','time_atual_fica'));
+ALTER TABLE public.partidas ADD COLUMN IF NOT EXISTS fila_espera JSONB NOT NULL DEFAULT '[]'::jsonb;
