@@ -68,10 +68,12 @@ export function StatsPeladaModal({
   open,
   onOpenChange,
   peladaId,
+  initialTab,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   peladaId: string;
+  initialTab?: TabId;
 }) {
   const { user } = useAuth();
   const [times, setTimes] = useState<Time[]>([]);
@@ -81,10 +83,14 @@ export function StatsPeladaModal({
   const [peladaInfo, setPeladaInfo] = useState<{ nome: string; data: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [tab, setTab] = useState<TabId>("times");
+  const [tab, setTab] = useState<TabId>(initialTab || "times");
   const [expandedPartida, setExpandedPartida] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const storyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) setTab(initialTab || "times");
+  }, [open, initialTab]);
 
   useEffect(() => {
     if (!open) return;
