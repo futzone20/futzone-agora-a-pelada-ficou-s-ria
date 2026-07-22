@@ -167,7 +167,7 @@ function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membr
     toast.success("Atualizado"); onChange();
   };
   const remover = async (m: Membro) => {
-    if (!confirm(`Remover ${m.profile?.nome || "membro"} do grupo?`)) return;
+    if (!(await confirm({ title: "Remover membro", description: `Remover ${m.profile?.nome || "membro"} do grupo?`, variant: "destructive", confirmLabel: "Remover" }))) return;
     const { error } = await supabase.from("grupo_membros").update({ status: "removido" } as never).eq("id", m.id);
     if (error) return toast.error(error.message);
     toast.success("Membro removido"); onChange();
