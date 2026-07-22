@@ -9,7 +9,7 @@ import { CircleDot, Calendar, Clock, MapPin, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
+import { ConfirmadosProgress, PeladaStatusOuContagem, useAgora } from "@/lib/pelada-status";
 
 export const Route = createFileRoute("/jogador/peladas")({
   component: Peladas,
