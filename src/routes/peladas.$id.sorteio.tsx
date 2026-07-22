@@ -39,6 +39,7 @@ function SorteioPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [pelada, setPelada] = useState<any>(null);
   const [confirmados, setConfirmados] = useState<JogadorSorteio[]>([]);
