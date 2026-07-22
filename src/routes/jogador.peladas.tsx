@@ -9,7 +9,7 @@ import { CircleDot, Calendar, Clock, MapPin, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
+import { ConfirmadosProgress, PeladaStatusOuContagem, useAgora } from "@/lib/pelada-status";
 
 export const Route = createFileRoute("/jogador/peladas")({
   component: Peladas,
@@ -26,6 +26,7 @@ function Peladas() {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const agora = useAgora();
 
   useEffect(() => {
     if (!user) return;
@@ -71,7 +72,7 @@ function Peladas() {
             <Link key={p.id} to="/peladas/$id" params={{ id: p.id }} className="block rounded-2xl border border-border bg-card p-4 transition hover:border-primary/50">
               <div className="flex items-start justify-between">
                 <div className="font-bold">{p.nome_pelada}</div>
-                <StatusBadge status={p.status} />
+                <PeladaStatusOuContagem status={p.status} data={p.data} horarioInicio={p.horario_inicio} agora={agora} />
               </div>
               <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {p.data.split("-").reverse().join("/")}</span>

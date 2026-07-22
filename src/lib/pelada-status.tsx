@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 export type PeladaStatus = "aguardando" | "confirmada" | "em_andamento" | "encerrada" | "cancelada" | string;
 
 export const statusLabel = (s: PeladaStatus): string => {
@@ -40,5 +42,50 @@ export function ConfirmadosProgress({ confirmados, capacidade }: { confirmados: 
         <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
       </div>
     </div>
+  );
+}
+
+/** Relógio que atualiza a cada segundo — usado pra alimentar contagens regressivas ao vivo. */
+export function useAgora(intervaloMs = 1000) {
+  const [agora, setAgora] = useState(Date.now());
+  useEffect(() => {
+    const i = setInterval(() => setAgora(Date.now()), intervaloMs);
+    return () => clearInterval(i);
+  }, [intervaloMs]);
+  return agora;
+}
+
+export function formatarContagem(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}min ${s}s`;
+  if (m > 0) return `${m}min ${s}s`;
+  return `${s}s`;
+}
+
+export function PeladaStatusOuContagem({
+  status, data, horarioInicio, agora,
+}: { status: PeladaStatus; data: string; horarioInicio: string; agora: number }) {
+  const naoComecou = status !== "em_andamento" && status !== "encerrada" && status !== "cancelada";
+  if (!naoComecou) return <StatusBadge status={status} />;
+
+  let inicio: number;
+  try {
+    inicio = new Date(`${data}T${horarioInicio}`).getTime();
+  } catch {
+    return <StatusBadge status={status} />;
+  }
+  const faltam = inicio - agora;
+  if (!Number.isFinite(inicio) || faltam <= 0) return <StatusBadge status={status} />;
+
+  if (faltam > 24 * 3600_000) {
+    return <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-400">Em breve</span>;
+  }
+  return (
+    <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-400">
+      Começa em {formatarContagem(faltam)}
+    </span>
   );
 }
