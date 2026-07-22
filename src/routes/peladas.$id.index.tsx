@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
 import { GerenciarPresencasModal } from "@/components/GerenciarPresencasModal";
-import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList } from "lucide-react";
+import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -455,39 +455,75 @@ function PeladaDetail() {
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {pelada.horario_inicio.slice(0,5)}</span>
               {quadra && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {quadra.nome}</span>}
             </div>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-green-900/50 px-3 py-1 text-xs text-[#00FF87]">
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#00FF87]/40 bg-[#00FF87]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#00FF87]">
               <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF87]" />
               {pelada.status.replace("_", " ")}
             </div>
           </div>
-          <Shield className="absolute right-0 top-1/2 h-16 w-16 text-[#00FF87]" />
+          <Shield className="absolute right-0 top-1/2 h-20 w-20 text-[#00FF87] drop-shadow-[0_0_12px_rgba(0,255,135,0.6)]" strokeWidth={1.5} />
         </div>
       </div>
 
       <div className="mt-4 space-y-4 px-4">
-        <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
-          <div>
-            <div className="flex items-center gap-1 mb-3 text-white font-bold"><Users className="h-4 w-4" /> Jogadores ({confirmados.length})</div>
-            <div className="grid grid-cols-2 gap-2">
-              {confirmados.slice(0,8).map((c) => {
-                const nome = profilesMap[c.user_id]?.nome || "Jogador";
-                return (
-                  <div key={c.id} className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2A2A2A] text-xs text-white">{initials(nome)}</div>
-                    <span className="text-sm truncate text-white">{nome}</span>
+        {times.length === 0 && (
+          <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
+            <div>
+              <div className="flex items-center gap-1 mb-3 text-white font-bold"><Users className="h-4 w-4" /> Jogadores ({confirmados.length})</div>
+              <div className="grid grid-cols-2 gap-2">
+                {confirmados.slice(0,8).map((c) => {
+                  const nome = profilesMap[c.user_id]?.nome || "Jogador";
+                  return (
+                    <div key={c.id} className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2A2A2A] text-xs text-white">{initials(nome)}</div>
+                      <span className="text-sm truncate text-white">{nome}</span>
+                    </div>
+                  );
+                })}
+                {confirmados.length > 8 && <div className="text-xs text-muted-foreground">+ {confirmados.length - 8} outros</div>}
+              </div>
+            </div>
+            <div className="border-l border-[#2A2A2A] pl-4">
+              <div className="flex items-center gap-1 mb-3 text-white font-bold"><Clock className="h-4 w-4" /> Espera ({espera.length})</div>
+              <div className="space-y-2">
+                {espera.length === 0 ? <div className="text-xs text-[#888]">Nenhum na espera</div> : espera.map(c => <div key={c.id} className="text-sm text-white truncate">{profilesMap[c.user_id]?.nome}</div>)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {times.length > 0 && pelada.status !== "em_andamento" && (
+          <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
+            <div className="flex items-center gap-1 mb-1 text-xs font-bold text-[#888]"><Users className="h-3.5 w-3.5" /> {confirmados.length} confirmados no sorteio</div>
+          </div>
+        )}
+
+        {pelada.status === "em_andamento" && (() => {
+          const aluguelMM = Math.floor(tempoAluguelSec / 60).toString().padStart(2, "0");
+          const aluguelSS = (tempoAluguelSec % 60).toString().padStart(2, "0");
+          const totalLocado = pelada.tempo_locado_minutos ?? 60;
+          const decorrido = Math.max(0, totalLocado * 60 - tempoAluguelSec);
+          const pct = totalLocado > 0 ? Math.min(100, Math.round((decorrido / (totalLocado * 60)) * 100)) : 0;
+          return (
+            <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#888]">Tempo de quadra</div>
+                  <div className="text-4xl font-black text-[#00FF87] mt-1">{aluguelMM}:{aluguelSS}</div>
+                  {partidaAtual && <div className="text-[10px] font-bold uppercase tracking-widest text-[#888] mt-1">Partida {partidaAtual.numero_partida}</div>}
+                </div>
+                <div className="h-10 w-px bg-[#2A2A2A]" />
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#888]">Total <span className="text-white">{Math.floor(totalLocado/60)}h{(totalLocado%60).toString().padStart(2,"0")}</span></div>
+                  <div className="mt-2 h-1.5 w-full rounded-full bg-[#2A2A2A] overflow-hidden">
+                    <div className="h-full bg-[#00FF87]" style={{ width: `${pct}%` }} />
                   </div>
-                );
-              })}
-              {confirmados.length > 8 && <div className="text-xs text-muted-foreground">+ {confirmados.length - 8} outros</div>}
+                  <div className="text-[10px] font-bold text-[#00FF87] mt-1">{pct}%</div>
+                </div>
+                <Shield className="h-10 w-10 text-[#00FF87]/40 shrink-0" />
+              </div>
             </div>
-          </div>
-          <div className="border-l border-[#2A2A2A] pl-4">
-            <div className="flex items-center gap-1 mb-3 text-white font-bold"><Clock className="h-4 w-4" /> Espera ({espera.length})</div>
-            <div className="space-y-2">
-              {espera.length === 0 ? <div className="text-xs text-[#888]">Nenhum na espera</div> : espera.map(c => <div key={c.id} className="text-sm text-white truncate">{profilesMap[c.user_id]?.nome}</div>)}
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {times.length > 0 && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
@@ -502,33 +538,36 @@ function PeladaDetail() {
           };
           return (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-white font-bold"><Users className="h-5 w-5" /> Times sorteados</div>
+              <div className="flex items-center gap-2 text-white font-bold uppercase tracking-wide text-sm"><Users className="h-5 w-5" /> Times sorteados</div>
 
               {meuTime && (
                 <div className="rounded-2xl border-2 bg-[#1A1A1A] p-4 relative overflow-hidden" style={{ borderColor: meuTime.cor }}>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 font-bold text-lg" style={{ color: corTextoLegivel(meuTime.cor) }}>
-                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${estaDeFora(meuTime) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(meuTime)}</span>
-                      Seu time: {meuTime.nome} <Trophy className="h-4 w-4" />
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: meuTime.cor }}>
+                        <Star className="h-5 w-5" style={{ color: corTextoLegivel(meuTime.cor) }} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: corTextoLegivel(meuTime.cor) }}>Seu time</div>
+                        <div className="text-lg font-black text-white leading-tight">{meuTime.nome}</div>
+                      </div>
                     </div>
-                    {temRodizio && estaDeFora(meuTime) && (
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-[#AAA]">⏳ fora na 1ª</span>
-                    )}
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${estaDeFora(meuTime) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(meuTime)}</span>
                   </div>
+                  {temRodizio && estaDeFora(meuTime) && (
+                    <div className="mb-2 flex items-center gap-1 text-[10px] font-bold text-[#AAA]"><User className="h-3 w-3" /> fora na 1ª rodada</div>
+                  )}
                   <div className="flex gap-4">
-                    <div className="h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20" style={{ backgroundColor: meuTime.cor }}>
-                      <Users className="h-8 w-8 text-white" />
-                    </div>
                     <div className="flex-1 space-y-1">
                       {meuTime.membros.map((m) => (
                         <div key={m.user_id} className="text-sm text-white">
-                          {m.nome}{m.user_id === user?.id && <span className="text-[#888] ml-1">(você)</span>}
+                          {m.nome}{m.user_id === user?.id && <span className="ml-1 font-bold" style={{ color: corTextoLegivel(meuTime.cor) }}>(você)</span>}
                         </div>
                       ))}
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] text-[#888] uppercase">FORÇA</div>
-                      <div className="text-2xl font-bold" style={{ color: corTextoLegivel(meuTime.cor) }}>{mediaTime(meuTime.membros).toFixed(2)}</div>
+                      <div className="text-[10px] text-[#888] uppercase">Força</div>
+                      <div className="text-2xl font-bold border-b-2 pb-0.5" style={{ color: corTextoLegivel(meuTime.cor), borderColor: meuTime.cor }}>{mediaTime(meuTime.membros).toFixed(2)}</div>
                     </div>
                   </div>
                   <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: meuTime.cor, opacity: 0.3 }} />
@@ -539,19 +578,20 @@ function PeladaDetail() {
               <div className="grid grid-cols-2 gap-3">
                 {times.filter((t) => t !== meuTime).map((t) => (
                   <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
+                    {temRodizio && estaDeFora(t) && (
+                      <span className="absolute right-3 top-3 flex items-center gap-1 text-[9px] font-bold text-[#AAA]"><User className="h-3 w-3" /> 1 fora</span>
+                    )}
                     <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
-                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${estaDeFora(t) ? "bg-white/10 text-[#AAA]" : "bg-[#00FF87]/20 text-[#00FF87]"}`}>{numeroTime(t)}</span>
-                      <div className="h-10 w-10 rounded-full flex items-center justify-center bg-white/10" style={{ backgroundColor: t.cor }}>
-                        <Users className="h-5 w-5 text-white" />
+                      <div className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: t.cor }}>
+                        <Shirt className="h-5 w-5 text-white" />
                       </div>
                       <span className="truncate">{t.nome}</span>
-                      {temRodizio && estaDeFora(t) && <span className="ml-auto shrink-0 text-[9px] font-bold text-[#AAA]">⏳ fora</span>}
                     </div>
                     <div className="space-y-1 mb-4">
                       {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
                     </div>
                     <div className="absolute right-3 bottom-3 text-right">
-                      <div className="text-[9px] text-[#888] uppercase">FORÇA</div>
+                      <div className="text-[9px] text-[#888] uppercase">Força</div>
                       <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
                     </div>
                     <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
@@ -618,35 +658,50 @@ function PeladaDetail() {
 
         <div className="grid grid-cols-2 gap-3">
           {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
-            <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
+            <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
           ) : minhaConf?.status === "confirmado" ? (
             <>
-              <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
-              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
+              <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
+              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
             </>
           ) : (
             <>
-              <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold h-13 rounded-xl">Em lista de espera</Button>
-              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
+              <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold uppercase tracking-wide h-13 rounded-xl">Em lista de espera</Button>
+              <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
             </>
           )}
 
-          {isCapitao && (
-            <>
-              <Button onClick={() => setPresencasOpen(true)} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><Users className="mr-2 h-4 w-4" /> Gerenciar presenças</Button>
-              {pelada.sorteio_feito && <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl"><RefreshCw className="mr-2 h-4 w-4" /> Refazer sorteio</Button>}
-              {!pelada.sorteio_feito && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
-                <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
-              )}
-            </>
+          {!pelada.sorteio_feito && isCapitao && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
+            <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
           )}
 
           {isCapitao && pelada.sorteio_feito && pelada.status !== "em_andamento" && pelada.status !== "encerrada" && (
-            <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
+            <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
           )}
 
-          {pelada.status === "em_andamento" && (
-            <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white h-12 rounded-xl">
+          {isCapitao && (
+            <div className="col-span-2 grid grid-cols-3 gap-2">
+              <button onClick={() => setPresencasOpen(true)} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                <Users className="h-5 w-5" />
+                <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Gerenciar<br />presenças</span>
+              </button>
+              {pelada.sorteio_feito && (
+                <button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                  <RefreshCw className="h-5 w-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Refazer<br />sorteio</span>
+                </button>
+              )}
+              {pelada.status === "em_andamento" && (
+                <Link to="/peladas/$id/lances" params={{ id }} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                  <Shield className="h-5 w-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Painel de<br />lances</span>
+                </Link>
+              )}
+            </div>
+          )}
+
+          {!isCapitao && pelada.status === "em_andamento" && (
+            <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white uppercase tracking-wide h-12 rounded-xl">
               <Link to="/peladas/$id/lances" params={{ id }}><ClipboardList className="mr-2 h-4 w-4" /> Painel de Lances</Link>
             </Button>
           )}
