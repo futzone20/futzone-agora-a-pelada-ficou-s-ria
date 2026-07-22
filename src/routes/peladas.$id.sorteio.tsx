@@ -210,10 +210,8 @@ function SorteioPage() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Sorteio — {pelada.nome_pelada}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {totalLinha} de linha + {totalGoleirosDisp} goleiro(s) confirmados · dá pra formar {numTimesDinamico} times de {pelada.jogadores_por_time}
-          {pelada.numero_times !== numTimesDinamico && (
-            <> (configurado para {pelada.numero_times}, mas ajustado pelo número real de confirmados)</>
-          )}
+          {totalLinha} de linha + {totalGoleirosDisp} goleiro(s) confirmados · vai formar os <b>{numTimes} times</b> configurados,
+          com {linhaComSobra > 0 ? `${linhaPorTimeAprox} ou ${linhaPorTimeAprox + 1}` : linhaPorTimeAprox} jogadores de linha em cada
         </p>
         {!minimoOk && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-yellow-500/10 p-3 text-xs text-yellow-500">
