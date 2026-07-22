@@ -522,7 +522,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
       grupo_id: grupoId,
       criado_por: user.id,
       ...rest,
-      jogadores_por_time: totalPorTime,
+      jogadores_por_time: form.jogadores_linha_por_time,
       gols_para_encerrar: gols_para_encerrar_ativo ? form.gols_para_encerrar : null,
     };
     if (tipo === "publica" && quadraId) payload.quadra_id = quadraId;
