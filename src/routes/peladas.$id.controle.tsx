@@ -182,7 +182,7 @@ function Controle() {
   };
 
   const encerrarPelada = async () => {
-    if (!confirm("Encerrar pelada?")) return;
+    if (!(await confirm({ title: "Encerrar pelada", description: "Tem certeza que deseja encerrar a pelada?", variant: "destructive", confirmLabel: "Encerrar" }))) return;
     await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
     await supabase.from("placar_sessao").update({ ativa: false, encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id);
     void notificarVencedoresPelada(id);
