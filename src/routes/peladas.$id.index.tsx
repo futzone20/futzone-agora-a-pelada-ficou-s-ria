@@ -848,7 +848,7 @@ function PeladaDetail() {
         onDone={() => { setSorteioOpen(false); void load(); }}
       />
 
-      <AlertDialog open={!!proximaPreview && !!partidaAtual === false && pelada.status === "em_andamento" && isCapitao} onOpenChange={(v) => { if (!v) setProximaPreview(null); }}>
+      <AlertDialog open={!!proximaPreview && !partidaAtual && pelada.status === "em_andamento" && isCapitao} onOpenChange={(v) => { if (!v) setProximaPreview(null); }}>
         <AlertDialogContent className="bg-[#0D0D0D] border-[#2A2A2A] text-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">🏁 Partida encerrada!</AlertDialogTitle>
