@@ -163,3 +163,19 @@ export function sugerirTrocaGoleiro(params: {
   }
   return { sugestao: trocas.length > 0, trocas };
 }
+
+/**
+ * Dado um hex de cor de time, retorna uma cor de texto legível sobre fundo escuro.
+ * Cores muito escuras (ex: "Time Preto" #222222) ficam quase invisíveis se usadas
+ * como cor do próprio texto sobre os cards escuros do app — nesses casos, cai pra
+ * uma cor clara fixa em vez da cor original do time.
+ */
+export function corTextoLegivel(hex: string, corClara = "#F5F5F5"): string {
+  const c = hex.replace("#", "");
+  if (c.length !== 6) return hex;
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminancia < 0.4 ? corClara : hex;
+}

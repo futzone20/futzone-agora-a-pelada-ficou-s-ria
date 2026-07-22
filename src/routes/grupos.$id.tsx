@@ -18,6 +18,7 @@ import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2,
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { SKILL_KEYS, mediaSkill, type SkillRow } from "@/lib/sorteio";
 import { AvaliarMembroModal } from "@/components/AvaliarMembroModal";
 import { TemporadaTab } from "@/components/TemporadaTab";
@@ -143,6 +144,7 @@ function tituloFor(papel: string) {
 
 function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membros: Membro[]; isCapitao: boolean; onChange: () => void }) {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [convidarOpen, setConvidarOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [skillsMembro, setSkillsMembro] = useState<Membro | null>(null);
@@ -165,7 +167,7 @@ function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membr
     toast.success("Atualizado"); onChange();
   };
   const remover = async (m: Membro) => {
-    if (!confirm(`Remover ${m.profile?.nome || "membro"} do grupo?`)) return;
+    if (!(await confirm({ title: "Remover membro", description: `Remover ${m.profile?.nome || "membro"} do grupo?`, variant: "destructive", confirmLabel: "Remover" }))) return;
     const { error } = await supabase.from("grupo_membros").update({ status: "removido" } as never).eq("id", m.id);
     if (error) return toast.error(error.message);
     toast.success("Membro removido"); onChange();
@@ -688,6 +690,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
 }
 
 function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: any; isCapitao: boolean; peladas: Pelada[]; onChange: () => void; onDeleted: () => void }) {
+  const confirm = useConfirm();
   const [nome, setNome] = useState(grupo.nome);
   const temAtiva = peladas.some((p) => p.status === "em_andamento");
 
@@ -706,7 +709,7 @@ function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: 
   };
   const excluir = async () => {
     if (temAtiva) return toast.error("Existem peladas em andamento");
-    if (!confirm("Excluir grupo definitivamente?")) return;
+    if (!(await confirm({ title: "Excluir grupo", description: "Excluir grupo definitivamente? Essa ação não pode ser desfeita.", variant: "destructive", confirmLabel: "Excluir" }))) return;
     const { error } = await supabase.from("grupos").delete().eq("id", grupo.id);
     if (error) return toast.error(error.message);
     toast.success("Grupo excluído"); onDeleted();

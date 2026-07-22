@@ -12,7 +12,8 @@ import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuf
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { mediaSkill, mediaTime, type Jogador } from "@/lib/sorteio";
+import { mediaSkill, mediaTime, corTextoLegivel, type Jogador } from "@/lib/sorteio";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
 import { StatsPeladaModal } from "@/components/StatsPeladaModal";
 import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
@@ -40,6 +41,7 @@ function PeladaDetail() {
   const { id } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [pelada, setPelada] = useState<any>(null);
   const [quadra, setQuadra] = useState<any>(null);
   const [confirmacoes, setConfirmacoes] = useState<any[]>([]);
@@ -313,7 +315,7 @@ function PeladaDetail() {
     if (!user || !minhaConf) return;
     let novoStatus: "recusado" | "cancelado_tarde" = "recusado";
     if (pelada.sorteio_feito) {
-      if (!confirm("Atenção: cancelar após o sorteio reduzirá seus pontos. Deseja continuar?")) return;
+      if (!(await confirm({ title: "Cancelar presença", description: "Atenção: cancelar após o sorteio reduzirá seus pontos. Deseja continuar?", variant: "destructive", confirmLabel: "Cancelar mesmo assim" }))) return;
       novoStatus = "cancelado_tarde";
     }
     setActing(true);
@@ -377,7 +379,7 @@ function PeladaDetail() {
   const encerrarPeladaManual = async () => {
     if (!isCapitao) return;
     const restMin = Math.floor(tempoAluguelSec / 60);
-    if (!confirm(`Tem certeza que deseja encerrar a pelada? Ainda restam ${restMin}min de aluguel.`)) return;
+    if (!(await confirm({ title: "Encerrar pelada", description: `Tem certeza que deseja encerrar a pelada? Ainda restam ${restMin}min de aluguel.`, variant: "destructive", confirmLabel: "Encerrar" }))) return;
     await encerrarPeladaAuto();
   };
 
@@ -451,20 +453,39 @@ function PeladaDetail() {
 
         {times.length > 0 && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
-          const ordemRodizio = pelada.sistema_disputa === "rodizio"
-            ? [...times].sort((a, b) => mediaTime(b.membros) - mediaTime(a.membros))
-            : [];
-          const foraPrimeira = ordemRodizio[0];
+          // O time que fica de fora na 1ª rodada é sempre o de ordem 0 — é a mesma regra usada
+          // de fato ao iniciar a pelada (peladas.$id.controle.tsx), então isso aqui só espelha
+          // o que vai acontecer, sem risco de mostrar um time diferente do que realmente começa de fora.
+          const temRodizio = pelada.sistema_disputa === "rodizio" && times.length >= 3;
+          const foraPrimeira = temRodizio ? [...times].sort((a, b) => a.ordem - b.ordem)[0] : null;
+          const estaDeFora = (t: typeof times[number]) => !!foraPrimeira && t.id === foraPrimeira.id;
           return (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-white font-bold"><Users className="h-5 w-5" /> Times sorteados</div>
-              
+
+              {temRodizio && (
+                <div className="flex items-start gap-2 rounded-xl border border-[#2A2A2A] bg-[#141414] p-3 text-xs text-[#AAA]">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#00FF87]" />
+                  <div className="space-y-1">
+                    <div>A 1ª partida é entre os 2 times marcados <span className="text-[#00FF87] font-bold">▶ Começa jogando</span>.</div>
+                    <div>O time marcado <span className="text-yellow-400 font-bold">⏳ Começa de fora</span> entra no rodízio depois, revezando com quem perder.</div>
+                  </div>
+                </div>
+              )}
+
               {meuTime && (
                 <div className="rounded-2xl border-2 bg-[#1A1A1A] p-4 relative overflow-hidden" style={{ borderColor: meuTime.cor }}>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 font-bold text-lg" style={{ color: meuTime.cor }}>
+                    <div className="flex items-center gap-2 font-bold text-lg" style={{ color: corTextoLegivel(meuTime.cor) }}>
                       Seu time: {meuTime.nome} <Trophy className="h-4 w-4" />
                     </div>
+                    {temRodizio && (
+                      estaDeFora(meuTime) ? (
+                        <span className="rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 text-[10px] font-bold text-yellow-400">⏳ Começa de fora</span>
+                      ) : (
+                        <span className="rounded-full bg-[#00FF87]/10 border border-[#00FF87]/30 px-2 py-0.5 text-[10px] font-bold text-[#00FF87]">▶ Começa jogando</span>
+                      )
+                    )}
                   </div>
                   <div className="flex gap-4">
                     <div className="h-14 w-14 rounded-full flex items-center justify-center border-2 border-white/20" style={{ backgroundColor: meuTime.cor }}>
@@ -479,7 +500,7 @@ function PeladaDetail() {
                     </div>
                     <div className="text-right">
                       <div className="text-[10px] text-[#888] uppercase">FORÇA</div>
-                      <div className="text-2xl font-bold" style={{ color: meuTime.cor }}>{mediaTime(meuTime.membros).toFixed(2)}</div>
+                      <div className="text-2xl font-bold" style={{ color: corTextoLegivel(meuTime.cor) }}>{mediaTime(meuTime.membros).toFixed(2)}</div>
                     </div>
                   </div>
                   <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: meuTime.cor, opacity: 0.3 }} />
@@ -490,30 +511,31 @@ function PeladaDetail() {
               <div className="grid grid-cols-2 gap-3">
                 {times.filter((t) => t !== meuTime).map((t) => (
                   <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
-                    <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: t.cor }}>
+                    <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
                       <div className="h-10 w-10 rounded-full flex items-center justify-center bg-white/10" style={{ backgroundColor: t.cor }}>
                         <Users className="h-5 w-5 text-white" />
                       </div>
                       <span className="truncate">{t.nome}</span>
                     </div>
+                    {temRodizio && (
+                      estaDeFora(t) ? (
+                        <div className="mb-2 inline-block rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 text-[10px] font-bold text-yellow-400">⏳ De fora</div>
+                      ) : (
+                        <div className="mb-2 inline-block rounded-full bg-[#00FF87]/10 border border-[#00FF87]/30 px-2 py-0.5 text-[10px] font-bold text-[#00FF87]">▶ Joga já</div>
+                      )
+                    )}
                     <div className="space-y-1 mb-4">
                       {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
                     </div>
                     <div className="absolute right-3 bottom-3 text-right">
                       <div className="text-[9px] text-[#888] uppercase">FORÇA</div>
-                      <div className="text-sm font-bold" style={{ color: t.cor }}>{mediaTime(t.membros).toFixed(2)}</div>
+                      <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
                     </div>
                     <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
                     <div className="absolute bottom-0 left-0 h-1" style={{ width: `${(mediaTime(t.membros) / 5) * 100}%`, backgroundColor: t.cor }} />
                   </div>
                 ))}
               </div>
-
-              {foraPrimeira && (
-                <div className="flex items-center gap-2 text-xs text-[#888] py-2">
-                  <Info className="h-4 w-4" /> Time de fora na 1ª rodada: <span className="text-red-500 font-bold">{foraPrimeira.nome}</span>
-                </div>
-              )}
             </div>
           );
         })()}

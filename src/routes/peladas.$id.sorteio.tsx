@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { CORES_TIMES, type Jogador, mediaSkill, mediaTime, sortear } from "@/lib/sorteio";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/peladas/$id/sorteio")({
   component: Wrapper,
@@ -38,6 +39,7 @@ function SorteioPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [pelada, setPelada] = useState<any>(null);
   const [confirmados, setConfirmados] = useState<JogadorSorteio[]>([]);
@@ -142,11 +144,15 @@ function SorteioPage() {
     setTimes(ui);
   };
 
-  const gerar = () => {
+  const gerar = async () => {
     if (!pelada) return;
     if (pendentes.length > 0) {
       const nomes = pendentes.map((p) => p.nome).join(", ");
-      if (!confirm(`⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`)) return;
+      if (!(await confirm({
+        title: "Jogadores sem skills",
+        description: `⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`,
+        confirmLabel: "Continuar mesmo assim",
+      }))) return;
     }
     if (times.length === 0) { setConfirmacaoOpen(true); return; }
     gerarInterno();

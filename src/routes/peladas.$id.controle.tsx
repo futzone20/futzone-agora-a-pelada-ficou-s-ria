@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { slugify, calcularTabela } from "@/lib/placar";
 import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/peladas/$id/controle")({ component: Wrapper });
 
@@ -41,6 +42,7 @@ function Controle() {
   const { id } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [pelada, setPelada] = useState<any>(null);
   const [quadra, setQuadra] = useState<any>(null);
   const [times, setTimes] = useState<any[]>([]);
@@ -180,7 +182,7 @@ function Controle() {
   };
 
   const encerrarPelada = async () => {
-    if (!confirm("Encerrar pelada?")) return;
+    if (!(await confirm({ title: "Encerrar pelada", description: "Tem certeza que deseja encerrar a pelada?", variant: "destructive", confirmLabel: "Encerrar" }))) return;
     await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
     await supabase.from("placar_sessao").update({ ativa: false, encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id);
     void notificarVencedoresPelada(id);
