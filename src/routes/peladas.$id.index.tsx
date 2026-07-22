@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { mediaSkill, mediaTime, corTextoLegivel, type Jogador } from "@/lib/sorteio";
+import { proximaRodada, escolherTimesIniciais } from "@/lib/rodizio";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
 import { StatsPeladaModal } from "@/components/StatsPeladaModal";
