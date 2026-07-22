@@ -60,6 +60,13 @@ function PeladaDetail() {
   const [partidaAtual, setPartidaAtual] = useState<any>(null);
   const [tempoRestante, setTempoRestante] = useState<number>(0);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [statsInitialTab, setStatsInitialTab] = useState<"times" | "artilheiros" | "partidas" | "goleiros">("times");
+  const [resumoEncerrada, setResumoEncerrada] = useState<{
+    vencedor: { id: string; nome: string; cor: string } | null;
+    mvpNome: string | null;
+    artilheiroNome: string | null;
+    artilheiroGols: number;
+  } | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [tempoAluguelSec, setTempoAluguelSec] = useState<number>(0);
   const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
