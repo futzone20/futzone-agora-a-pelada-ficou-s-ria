@@ -968,7 +968,7 @@ function PeladaDetail() {
         </div>
       </div>
 
-      <StatsPeladaModal open={statsOpen} onOpenChange={setStatsOpen} peladaId={id} />
+      <StatsPeladaModal open={statsOpen} onOpenChange={setStatsOpen} peladaId={id} initialTab={statsInitialTab} />
 
       <GerenciarPresencasModal
         open={presencasOpen}
