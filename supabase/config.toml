@@ -1,1 +1,4 @@
 project_id = "ueihfrbmefmihtbidloq"
+
+[functions.encerrar-peladas-vencidas]
+verify_jwt = false
