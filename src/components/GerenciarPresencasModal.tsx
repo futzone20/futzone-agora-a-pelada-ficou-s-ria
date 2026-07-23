@@ -28,7 +28,7 @@ const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("
 export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId, capacidade }: Props) {
   const confirm = useConfirm();
   const [peladaStatus, setPeladaStatus] = useState<string | null>(null);
-  const [tokenConfirmacao, setTokenConfirmacao] = useState<string | null>(null);
+  
   const [membros, setMembros] = useState<any[]>([]);
   const [confirmacoes, setConfirmacoes] = useState<any[]>([]);
   const [convidados, setConvidados] = useState<any[]>([]);
