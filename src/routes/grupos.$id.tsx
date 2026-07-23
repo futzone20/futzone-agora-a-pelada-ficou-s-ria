@@ -64,33 +64,40 @@ function GrupoPage() {
   const isCapitao = !!membros.find((m) => m.user_id === user?.id && (m.papel === "capitao" || m.papel === "auxiliar"));
 
   const load = async () => {
-    setLoading(true);
-    const [g, m, p] = await Promise.all([
-      supabase.from("grupos").select("*").eq("id", id).maybeSingle(),
-      supabase.from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).eq("status", "ativo"),
-      supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, status").eq("grupo_id", id).order("data", { ascending: true }),
-    ]);
-    if (g.error) toast.error(g.error.message);
-    setGrupo(g.data);
-    const userIds = (m.data || []).map((x: any) => x.user_id);
-    let profilesMap: Record<string, { nome: string; foto_url: string | null; cidade: string | null; cadastro_completo: boolean }> = {};
-    let skillsMap: Record<string, any> = {};
-    if (userIds.length > 0) {
-      const [pr, sk] = await Promise.all([
-        supabase.from("profiles").select("user_id, nome, foto_url, cidade, cadastro_completo").in("user_id", userIds),
-        supabase.from("skills").select("*").in("user_id", userIds),
+    try {
+      setLoading(true);
+      const [g, m, p] = await Promise.all([
+        supabase.from("grupos").select("*").eq("id", id).maybeSingle(),
+        supabase.from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).eq("status", "ativo"),
+        supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, status").eq("grupo_id", id).order("data", { ascending: true }),
       ]);
-      (pr.data || []).forEach((x: any) => { profilesMap[x.user_id] = { nome: x.nome, foto_url: x.foto_url, cidade: x.cidade, cadastro_completo: x.cadastro_completo !== false }; });
-      (sk.data || []).forEach((x: any) => { skillsMap[x.user_id] = x; });
+      if (g.error) toast.error(g.error.message);
+      setGrupo(g.data);
+      const userIds = (m.data || []).map((x: any) => x.user_id);
+      let profilesMap: Record<string, { nome: string; foto_url: string | null; cidade: string | null; cadastro_completo: boolean }> = {};
+      let skillsMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const [pr, sk] = await Promise.all([
+          supabase.from("profiles").select("user_id, nome, foto_url, cidade, cadastro_completo").in("user_id", userIds),
+          supabase.from("skills").select("*").in("user_id", userIds),
+        ]);
+        if (pr.error) toast.error(pr.error.message);
+        if (sk.error) toast.error(sk.error.message);
+        (pr.data || []).forEach((x: any) => { profilesMap[x.user_id] = { nome: x.nome, foto_url: x.foto_url, cidade: x.cidade, cadastro_completo: x.cadastro_completo !== false }; });
+        (sk.data || []).forEach((x: any) => { skillsMap[x.user_id] = x; });
+      }
+      setMembros((m.data || []).map((x: any) => ({
+        ...x,
+        profile: profilesMap[x.user_id] || null,
+        skill: skillsMap[x.user_id] || null,
+        skill_origem: skillsMap[x.user_id]?.origem_ultima_atualizaçao || null,
+      })));
+      setPeladas((p.data as any) || []);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao carregar grupo");
+    } finally {
+      setLoading(false);
     }
-    setMembros((m.data || []).map((x: any) => ({
-      ...x,
-      profile: profilesMap[x.user_id] || null,
-      skill: skillsMap[x.user_id] || null,
-      skill_origem: skillsMap[x.user_id]?.origem_ultima_atualizacao || null,
-    })));
-    setPeladas((p.data as any) || []);
-    setLoading(false);
   };
 
   useEffect(() => { void load(); }, [id]);
