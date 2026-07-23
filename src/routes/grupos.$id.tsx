@@ -612,10 +612,10 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
             </SelectContent>
           </Select>
           {form.tempo_locado_custom && (
-            <Input className="mt-2" type="number" min={10} value={form.tempo_locado_minutos} onChange={(e) => setForm({ ...form, tempo_locado_minutos: +e.target.value })} placeholder="minutos" />
+            <Input className="mt-2" type="number" min={10} value={form.tempo_locado_minutos} onChange={(e) => setForm({ ...form, tempo_locado_minutos: Math.max(10, +e.target.value || 10) })} placeholder="minutos" />
           )}
         </div>
-        <div><Label>Duração de cada partida (min)</Label><Input type="number" min={1} value={form.duracao_partida_minutos} onChange={(e) => setForm({ ...form, duracao_partida_minutos: +e.target.value })} /></div>
+        <div><Label>Duração de cada partida (min)</Label><Input type="number" min={1} value={form.duracao_partida_minutos} onChange={(e) => setForm({ ...form, duracao_partida_minutos: Math.max(1, +e.target.value || 1) })} /></div>
         <div>
           <Label>Nº de times</Label>
           <Select value={String(form.numero_times)} onValueChange={(v) => setForm({ ...form, numero_times: +v })}>
@@ -625,7 +625,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
             </SelectContent>
           </Select>
         </div>
-        <div><Label>Jogadores de linha/time</Label><Input type="number" min={1} value={form.jogadores_linha_por_time} onChange={(e) => setForm({ ...form, jogadores_linha_por_time: +e.target.value })} /></div>
+        <div><Label>Jogadores de linha/time</Label><Input type="number" min={1} value={form.jogadores_linha_por_time} onChange={(e) => setForm({ ...form, jogadores_linha_por_time: Math.max(1, +e.target.value || 1) })} /></div>
         <div>
           <Label>Goleiros/time</Label>
           <Input type="number" min={0} value={form.goleiros_por_time} onChange={(e) => setForm({ ...form, goleiros_por_time: +e.target.value })} />
