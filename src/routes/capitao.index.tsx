@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { PeladaStatusOuContagem, ConfirmadosProgress, useAgora } from "@/lib/pelada-status";
 import { ConvitesGrupoCard } from "@/components/ConvitesGrupoCard";
+import { CaixinhaEntradaCard } from "@/components/CaixinhaEntradaCard";
 
 export const Route = createFileRoute("/capitao/")({
   component: Inicio,
@@ -74,6 +75,7 @@ function Inicio() {
   return (
     <div className="space-y-6">
       <ConvitesGrupoCard />
+      <CaixinhaEntradaCard to="/capitao/vaquinhas" />
       {aoVivo && (
         <section>
           <Link

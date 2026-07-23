@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus } from "lucide-react";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus, PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -123,10 +123,11 @@ function GrupoPage() {
       </div>
 
       <Tabs defaultValue="membros">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="membros"><Users className="mr-1 h-4 w-4" />Membros</TabsTrigger>
           <TabsTrigger value="peladas"><CircleDot className="mr-1 h-4 w-4" />Peladas</TabsTrigger>
-          <TabsTrigger value="regras"><BookOpen className="mr-1 h-4 w-4" />Regras</TabsTrigger>
+          <TabsTrigger value="regras"><BookOpen className="mr-1 h-4 w-4" /></TabsTrigger>
+          <TabsTrigger value="vaquinhas"><PiggyBank className="mr-1 h-4 w-4" />💰</TabsTrigger>
           <TabsTrigger value="temporada">🏆</TabsTrigger>
           <TabsTrigger value="config"><Settings className="mr-1 h-4 w-4" /></TabsTrigger>
         </TabsList>
@@ -141,6 +142,10 @@ function GrupoPage() {
 
         <TabsContent value="regras" className="mt-4">
           <RegrasTab grupoId={id} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} />
+        </TabsContent>
+
+        <TabsContent value="vaquinhas" className="mt-4">
+          <VaquinhasTab grupo={grupo} membros={membros} isCapitao={isCapitao} />
         </TabsContent>
 
         <TabsContent value="temporada" className="mt-4">
