@@ -395,6 +395,29 @@ function PeladaDetail() {
     void load();
   };
 
+  const liberarLista = async () => {
+    if (!pelada || acting) return;
+    setActing(true);
+    const { error } = await supabase.from("peladas").update({ lista_liberada_em: new Date().toISOString() } as never).eq("id", id);
+    if (error) { toast.error(error.message); setActing(false); return; }
+
+    const { data: membros } = await supabase.from("grupo_membros").select("user_id").eq("grupo_id", pelada.grupo_id).eq("status", "ativo");
+    const notifs = ((membros as any[]) || [])
+      .filter((m) => m.user_id !== user?.id)
+      .map((m) => ({
+        user_id: m.user_id,
+        titulo: "📢 Lista liberada!",
+        mensagem: `A lista da pelada "${pelada.nome_pelada}" já está aberta. Confirme sua presença!`,
+        link: `/pelada-confirmar/${pelada.token_confirmacao}`,
+      }));
+    if (notifs.length) await supabase.from("notificacoes").insert(notifs as never);
+
+    toast.success("Lista liberada! Todo mundo do grupo foi notificado.");
+    setActing(false);
+    void load();
+  };
+
+
   const iniciarPelada = async (comAtraso: boolean = false) => {
     if (!pelada || !isCapitao || acting) return;
     setActing(true);
