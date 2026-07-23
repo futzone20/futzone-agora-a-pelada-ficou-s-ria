@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
 import { GerenciarPresencasModal } from "@/components/GerenciarPresencasModal";
-import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown } from "lucide-react";
+import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown, Copy, MessageCircle } from "lucide-react";
 import { calcularTabela } from "@/lib/placar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
