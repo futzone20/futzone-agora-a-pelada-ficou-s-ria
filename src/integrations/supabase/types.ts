@@ -2263,6 +2263,7 @@ export type Database = {
           id: string
           jogadores_linha_por_time: number | null
           jogadores_por_time: number
+          lista_liberada_em: string | null
           modalidade_goleiro: string | null
           mvp_user_id: string | null
           nome_pelada: string
@@ -2298,6 +2299,7 @@ export type Database = {
           id?: string
           jogadores_linha_por_time?: number | null
           jogadores_por_time?: number
+          lista_liberada_em?: string | null
           modalidade_goleiro?: string | null
           mvp_user_id?: string | null
           nome_pelada: string
@@ -2333,6 +2335,7 @@ export type Database = {
           id?: string
           jogadores_linha_por_time?: number | null
           jogadores_por_time?: number
+          lista_liberada_em?: string | null
           modalidade_goleiro?: string | null
           mvp_user_id?: string | null
           nome_pelada?: string

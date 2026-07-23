@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, UserPlus, Users, Copy } from "lucide-react";
+import { X, UserPlus, Users } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmProvider";
 
 
@@ -28,7 +28,7 @@ const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("
 export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId, capacidade }: Props) {
   const confirm = useConfirm();
   const [peladaStatus, setPeladaStatus] = useState<string | null>(null);
-  const [tokenConfirmacao, setTokenConfirmacao] = useState<string | null>(null);
+  
   const [membros, setMembros] = useState<any[]>([]);
   const [confirmacoes, setConfirmacoes] = useState<any[]>([]);
   const [convidados, setConvidados] = useState<any[]>([]);
@@ -39,9 +39,8 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
   const load = async () => {
     setLoading(true);
 
-    const { data: pel } = await supabase.from("peladas").select("status, token_confirmacao").eq("id", peladaId).maybeSingle();
+    const { data: pel } = await supabase.from("peladas").select("status").eq("id", peladaId).maybeSingle();
     setPeladaStatus((pel as any)?.status || null);
-    setTokenConfirmacao((pel as any)?.token_confirmacao || null);
 
 
     const { data: gm } = await supabase
@@ -146,20 +145,6 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
           {peladaStatus === "aguardando" && (
             <Button size="sm" variant="outline" onClick={encerrarListaManualmente} className="w-full">
               Encerrar lista agora (mesmo incompleta)
-            </Button>
-          )}
-          {tokenConfirmacao && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                const link = `${window.location.origin}/pelada-confirmar/${tokenConfirmacao}`;
-                navigator.clipboard.writeText(link);
-                toast.success("Link de confirmação copiado! Só vale pra quem já está (ou vai entrar) no grupo.");
-              }}
-            >
-              <Copy className="mr-2 h-4 w-4" /> Copiar link de confirmação dessa pelada
             </Button>
           )}
         </div>

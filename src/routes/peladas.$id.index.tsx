@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
 import { GerenciarPresencasModal } from "@/components/GerenciarPresencasModal";
-import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown } from "lucide-react";
+import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown, Copy, MessageCircle } from "lucide-react";
 import { calcularTabela } from "@/lib/placar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -395,6 +395,29 @@ function PeladaDetail() {
     void load();
   };
 
+  const liberarLista = async () => {
+    if (!pelada || acting) return;
+    setActing(true);
+    const { error } = await supabase.from("peladas").update({ lista_liberada_em: new Date().toISOString() } as never).eq("id", id);
+    if (error) { toast.error(error.message); setActing(false); return; }
+
+    const { data: membros } = await supabase.from("grupo_membros").select("user_id").eq("grupo_id", pelada.grupo_id).eq("status", "ativo");
+    const notifs = ((membros as any[]) || [])
+      .filter((m) => m.user_id !== user?.id)
+      .map((m) => ({
+        user_id: m.user_id,
+        titulo: "📢 Lista liberada!",
+        mensagem: `A lista da pelada "${pelada.nome_pelada}" já está aberta. Confirme sua presença!`,
+        link: `/pelada-confirmar/${pelada.token_confirmacao}`,
+      }));
+    if (notifs.length) await supabase.from("notificacoes").insert(notifs as never);
+
+    toast.success("Lista liberada! Todo mundo do grupo foi notificado.");
+    setActing(false);
+    void load();
+  };
+
+
   const iniciarPelada = async (comAtraso: boolean = false) => {
     if (!pelada || !isCapitao || acting) return;
     setActing(true);
@@ -705,6 +728,41 @@ function PeladaDetail() {
                   <Button onClick={encerrarPartida} className="w-full bg-[#CC0000] hover:bg-[#AA0000] text-white font-bold h-12 rounded-xl">Encerrar Partida</Button>
                   <Button onClick={encerrarPeladaManual} variant="outline" className="w-full border-[#CC0000] text-[#CC0000] hover:bg-[#CC0000]/10 h-10 rounded-xl">🛑 Encerrar Pelada</Button>
                 </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {isCapitao && pelada.status === "aguardando" && pelada.token_confirmacao && (() => {
+          const linkCompleto = `${window.location.origin}/pelada-confirmar/${pelada.token_confirmacao}`;
+          const mensagemWhats = encodeURIComponent(`⚽ A lista da pelada "${pelada.nome_pelada}" está aberta! Confirma sua presença: ${linkCompleto}`);
+          return (
+            <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2 font-bold"><Copy className="h-4 w-4 text-[#00FF87]" /> Link de confirmação</div>
+              <p className="text-xs text-muted-foreground">Envie esse link pro pessoal do grupo confirmar presença nessa pelada.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { navigator.clipboard.writeText(linkCompleto); toast.success("Link copiado!"); }}
+                >
+                  <Copy className="mr-2 h-4 w-4" /> Copiar link
+                </Button>
+                <Button size="sm" className="bg-[#25D366] text-white hover:bg-[#25D366]/90" asChild>
+                  <a href={`https://wa.me/?text=${mensagemWhats}`} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
+                  </a>
+                </Button>
+              </div>
+              {!pelada.recorrente && (
+                <Button
+                  size="sm"
+                  onClick={liberarLista}
+                  disabled={acting || !!pelada.lista_liberada_em}
+                  className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90"
+                >
+                  {pelada.lista_liberada_em ? "✓ Lista já liberada" : "📢 Liberar Lista pra todo mundo"}
+                </Button>
               )}
             </div>
           );
