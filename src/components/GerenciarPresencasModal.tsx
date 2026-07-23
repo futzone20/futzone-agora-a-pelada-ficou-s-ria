@@ -26,6 +26,8 @@ interface Props {
 const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
 export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId, capacidade }: Props) {
+  const confirm = useConfirm();
+  const [peladaStatus, setPeladaStatus] = useState<string | null>(null);
   const [membros, setMembros] = useState<any[]>([]);
   const [confirmacoes, setConfirmacoes] = useState<any[]>([]);
   const [convidados, setConvidados] = useState<any[]>([]);
@@ -35,6 +37,10 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
 
   const load = async () => {
     setLoading(true);
+
+    const { data: pel } = await supabase.from("peladas").select("status").eq("id", peladaId).maybeSingle();
+    setPeladaStatus((pel as any)?.status || null);
+
 
     const { data: gm } = await supabase
       .from("grupo_membros")
