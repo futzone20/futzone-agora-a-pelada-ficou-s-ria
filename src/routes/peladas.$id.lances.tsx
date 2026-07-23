@@ -142,6 +142,34 @@ function LancesPage() {
   }, [partida, now]);
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+  useEffect(() => {
+    if (!ehAuxiliar || !partida || partida.status !== "em_andamento") return;
+    if (restanteSec > 0) return;
+    void encerrarPartidaAuto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restanteSec, partida?.id, partida?.status, ehAuxiliar]);
+
+  useEffect(() => {
+    if (!pelada || pelada.status !== "em_andamento") { setProximaPreview(null); return; }
+    if (partida) { setProximaPreview(null); return; }
+    if (proximaPreview) return;
+    void calcularProximaPartida(id, pelada).then((p) => { if (p) setProximaPreview(p); });
+  }, [pelada?.status, partida, proximaPreview, id]);
+
+  const confirmarProximaPartida = async () => {
+    if (!proximaPreview || confirmandoProxima) return;
+    setConfirmandoProxima(true);
+    try {
+      await iniciarProximaPartida(id, pelada, proximaPreview);
+      setProximaPreview(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao iniciar a próxima partida");
+    } finally {
+      setConfirmandoProxima(false);
+    }
+    void load();
+  };
+
   const corAluguel = tempoAluguelSec > 1200 ? "#00FF87" : tempoAluguelSec > 300 ? "#FACC15" : "#FF4D4D";
   const pulseAluguel = tempoAluguelSec <= 300 ? "animate-pulse" : "";
 
@@ -228,6 +256,29 @@ function LancesPage() {
           goleiroTimeId: timeAdversarioId,
           goleiroTimeNome: timeAdversario.nome,
           goleiroTimeCor: timeAdversario.cor,
+        });
+      }
+      return;
+    }
+
+    if (tipo === "frango") {
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo: "frango", user_id: userId, time_id: timeId, marcado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Frango registrado 🐔");
+      setDrawer(null);
+      void load();
+
+      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+      const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
+      const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
+
+      if (jogadoresAdversario.length > 0 && timeAdversario) {
+        setDrawerArtilheiro({
+          timeId: timeAdversarioId,
+          timeNome: timeAdversario.nome,
+          timeCor: timeAdversario.cor,
         });
       }
       return;
