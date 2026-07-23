@@ -5,6 +5,7 @@ import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, T
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { calcularProximaPartida, iniciarProximaPartida, type ProximaPartidaPreview } from "@/lib/rotacaoPartida";
 
 
 export const Route = createFileRoute("/peladas/$id/lances")({ component: Wrapper });
@@ -59,15 +60,18 @@ function LancesPage() {
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [drawer, setDrawer] = useState<{ tipo: string; timeId: string } | null>(null);
   const [drawerGoleiro, setDrawerGoleiro] = useState<{ goleiroTimeId: string; goleiroTimeNome: string; goleiroTimeCor: string } | null>(null);
+  const [drawerArtilheiro, setDrawerArtilheiro] = useState<{ timeId: string; timeNome: string; timeCor: string } | null>(null);
   const [pendingGol, setPendingGol] = useState<{ userId: string; tipo: string; timeId: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [isCapitao, setIsCapitao] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
+  const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
+  const [confirmandoProxima, setConfirmandoProxima] = useState(false);
 
   const load = async () => {
     const { data: pelData } = await supabase
       .from("peladas")
-      .select("aluguel_iniciado_em, tempo_locado_minutos, grupo_id, gols_para_encerrar, modalidade_goleiro, data, horario_inicio, quadra_id")
+      .select("*")
       .eq("id", id)
       .maybeSingle();
     setPelada(pelData);
@@ -117,6 +121,7 @@ function LancesPage() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [id]);
@@ -137,6 +142,34 @@ function LancesPage() {
   }, [partida, now]);
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+  useEffect(() => {
+    if (!ehAuxiliar || !partida || partida.status !== "em_andamento") return;
+    if (restanteSec > 0) return;
+    void encerrarPartidaAuto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restanteSec, partida?.id, partida?.status, ehAuxiliar]);
+
+  useEffect(() => {
+    if (!pelada || pelada.status !== "em_andamento") { setProximaPreview(null); return; }
+    if (partida) { setProximaPreview(null); return; }
+    if (proximaPreview) return;
+    void calcularProximaPartida(id, pelada).then((p) => { if (p) setProximaPreview(p); });
+  }, [pelada?.status, partida, proximaPreview, id]);
+
+  const confirmarProximaPartida = async () => {
+    if (!proximaPreview || confirmandoProxima) return;
+    setConfirmandoProxima(true);
+    try {
+      await iniciarProximaPartida(id, pelada, proximaPreview);
+      setProximaPreview(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao iniciar a próxima partida");
+    } finally {
+      setConfirmandoProxima(false);
+    }
+    void load();
+  };
+
   const corAluguel = tempoAluguelSec > 1200 ? "#00FF87" : tempoAluguelSec > 300 ? "#FACC15" : "#FF4D4D";
   const pulseAluguel = tempoAluguelSec <= 300 ? "animate-pulse" : "";
 
@@ -145,7 +178,12 @@ function LancesPage() {
   const timeA = partida && times.find((t) => t.id === partida.time_a_id);
   const timeB = partida && times.find((t) => t.id === partida.time_b_id);
 
-  const jogadoresDoTime = (tid: string) => timeJogadores.filter((x) => x.time_id === tid);
+  const jogadoresDoTime = (tid: string, apenasGoleiro = false) => {
+    const todos = timeJogadores.filter((x) => x.time_id === tid);
+    if (!apenasGoleiro) return todos;
+    const goleiros = todos.filter((x) => x.eh_goleiro);
+    return goleiros.length > 0 ? goleiros : todos;
+  };
 
   const dataFmt = useMemo(() => {
     if (!pelada?.data) return "";
@@ -223,6 +261,29 @@ function LancesPage() {
       return;
     }
 
+    if (tipo === "frango") {
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo: "frango", user_id: userId, time_id: timeId, marcado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Frango registrado 🐔");
+      setDrawer(null);
+      void load();
+
+      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+      const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
+      const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
+
+      if (jogadoresAdversario.length > 0 && timeAdversario) {
+        setDrawerArtilheiro({
+          timeId: timeAdversarioId,
+          timeNome: timeAdversario.nome,
+          timeCor: timeAdversario.cor,
+        });
+      }
+      return;
+    }
+
     const { error } = await supabase.from("lances").insert({
       partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
     } as never);
@@ -253,11 +314,59 @@ function LancesPage() {
     void load();
   };
 
+  const marcarArtilheiro = async (userId: string | null) => {
+    if (!partida || !user || !drawerArtilheiro) return;
+    if (userId) {
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo: "gol", user_id: userId, time_id: drawerArtilheiro.timeId, marcado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); setDrawerArtilheiro(null); return; }
+      toast.success("Gol registrado! ⚽");
+
+      const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+      if (partidaAtualizada) setPartida(partidaAtualizada);
+
+      const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
+      if (pel?.gols_para_encerrar && partidaAtualizada && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
+        setDrawerArtilheiro(null);
+        void encerrarPartidaAuto();
+        return;
+      }
+    }
+    setDrawerArtilheiro(null);
+    void load();
+  };
+
   if (!partida) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] p-4 space-y-3" style={{ maxWidth: 480, margin: "0 auto" }}>
         <Link to="/peladas/$id" params={{ id }} className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Voltar</Link>
-        <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Nenhuma partida em andamento.</div>
+        {proximaPreview ? (
+          <div className="rounded-2xl border border-[#1F1F1F] bg-[#111111] p-6 text-center space-y-4">
+            <div className="text-5xl">🏁</div>
+            <div className="text-xl font-black text-white">Partida encerrada!</div>
+            <div className="text-sm text-white/70">
+              Próxima partida:{" "}
+              <span className="font-bold text-white">{times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time"}</span>
+              {" "}x{" "}
+              <span className="font-bold text-white">{times.find((t) => t.id === proximaPreview.timeBId)?.nome || "Time"}</span>
+            </div>
+            {ehAuxiliar ? (
+              <button
+                onClick={confirmarProximaPartida}
+                disabled={confirmandoProxima}
+                className="w-full rounded-xl px-4 py-3 text-base font-black uppercase tracking-wider text-black disabled:opacity-50"
+                style={{ background: "#00FF87" }}
+              >
+                {confirmandoProxima ? "Iniciando..." : "▶ Iniciar Partida"}
+              </button>
+            ) : (
+              <p className="text-xs text-white/60">Aguardando o capitão iniciar a próxima partida...</p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Nenhuma partida em andamento.</div>
+        )}
       </div>
     );
   }
@@ -434,7 +543,7 @@ function LancesPage() {
                             </div>
                             <div className="flex-1 min-w-0 text-[12px] leading-tight">
                               <span className="font-bold text-white">{profiles[l.user_id]?.nome || "Jogador"}</span>
-                              <span className="text-white/70"> fez </span>
+                              <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
                               <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
                               <span className="text-white/50"> — </span>
                               <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
@@ -507,12 +616,12 @@ function LancesPage() {
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">
-                Quem fez o {TIPOS.find((t) => t.v === drawer.tipo)?.label}?
+                {drawer.tipo === "frango" ? "Qual goleiro levou o frango? 🐔" : `Quem fez o ${TIPOS.find((t) => t.v === drawer.tipo)?.label}?`}
               </h3>
               <button onClick={() => setDrawer(null)} className="text-white/60"><X className="h-5 w-5" /></button>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto">
-              {jogadoresDoTime(drawer.timeId).map((j) => (
+              {jogadoresDoTime(drawer.timeId, drawer.tipo === "frango").map((j) => (
                 <button
                   key={j.user_id}
                   onClick={() => marcar(j.user_id)}
@@ -546,8 +655,7 @@ function LancesPage() {
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
-              {timeJogadores
-                .filter((j: any) => j.time_id === drawerGoleiro.goleiroTimeId)
+              {jogadoresDoTime(drawerGoleiro.goleiroTimeId, true)
                 .map((j: any) => (
                   <button
                     key={j.user_id}
@@ -569,7 +677,46 @@ function LancesPage() {
         </div>
       )}
 
-      {/* consumir pendingGol para eslint */}
+      {/* Drawer artilheiro (quem fez o gol, depois de marcar um frango) */}
+      {drawerArtilheiro && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => marcarArtilheiro(null)}>
+          <div
+            className="w-full rounded-t-2xl bg-[#1A1A1A] p-4 shadow-xl"
+            style={{ maxWidth: 480, margin: "0 auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Quem fez o gol? ⚽</h3>
+                <p className="text-xs text-white/60 mt-0.5">
+                  Jogador do <span className="font-bold" style={{ color: drawerArtilheiro.timeCor }}>{drawerArtilheiro.timeNome}</span>
+                </p>
+              </div>
+              <button onClick={() => marcarArtilheiro(null)} className="text-white/60">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
+              {jogadoresDoTime(drawerArtilheiro.timeId).map((j: any) => (
+                <button
+                  key={j.user_id}
+                  onClick={() => marcarArtilheiro(j.user_id)}
+                  className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
+                >
+                  <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => marcarArtilheiro(null)}
+              className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60"
+            >
+              Pular — sem artilheiro definido
+            </button>
+          </div>
+        </div>
+      )}
+
       {pendingGol && <span className="hidden" />}
     </div>
   );
