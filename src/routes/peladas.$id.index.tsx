@@ -349,9 +349,12 @@ function PeladaDetail() {
     if (!pelada?.aluguel_iniciado_em) return;
     if (pelada?.status !== "em_andamento") return;
     if (!isCapitao) return;
-    if (tempoAluguelSec !== 0) { if (avisoAluguelOpen) setAvisoAluguelOpen(false); return; }
+    const tempoLocado = pelada.tempo_locado_minutos ?? 60;
+    const fimAluguel = new Date(pelada.aluguel_iniciado_em).getTime() + tempoLocado * 60_000;
+    const jaVenceu = Date.now() >= fimAluguel;
+    if (!jaVenceu) { if (avisoAluguelOpen) setAvisoAluguelOpen(false); return; }
     if (!avisoAluguelOpen) setAvisoAluguelOpen(true);
-  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, loading, isCapitao, avisoAluguelOpen]);
+  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos, loading, isCapitao, avisoAluguelOpen]);
 
   useEffect(() => {
     if (!avisoAluguelOpen || !pelada?.aluguel_iniciado_em) return;
@@ -426,11 +429,16 @@ function PeladaDetail() {
   useEffect(() => {
     if (loading || !partidaAtual || !isCapitao) return;
     if (partidaAtual.pausada_em) return;
-    if (tempoRestante !== 0) return;
     if (partidaAtual.status !== "em_andamento") return;
+    if (!partidaAtual.iniciada_em) return;
+    const duracaoSegura = partidaAtual.duracao_minutos > 0 ? partidaAtual.duracao_minutos : 8;
+    const fim = new Date(partidaAtual.iniciada_em).getTime()
+      + duracaoSegura * 60_000
+      + (partidaAtual.tempo_pausado_total_seg || 0) * 1000;
+    if (Date.now() < fim) return;
     void supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("id", partidaAtual.id).then(() => void load());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tempoRestante, partidaAtual?.id, partidaAtual?.pausada_em, isCapitao, loading]);
+  }, [tempoRestante, partidaAtual?.id, partidaAtual?.pausada_em, partidaAtual?.iniciada_em, partidaAtual?.duracao_minutos, partidaAtual?.tempo_pausado_total_seg, isCapitao, loading]);
 
 
   useEffect(() => {
