@@ -58,6 +58,7 @@ function GrupoPage() {
   const navigate = useNavigate();
   const [grupo, setGrupo] = useState<any>(null);
   const [membros, setMembros] = useState<Membro[]>([]);
+  const [pendentes, setPendentes] = useState<Membro[]>([]);
   const [peladas, setPeladas] = useState<Pelada[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,7 +69,7 @@ function GrupoPage() {
       setLoading(true);
       const [g, m, p] = await Promise.all([
         supabase.from("grupos").select("*").eq("id", id).maybeSingle(),
-        supabase.from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).eq("status", "ativo"),
+        supabase.from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).in("status", ["ativo", "pendente"]),
         supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, status").eq("grupo_id", id).order("data", { ascending: true }),
       ]);
       if (g.error) toast.error(g.error.message);
@@ -86,12 +87,14 @@ function GrupoPage() {
         (pr.data || []).forEach((x: any) => { profilesMap[x.user_id] = { nome: x.nome, foto_url: x.foto_url, cidade: x.cidade, cadastro_completo: x.cadastro_completo !== false }; });
         (sk.data || []).forEach((x: any) => { skillsMap[x.user_id] = x; });
       }
-      setMembros((m.data || []).map((x: any) => ({
+      const todos = (m.data || []).map((x: any) => ({
         ...x,
         profile: profilesMap[x.user_id] || null,
         skill: skillsMap[x.user_id] || null,
         skill_origem: skillsMap[x.user_id]?.origem_ultima_atualizacao || null,
-      })));
+      }));
+      setMembros(todos.filter((x: any) => x.status === "ativo"));
+      setPendentes(todos.filter((x: any) => x.status === "pendente"));
       setPeladas((p.data as any) || []);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao carregar grupo");
@@ -124,7 +127,7 @@ function GrupoPage() {
         </TabsList>
 
         <TabsContent value="membros" className="mt-4">
-          <MembrosTab grupo={grupo} membros={membros} isCapitao={isCapitao} onChange={load} />
+          <MembrosTab grupo={grupo} membros={membros} pendentes={pendentes} isCapitao={isCapitao} onChange={load} />
         </TabsContent>
 
         <TabsContent value="peladas" className="mt-4">
@@ -149,7 +152,7 @@ function tituloFor(papel: string) {
   return { label: "Jogador", emoji: "🎮" };
 }
 
-function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membros: Membro[]; isCapitao: boolean; onChange: () => void }) {
+function MembrosTab({ grupo, membros, pendentes, isCapitao, onChange }: { grupo: any; membros: Membro[]; pendentes: Membro[]; isCapitao: boolean; onChange: () => void }) {
   const { user } = useAuth();
   const confirm = useConfirm();
   const [convidarOpen, setConvidarOpen] = useState(false);
@@ -178,6 +181,21 @@ function MembrosTab({ grupo, membros, isCapitao, onChange }: { grupo: any; membr
     const { error } = await supabase.from("grupo_membros").update({ status: "removido" } as never).eq("id", m.id);
     if (error) return toast.error(error.message);
     toast.success("Membro removido"); onChange();
+  };
+
+  const aceitarPendente = async (m: Membro) => {
+    const { error } = await supabase.from("grupo_membros").update({ status: "ativo" } as never).eq("id", m.id);
+    if (error) return toast.error(error.message);
+    toast.success(`${m.profile?.nome || "Jogador"} aceito no grupo!`);
+    onChange();
+  };
+
+  const recusarPendente = async (m: Membro) => {
+    if (!(await confirm({ title: "Recusar pedido", description: `Recusar a entrada de ${m.profile?.nome || "esse jogador"} no grupo?`, variant: "destructive", confirmLabel: "Recusar" }))) return;
+    const { error } = await supabase.from("grupo_membros").delete().eq("id", m.id);
+    if (error) return toast.error(error.message);
+    toast.success("Pedido recusado");
+    onChange();
   };
 
   return (
