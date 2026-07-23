@@ -543,7 +543,7 @@ function LancesPage() {
                             </div>
                             <div className="flex-1 min-w-0 text-[12px] leading-tight">
                               <span className="font-bold text-white">{profiles[l.user_id]?.nome || "Jogador"}</span>
-                              <span className="text-white/70"> fez </span>
+                              <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
                               <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
                               <span className="text-white/50"> — </span>
                               <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
@@ -616,12 +616,12 @@ function LancesPage() {
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">
-                Quem fez o {TIPOS.find((t) => t.v === drawer.tipo)?.label}?
+                {drawer.tipo === "frango" ? "Qual goleiro levou o frango? 🐔" : `Quem fez o ${TIPOS.find((t) => t.v === drawer.tipo)?.label}?`}
               </h3>
               <button onClick={() => setDrawer(null)} className="text-white/60"><X className="h-5 w-5" /></button>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto">
-              {jogadoresDoTime(drawer.timeId).map((j) => (
+              {jogadoresDoTime(drawer.timeId, drawer.tipo === "frango").map((j) => (
                 <button
                   key={j.user_id}
                   onClick={() => marcar(j.user_id)}
@@ -655,8 +655,7 @@ function LancesPage() {
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
-              {timeJogadores
-                .filter((j: any) => j.time_id === drawerGoleiro.goleiroTimeId)
+              {jogadoresDoTime(drawerGoleiro.goleiroTimeId, true)
                 .map((j: any) => (
                   <button
                     key={j.user_id}
