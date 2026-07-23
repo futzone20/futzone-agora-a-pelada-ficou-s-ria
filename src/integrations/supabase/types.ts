@@ -2257,6 +2257,7 @@ export type Database = {
           goleiros_por_time: number
           gols_para_encerrar: number | null
           grupo_id: string
+          horario_abertura_lista: string
           horario_fim: string
           horario_inicio: string
           id: string
@@ -2275,6 +2276,7 @@ export type Database = {
           sorteio_feito: boolean
           status: Database["public"]["Enums"]["status_pelada"]
           tempo_locado_minutos: number | null
+          token_confirmacao: string | null
         }
         Insert: {
           aluguel_iniciado_em?: string | null
@@ -2290,6 +2292,7 @@ export type Database = {
           goleiros_por_time?: number
           gols_para_encerrar?: number | null
           grupo_id: string
+          horario_abertura_lista?: string
           horario_fim: string
           horario_inicio: string
           id?: string
@@ -2308,6 +2311,7 @@ export type Database = {
           sorteio_feito?: boolean
           status?: Database["public"]["Enums"]["status_pelada"]
           tempo_locado_minutos?: number | null
+          token_confirmacao?: string | null
         }
         Update: {
           aluguel_iniciado_em?: string | null
@@ -2323,6 +2327,7 @@ export type Database = {
           goleiros_por_time?: number
           gols_para_encerrar?: number | null
           grupo_id?: string
+          horario_abertura_lista?: string
           horario_fim?: string
           horario_inicio?: string
           id?: string
@@ -2341,6 +2346,7 @@ export type Database = {
           sorteio_feito?: boolean
           status?: Database["public"]["Enums"]["status_pelada"]
           tempo_locado_minutos?: number | null
+          token_confirmacao?: string | null
         }
         Relationships: [
           {
@@ -3189,7 +3195,7 @@ export type Database = {
         | "recusado"
         | "lista_espera"
         | "cancelado_tarde"
-      status_membro: "ativo" | "removido"
+      status_membro: "ativo" | "removido" | "pendente"
       status_partida: "aguardando" | "em_andamento" | "encerrada"
       status_pelada:
         | "aguardando"
@@ -3344,7 +3350,7 @@ export const Constants = {
         "lista_espera",
         "cancelado_tarde",
       ],
-      status_membro: ["ativo", "removido"],
+      status_membro: ["ativo", "removido", "pendente"],
       status_partida: ["aguardando", "em_andamento", "encerrada"],
       status_pelada: [
         "aguardando",

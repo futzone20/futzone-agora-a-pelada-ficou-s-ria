@@ -27,6 +27,7 @@ import { Route as GoleirosIndexRouteImport } from './routes/goleiros.index'
 import { Route as DonoIndexRouteImport } from './routes/dono.index'
 import { Route as CapitaoIndexRouteImport } from './routes/capitao.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as PeladaConfirmarTokenRouteImport } from './routes/pelada-confirmar.$token'
 import { Route as ParceiroResgatesRouteImport } from './routes/parceiro.resgates'
 import { Route as ParceiroRelatoriosRouteImport } from './routes/parceiro.relatorios'
 import { Route as ParceiroCatalogoRouteImport } from './routes/parceiro.catalogo'
@@ -157,6 +158,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const PeladaConfirmarTokenRoute = PeladaConfirmarTokenRouteImport.update({
+  id: '/pelada-confirmar/$token',
+  path: '/pelada-confirmar/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ParceiroResgatesRoute = ParceiroResgatesRouteImport.update({
   id: '/resgates',
@@ -403,6 +409,7 @@ export interface FileRoutesByFullPath {
   '/parceiro/catalogo': typeof ParceiroCatalogoRoute
   '/parceiro/relatorios': typeof ParceiroRelatoriosRoute
   '/parceiro/resgates': typeof ParceiroResgatesRoute
+  '/pelada-confirmar/$token': typeof PeladaConfirmarTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/capitao/': typeof CapitaoIndexRoute
   '/dono/': typeof DonoIndexRoute
@@ -458,6 +465,7 @@ export interface FileRoutesByTo {
   '/parceiro/catalogo': typeof ParceiroCatalogoRoute
   '/parceiro/relatorios': typeof ParceiroRelatoriosRoute
   '/parceiro/resgates': typeof ParceiroResgatesRoute
+  '/pelada-confirmar/$token': typeof PeladaConfirmarTokenRoute
   '/admin': typeof AdminIndexRoute
   '/capitao': typeof CapitaoIndexRoute
   '/dono': typeof DonoIndexRoute
@@ -519,6 +527,7 @@ export interface FileRoutesById {
   '/parceiro/catalogo': typeof ParceiroCatalogoRoute
   '/parceiro/relatorios': typeof ParceiroRelatoriosRoute
   '/parceiro/resgates': typeof ParceiroResgatesRoute
+  '/pelada-confirmar/$token': typeof PeladaConfirmarTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/capitao/': typeof CapitaoIndexRoute
   '/dono/': typeof DonoIndexRoute
@@ -581,6 +590,7 @@ export interface FileRouteTypes {
     | '/parceiro/catalogo'
     | '/parceiro/relatorios'
     | '/parceiro/resgates'
+    | '/pelada-confirmar/$token'
     | '/admin/'
     | '/capitao/'
     | '/dono/'
@@ -636,6 +646,7 @@ export interface FileRouteTypes {
     | '/parceiro/catalogo'
     | '/parceiro/relatorios'
     | '/parceiro/resgates'
+    | '/pelada-confirmar/$token'
     | '/admin'
     | '/capitao'
     | '/dono'
@@ -696,6 +707,7 @@ export interface FileRouteTypes {
     | '/parceiro/catalogo'
     | '/parceiro/relatorios'
     | '/parceiro/resgates'
+    | '/pelada-confirmar/$token'
     | '/admin/'
     | '/capitao/'
     | '/dono/'
@@ -730,6 +742,7 @@ export interface RootRouteChildren {
   GoleirosIdRoute: typeof GoleirosIdRoute
   GruposIdRoute: typeof GruposIdRoute
   PIdRoute: typeof PIdRoute
+  PeladaConfirmarTokenRoute: typeof PeladaConfirmarTokenRoute
   GoleirosIndexRoute: typeof GoleirosIndexRoute
   PeladasIdAvaliarRoute: typeof PeladasIdAvaliarRoute
   PeladasIdCardRoute: typeof PeladasIdCardRoute
@@ -867,6 +880,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/pelada-confirmar/$token': {
+      id: '/pelada-confirmar/$token'
+      path: '/pelada-confirmar/$token'
+      fullPath: '/pelada-confirmar/$token'
+      preLoaderRoute: typeof PeladaConfirmarTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/parceiro/resgates': {
       id: '/parceiro/resgates'
@@ -1280,6 +1300,7 @@ const rootRouteChildren: RootRouteChildren = {
   GoleirosIdRoute: GoleirosIdRoute,
   GruposIdRoute: GruposIdRoute,
   PIdRoute: PIdRoute,
+  PeladaConfirmarTokenRoute: PeladaConfirmarTokenRoute,
   GoleirosIndexRoute: GoleirosIndexRoute,
   PeladasIdAvaliarRoute: PeladasIdAvaliarRoute,
   PeladasIdCardRoute: PeladasIdCardRoute,

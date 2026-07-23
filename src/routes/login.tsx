@@ -25,7 +25,9 @@ function LoginPage() {
       const u = await signIn(email.trim().toLowerCase(), password);
       toast.success(`Bem-vindo, ${u.nome.split(" ")[0]}!`);
       const invite = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_invite") : null;
+      const peladaToken = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_pelada_confirmacao") : null;
       if (invite) { sessionStorage.removeItem("mrfut_invite"); navigate({ to: "/convite/$codigo", params: { codigo: invite } }); }
+      else if (peladaToken) { sessionStorage.removeItem("mrfut_pelada_confirmacao"); navigate({ to: "/pelada-confirmar/$token", params: { token: peladaToken } }); }
       else navigate({ to: rolePath(u.role) });
     } catch (err: any) {
       toast.error(err.message || "Erro ao entrar");
