@@ -202,6 +202,21 @@ function LancesPage() {
     return `${Math.max(1, diff)}'`;
   };
 
+  const contarReclamacoes = (userId: string, lanceId: string) => {
+    const doUsuario = lancesAll
+      .filter((l) => l.tipo === "outro" && l.user_id === userId)
+      .sort((a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime());
+    const idx = doUsuario.findIndex((l) => l.id === lanceId);
+    return idx + 1;
+  };
+
+  const textoReclamacao = (nome: string, n: number) => {
+    if (n <= 1) return `${nome} reclamou`;
+    if (n === 2) return `${nome} reclamou de novo`;
+    if (n === 3) return `${nome} já tá reclamando demais hoje`;
+    return `${nome} esqueceu de jogar bola e só veio pra reclamar rs`;
+  };
+
   const ordinal = (n: number) => {
     if (n === 1) return "1ª";
     if (n === 2) return "2ª";
