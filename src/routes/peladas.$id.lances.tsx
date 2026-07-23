@@ -314,11 +314,59 @@ function LancesPage() {
     void load();
   };
 
+  const marcarArtilheiro = async (userId: string | null) => {
+    if (!partida || !user || !drawerArtilheiro) return;
+    if (userId) {
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo: "gol", user_id: userId, time_id: drawerArtilheiro.timeId, marcado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); setDrawerArtilheiro(null); return; }
+      toast.success("Gol registrado! ⚽");
+
+      const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+      if (partidaAtualizada) setPartida(partidaAtualizada);
+
+      const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
+      if (pel?.gols_para_encerrar && partidaAtualizada && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
+        setDrawerArtilheiro(null);
+        void encerrarPartidaAuto();
+        return;
+      }
+    }
+    setDrawerArtilheiro(null);
+    void load();
+  };
+
   if (!partida) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] p-4 space-y-3" style={{ maxWidth: 480, margin: "0 auto" }}>
         <Link to="/peladas/$id" params={{ id }} className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Voltar</Link>
-        <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Nenhuma partida em andamento.</div>
+        {proximaPreview ? (
+          <div className="rounded-2xl border border-[#1F1F1F] bg-[#111111] p-6 text-center space-y-4">
+            <div className="text-5xl">🏁</div>
+            <div className="text-xl font-black text-white">Partida encerrada!</div>
+            <div className="text-sm text-white/70">
+              Próxima partida:{" "}
+              <span className="font-bold text-white">{times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time"}</span>
+              {" "}x{" "}
+              <span className="font-bold text-white">{times.find((t) => t.id === proximaPreview.timeBId)?.nome || "Time"}</span>
+            </div>
+            {ehAuxiliar ? (
+              <button
+                onClick={confirmarProximaPartida}
+                disabled={confirmandoProxima}
+                className="w-full rounded-xl px-4 py-3 text-base font-black uppercase tracking-wider text-black disabled:opacity-50"
+                style={{ background: "#00FF87" }}
+              >
+                {confirmandoProxima ? "Iniciando..." : "▶ Iniciar Partida"}
+              </button>
+            ) : (
+              <p className="text-xs text-white/60">Aguardando o capitão iniciar a próxima partida...</p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Nenhuma partida em andamento.</div>
+        )}
       </div>
     );
   }
