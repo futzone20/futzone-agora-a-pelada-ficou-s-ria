@@ -186,10 +186,11 @@ function PeladaDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!partidaAtual?.iniciada_em || !partidaAtual?.duracao_minutos) { setTempoRestante(0); return; }
+    if (!partidaAtual?.iniciada_em) { setTempoRestante(0); return; }
+    const duracaoSegura = partidaAtual.duracao_minutos > 0 ? partidaAtual.duracao_minutos : 8;
     const calc = () => {
       const fim = new Date(partidaAtual.iniciada_em).getTime()
-        + partidaAtual.duracao_minutos * 60_000
+        + duracaoSegura * 60_000
         + (partidaAtual.tempo_pausado_total_seg || 0) * 1000;
       const agora = partidaAtual.pausada_em ? new Date(partidaAtual.pausada_em).getTime() : Date.now();
       setTempoRestante(Math.max(0, Math.floor((fim - agora) / 1000)));
@@ -415,7 +416,7 @@ function PeladaDetail() {
     const tempoLocado = pelada.tempo_locado_minutos ?? 60;
     const fim = new Date(pelada.aluguel_iniciado_em).getTime() + tempoLocado * 60_000;
     const restanteMin = (fim - Date.now()) / 60000;
-    const dur = pelada.duracao_partida_minutos ?? 8;
+    const dur = pelada.duracao_partida_minutos || 8;
     if (restanteMin >= dur * 0.5) {
       void calcularProximaPartida().then((p) => { if (p) setProximaPreview(p); });
     }
@@ -544,7 +545,7 @@ function PeladaDetail() {
       placar_a: 0,
       placar_b: 0,
       status: "em_andamento",
-      duracao_minutos: pelada.duracao_partida_minutos ?? 8,
+      duracao_minutos: pelada.duracao_partida_minutos || 8,
       iniciada_em: agora,
     } as never);
     if (errPartida) { toast.error(errPartida.message); setActing(false); return; }
@@ -782,7 +783,7 @@ function PeladaDetail() {
                 <div className="text-center px-4">
                   <div className="text-2xl font-mono font-bold text-white mb-1">{partidaMM}:{partidaSS}</div>
                   <div className="h-1 w-12 bg-[#2A2A2A] mx-auto rounded-full overflow-hidden">
-                    <div className="h-full bg-[#00FF87]" style={{ width: `${(tempoRestante / (partidaAtual.duracao_minutos * 60)) * 100}%` }} />
+                    <div className="h-full bg-[#00FF87]" style={{ width: `${(tempoRestante / ((partidaAtual.duracao_minutos > 0 ? partidaAtual.duracao_minutos : 8) * 60)) * 100}%` }} />
                   </div>
                   {partidaAtual.pausada_em && (
                     <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-yellow-400">
