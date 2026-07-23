@@ -2492,6 +2492,10 @@ export type Database = {
           status: string
           user_id: string
           whatsapp: string
+          whatsapp_conectado: boolean
+          whatsapp_conectado_em: string | null
+          whatsapp_instance_name: string | null
+          whatsapp_numero: string | null
         }
         Insert: {
           altura?: number | null
@@ -2518,6 +2522,10 @@ export type Database = {
           status?: string
           user_id: string
           whatsapp?: string
+          whatsapp_conectado?: boolean
+          whatsapp_conectado_em?: string | null
+          whatsapp_instance_name?: string | null
+          whatsapp_numero?: string | null
         }
         Update: {
           altura?: number | null
@@ -2544,6 +2552,10 @@ export type Database = {
           status?: string
           user_id?: string
           whatsapp?: string
+          whatsapp_conectado?: boolean
+          whatsapp_conectado_em?: string | null
+          whatsapp_instance_name?: string | null
+          whatsapp_numero?: string | null
         }
         Relationships: []
       }
