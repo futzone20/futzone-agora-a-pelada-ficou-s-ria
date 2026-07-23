@@ -211,6 +211,21 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, onChange }: { grupo:
         </div>
       )}
 
+      {isCapitao && pendentes.length > 0 && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+          <div className="text-sm font-bold text-amber-200">🔔 Pedidos pendentes ({pendentes.length})</div>
+          {pendentes.map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card p-2">
+              <div className="text-sm font-bold">{p.profile?.nome || "Jogador"}</div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => aceitarPendente(p)} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">Aceitar</Button>
+                <Button size="sm" variant="outline" onClick={() => recusarPendente(p)}>Recusar</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-2">
         {membros.map((m) => {
           const nome = (m.profile?.nome && m.profile.nome.trim()) || "Jogador";
