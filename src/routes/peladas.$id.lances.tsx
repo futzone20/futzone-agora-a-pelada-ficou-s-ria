@@ -555,17 +555,24 @@ function LancesPage() {
                       {lancesP.map((l, idx) => {
                         const info = TIPO_LABEL_COR[l.tipo] || { label: l.tipo, color: "#9CA3AF" };
                         const icon = TIPOS.find((t) => t.v === l.tipo)?.icon || "•";
+                        const nome = profiles[l.user_id]?.nome || "Jogador";
                         return (
                           <div key={l.id} className={`flex items-center gap-2 px-3 py-2 ${idx > 0 ? "border-t border-[#2A2A2A]" : ""}`}>
                             <div className="grid h-7 w-7 place-items-center rounded-full shrink-0" style={{ background: `${info.color}22` }}>
                               <span className="text-sm">{icon}</span>
                             </div>
                             <div className="flex-1 min-w-0 text-[12px] leading-tight">
-                              <span className="font-bold text-white">{profiles[l.user_id]?.nome || "Jogador"}</span>
-                              <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
-                              <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
-                              <span className="text-white/50"> — </span>
-                              <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
+                              {l.tipo === "outro" ? (
+                                <span className="font-semibold text-white/90">{textoReclamacao(nome, contarReclamacoes(l.user_id, l.id))}</span>
+                              ) : (
+                                <>
+                                  <span className="font-bold text-white">{nome}</span>
+                                  <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
+                                  <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
+                                  <span className="text-white/50"> — </span>
+                                  <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
+                                </>
+                              )}
                             </div>
                             <span className="rounded-full bg-[#0D0D0D] px-1.5 py-0.5 text-[10px] font-bold text-white/60 tabular-nums shrink-0">{minutoLance(l, p)}</span>
                             {ehAuxiliar && (
