@@ -544,14 +544,16 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
       ...rest,
       jogadores_por_time: form.jogadores_linha_por_time,
       gols_para_encerrar: gols_para_encerrar_ativo ? form.gols_para_encerrar : null,
+      dia_semana: form.recorrente ? form.dia_semana : null,
     };
     if (tipo === "publica" && quadraId) payload.quadra_id = quadraId;
-    const { error } = await supabase.from("peladas").insert(payload as never);
+    const { data: nova, error } = await supabase.from("peladas").insert(payload as never).select("id").single();
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Pelada criada");
-    onCreated();
+    onCreated((nova as any)?.id);
   };
+
 
   return (
     <form onSubmit={submit} className="space-y-3">
