@@ -843,11 +843,41 @@ function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: 
         <div className="font-mono text-sm">{grupo.codigo_convite}</div>
         <Button variant="secondary" onClick={regen}>Regenerar código</Button>
       </div>
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+        <div className="flex items-center gap-2 text-sm font-bold"><MessageCircle className="h-4 w-4 text-primary" /> Central de Mensagens (WhatsApp)</div>
+        <p className="text-xs text-muted-foreground">
+          Conecte seu WhatsApp pra futuramente enviar convites e avisos de pelada automaticamente pros jogadores do grupo.
+        </p>
+        <div className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${whatsappConectado ? "bg-primary" : "bg-muted-foreground"}`} />
+          <span className="text-xs font-bold">{whatsappConectado ? `Conectado${whatsappNumero ? " — " + whatsappNumero : ""}` : "Não conectado"}</span>
+        </div>
+        <Button variant="secondary" onClick={() => setWhatsappOpen(true)}>
+          <QrCode className="mr-2 h-4 w-4" />{whatsappConectado ? "Reconectar" : "Conectar WhatsApp"}
+        </Button>
+      </div>
       <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
         <div className="text-sm font-bold text-destructive">Zona de perigo</div>
         <p className="text-xs text-muted-foreground">{temAtiva ? "Não é possível excluir com peladas em andamento." : "Esta ação não pode ser desfeita."}</p>
         <Button variant="destructive" onClick={excluir} disabled={temAtiva}><Trash2 className="mr-2 h-4 w-4" />Excluir grupo</Button>
       </div>
+
+      <Dialog open={whatsappOpen} onOpenChange={setWhatsappOpen}>
+        <DialogContent className="bg-card">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-primary" /> Conectar WhatsApp</DialogTitle></DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-border bg-secondary/30">
+              <div className="text-center text-muted-foreground">
+                <QrCode className="mx-auto mb-2 h-10 w-10" />
+                <p className="text-xs">QR Code aparece aqui quando a conexão estiver disponível</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Essa função ainda está em construção. Em breve você vai poder escanear um QR Code aqui pra conectar seu WhatsApp e enviar convites e avisos de pelada automaticamente pros jogadores do grupo.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
