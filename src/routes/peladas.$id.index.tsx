@@ -217,27 +217,8 @@ function PeladaDetail() {
     return () => clearInterval(i);
   }, [pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos, pelada?.status]);
 
-  const calcularProximaPartida = () => calcularProximaPartidaShared(id, pelada);
 
-  const iniciarProximaPartida = async (preview: ProximaPartidaPreview) => {
-    try {
-      await iniciarProximaPartidaShared(id, pelada, preview);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao iniciar a próxima partida");
-      return;
-    }
-    setProximaPreview(null);
-    void load();
-  };
 
-  const confirmarProximaPartida = async () => {
-    if (!proximaPreview) return;
-    if (proximaPreview.empateSorteio) {
-      const nomeTime = times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time";
-      toast.info(`Empate na 1ª partida — sorteio decidiu que o ${nomeTime} fica! 🎲`);
-    }
-    await iniciarProximaPartida(proximaPreview);
-  };
 
   const encerrarPeladaAuto = async () => {
     const { error: errP } = await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
