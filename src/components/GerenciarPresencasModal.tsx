@@ -12,6 +12,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { X, UserPlus, Users } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmProvider";
+
 
 interface Props {
   open: boolean;
