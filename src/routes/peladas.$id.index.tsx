@@ -877,29 +877,8 @@ function PeladaDetail() {
         onDone={() => { setSorteioOpen(false); void load(); }}
       />
 
-      <AlertDialog open={!!proximaPreview && !partidaAtual && pelada.status === "em_andamento" && isCapitao} onOpenChange={(v) => { if (!v) setProximaPreview(null); }}>
-        <AlertDialogContent className="bg-[#0D0D0D] border-[#2A2A2A] text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">🏁 Partida encerrada!</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm text-[#CCC]">
-                {proximaPreview && (
-                  <div className="text-base font-bold text-white">
-                    Próxima partida: {times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time"}{" "}x{" "}
-                    {times.find((t) => t.id === proximaPreview.timeBId)?.nome || "Time"}
-                  </div>
-                )}
-                <p>Quando o time estiver pronto, toque em "Iniciar Partida".</p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={confirmarProximaPartida} className="bg-[#00FF87] text-black hover:bg-[#00E676] font-bold">
-              ▶ Iniciar Partida
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+
 
       <AlertDialog open={avisoAluguelOpen} onOpenChange={(v) => { if (!v) setAvisoAluguelOpen(false); }}>
         <AlertDialogContent className="bg-[#0D0D0D] border-[#CC0000] text-white">
