@@ -32,6 +32,7 @@ import { Route as ParceiroResgatesRouteImport } from './routes/parceiro.resgates
 import { Route as ParceiroRelatoriosRouteImport } from './routes/parceiro.relatorios'
 import { Route as ParceiroCatalogoRouteImport } from './routes/parceiro.catalogo'
 import { Route as PIdRouteImport } from './routes/p.$id'
+import { Route as JogadorVaquinhasRouteImport } from './routes/jogador.vaquinhas'
 import { Route as JogadorResenhaRouteImport } from './routes/jogador.resenha'
 import { Route as JogadorRankingRouteImport } from './routes/jogador.ranking'
 import { Route as JogadorPerfilRouteImport } from './routes/jogador.perfil'
@@ -47,6 +48,7 @@ import { Route as DonoCashbackRouteImport } from './routes/dono.cashback'
 import { Route as DonoArenaRouteImport } from './routes/dono.arena'
 import { Route as DonoAgendamentosRouteImport } from './routes/dono.agendamentos'
 import { Route as ConviteCodigoRouteImport } from './routes/convite.$codigo'
+import { Route as CapitaoVaquinhasRouteImport } from './routes/capitao.vaquinhas'
 import { Route as CapitaoResenhaRouteImport } from './routes/capitao.resenha'
 import { Route as CapitaoRankingRouteImport } from './routes/capitao.ranking'
 import { Route as CapitaoPerfilRouteImport } from './routes/capitao.perfil'
@@ -184,6 +186,11 @@ const PIdRoute = PIdRouteImport.update({
   path: '/p/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JogadorVaquinhasRoute = JogadorVaquinhasRouteImport.update({
+  id: '/vaquinhas',
+  path: '/vaquinhas',
+  getParentRoute: () => JogadorRoute,
+} as any)
 const JogadorResenhaRoute = JogadorResenhaRouteImport.update({
   id: '/resenha',
   path: '/resenha',
@@ -258,6 +265,11 @@ const ConviteCodigoRoute = ConviteCodigoRouteImport.update({
   id: '/convite/$codigo',
   path: '/convite/$codigo',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CapitaoVaquinhasRoute = CapitaoVaquinhasRouteImport.update({
+  id: '/vaquinhas',
+  path: '/vaquinhas',
+  getParentRoute: () => CapitaoRoute,
 } as any)
 const CapitaoResenhaRoute = CapitaoResenhaRouteImport.update({
   id: '/resenha',
@@ -390,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/capitao/perfil': typeof CapitaoPerfilRoute
   '/capitao/ranking': typeof CapitaoRankingRoute
   '/capitao/resenha': typeof CapitaoResenhaRoute
+  '/capitao/vaquinhas': typeof CapitaoVaquinhasRoute
   '/convite/$codigo': typeof ConviteCodigoRoute
   '/dono/agendamentos': typeof DonoAgendamentosRoute
   '/dono/arena': typeof DonoArenaRoute
@@ -405,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/jogador/perfil': typeof JogadorPerfilRoute
   '/jogador/ranking': typeof JogadorRankingRoute
   '/jogador/resenha': typeof JogadorResenhaRoute
+  '/jogador/vaquinhas': typeof JogadorVaquinhasRoute
   '/p/$id': typeof PIdRoute
   '/parceiro/catalogo': typeof ParceiroCatalogoRoute
   '/parceiro/relatorios': typeof ParceiroRelatoriosRoute
@@ -446,6 +460,7 @@ export interface FileRoutesByTo {
   '/capitao/perfil': typeof CapitaoPerfilRoute
   '/capitao/ranking': typeof CapitaoRankingRoute
   '/capitao/resenha': typeof CapitaoResenhaRoute
+  '/capitao/vaquinhas': typeof CapitaoVaquinhasRoute
   '/convite/$codigo': typeof ConviteCodigoRoute
   '/dono/agendamentos': typeof DonoAgendamentosRoute
   '/dono/arena': typeof DonoArenaRoute
@@ -461,6 +476,7 @@ export interface FileRoutesByTo {
   '/jogador/perfil': typeof JogadorPerfilRoute
   '/jogador/ranking': typeof JogadorRankingRoute
   '/jogador/resenha': typeof JogadorResenhaRoute
+  '/jogador/vaquinhas': typeof JogadorVaquinhasRoute
   '/p/$id': typeof PIdRoute
   '/parceiro/catalogo': typeof ParceiroCatalogoRoute
   '/parceiro/relatorios': typeof ParceiroRelatoriosRoute
@@ -508,6 +524,7 @@ export interface FileRoutesById {
   '/capitao/perfil': typeof CapitaoPerfilRoute
   '/capitao/ranking': typeof CapitaoRankingRoute
   '/capitao/resenha': typeof CapitaoResenhaRoute
+  '/capitao/vaquinhas': typeof CapitaoVaquinhasRoute
   '/convite/$codigo': typeof ConviteCodigoRoute
   '/dono/agendamentos': typeof DonoAgendamentosRoute
   '/dono/arena': typeof DonoArenaRoute
@@ -523,6 +540,7 @@ export interface FileRoutesById {
   '/jogador/perfil': typeof JogadorPerfilRoute
   '/jogador/ranking': typeof JogadorRankingRoute
   '/jogador/resenha': typeof JogadorResenhaRoute
+  '/jogador/vaquinhas': typeof JogadorVaquinhasRoute
   '/p/$id': typeof PIdRoute
   '/parceiro/catalogo': typeof ParceiroCatalogoRoute
   '/parceiro/relatorios': typeof ParceiroRelatoriosRoute
@@ -571,6 +589,7 @@ export interface FileRouteTypes {
     | '/capitao/perfil'
     | '/capitao/ranking'
     | '/capitao/resenha'
+    | '/capitao/vaquinhas'
     | '/convite/$codigo'
     | '/dono/agendamentos'
     | '/dono/arena'
@@ -586,6 +605,7 @@ export interface FileRouteTypes {
     | '/jogador/perfil'
     | '/jogador/ranking'
     | '/jogador/resenha'
+    | '/jogador/vaquinhas'
     | '/p/$id'
     | '/parceiro/catalogo'
     | '/parceiro/relatorios'
@@ -627,6 +647,7 @@ export interface FileRouteTypes {
     | '/capitao/perfil'
     | '/capitao/ranking'
     | '/capitao/resenha'
+    | '/capitao/vaquinhas'
     | '/convite/$codigo'
     | '/dono/agendamentos'
     | '/dono/arena'
@@ -642,6 +663,7 @@ export interface FileRouteTypes {
     | '/jogador/perfil'
     | '/jogador/ranking'
     | '/jogador/resenha'
+    | '/jogador/vaquinhas'
     | '/p/$id'
     | '/parceiro/catalogo'
     | '/parceiro/relatorios'
@@ -688,6 +710,7 @@ export interface FileRouteTypes {
     | '/capitao/perfil'
     | '/capitao/ranking'
     | '/capitao/resenha'
+    | '/capitao/vaquinhas'
     | '/convite/$codigo'
     | '/dono/agendamentos'
     | '/dono/arena'
@@ -703,6 +726,7 @@ export interface FileRouteTypes {
     | '/jogador/perfil'
     | '/jogador/ranking'
     | '/jogador/resenha'
+    | '/jogador/vaquinhas'
     | '/p/$id'
     | '/parceiro/catalogo'
     | '/parceiro/relatorios'
@@ -916,6 +940,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/jogador/vaquinhas': {
+      id: '/jogador/vaquinhas'
+      path: '/vaquinhas'
+      fullPath: '/jogador/vaquinhas'
+      preLoaderRoute: typeof JogadorVaquinhasRouteImport
+      parentRoute: typeof JogadorRoute
+    }
     '/jogador/resenha': {
       id: '/jogador/resenha'
       path: '/resenha'
@@ -1020,6 +1051,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/convite/$codigo'
       preLoaderRoute: typeof ConviteCodigoRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/capitao/vaquinhas': {
+      id: '/capitao/vaquinhas'
+      path: '/vaquinhas'
+      fullPath: '/capitao/vaquinhas'
+      preLoaderRoute: typeof CapitaoVaquinhasRouteImport
+      parentRoute: typeof CapitaoRoute
     }
     '/capitao/resenha': {
       id: '/capitao/resenha'
@@ -1201,6 +1239,7 @@ interface CapitaoRouteChildren {
   CapitaoPerfilRoute: typeof CapitaoPerfilRoute
   CapitaoRankingRoute: typeof CapitaoRankingRoute
   CapitaoResenhaRoute: typeof CapitaoResenhaRoute
+  CapitaoVaquinhasRoute: typeof CapitaoVaquinhasRoute
   CapitaoIndexRoute: typeof CapitaoIndexRoute
 }
 
@@ -1210,6 +1249,7 @@ const CapitaoRouteChildren: CapitaoRouteChildren = {
   CapitaoPerfilRoute: CapitaoPerfilRoute,
   CapitaoRankingRoute: CapitaoRankingRoute,
   CapitaoResenhaRoute: CapitaoResenhaRoute,
+  CapitaoVaquinhasRoute: CapitaoVaquinhasRoute,
   CapitaoIndexRoute: CapitaoIndexRoute,
 }
 
@@ -1247,6 +1287,7 @@ interface JogadorRouteChildren {
   JogadorPerfilRoute: typeof JogadorPerfilRoute
   JogadorRankingRoute: typeof JogadorRankingRoute
   JogadorResenhaRoute: typeof JogadorResenhaRoute
+  JogadorVaquinhasRoute: typeof JogadorVaquinhasRoute
   JogadorIndexRoute: typeof JogadorIndexRoute
   JogadorParceirosSlugRoute: typeof JogadorParceirosSlugRoute
   JogadorParceirosIndexRoute: typeof JogadorParceirosIndexRoute
@@ -1257,6 +1298,7 @@ const JogadorRouteChildren: JogadorRouteChildren = {
   JogadorPerfilRoute: JogadorPerfilRoute,
   JogadorRankingRoute: JogadorRankingRoute,
   JogadorResenhaRoute: JogadorResenhaRoute,
+  JogadorVaquinhasRoute: JogadorVaquinhasRoute,
   JogadorIndexRoute: JogadorIndexRoute,
   JogadorParceirosSlugRoute: JogadorParceirosSlugRoute,
   JogadorParceirosIndexRoute: JogadorParceirosIndexRoute,

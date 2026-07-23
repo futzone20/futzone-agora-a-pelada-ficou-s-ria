@@ -19,6 +19,7 @@ import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ConvitesGrupoCard } from "@/components/ConvitesGrupoCard";
+import { CaixinhaEntradaCard } from "@/components/CaixinhaEntradaCard";
 
 export const Route = createFileRoute("/jogador/")({ component: Inicio });
 
@@ -140,7 +141,10 @@ export function Inicio() {
   return (
     <div className="space-y-6 pb-20 animate-fade-in scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
 
-      <div className="px-4"><ConvitesGrupoCard /></div>
+      <div className="space-y-3 px-4">
+        <ConvitesGrupoCard />
+        <CaixinhaEntradaCard to="/jogador/vaquinhas" />
+      </div>
 
       {aoVivo && (
         <section className="px-4">

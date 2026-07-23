@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus } from "lucide-react";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus, PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -123,10 +123,11 @@ function GrupoPage() {
       </div>
 
       <Tabs defaultValue="membros">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="membros"><Users className="mr-1 h-4 w-4" />Membros</TabsTrigger>
           <TabsTrigger value="peladas"><CircleDot className="mr-1 h-4 w-4" />Peladas</TabsTrigger>
-          <TabsTrigger value="regras"><BookOpen className="mr-1 h-4 w-4" />Regras</TabsTrigger>
+          <TabsTrigger value="regras"><BookOpen className="mr-1 h-4 w-4" /></TabsTrigger>
+          <TabsTrigger value="vaquinhas"><PiggyBank className="mr-1 h-4 w-4" />💰</TabsTrigger>
           <TabsTrigger value="temporada">🏆</TabsTrigger>
           <TabsTrigger value="config"><Settings className="mr-1 h-4 w-4" /></TabsTrigger>
         </TabsList>
@@ -141,6 +142,10 @@ function GrupoPage() {
 
         <TabsContent value="regras" className="mt-4">
           <RegrasTab grupoId={id} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} />
+        </TabsContent>
+
+        <TabsContent value="vaquinhas" className="mt-4">
+          <VaquinhasTab grupo={grupo} membros={membros} isCapitao={isCapitao} />
         </TabsContent>
 
         <TabsContent value="temporada" className="mt-4">
@@ -929,6 +934,163 @@ function RegrasTab({ grupoId, isCapitao, souCapitaoExato }: { grupoId: string; i
             <div><Label>Regra</Label><Textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} placeholder="Ex: O pênalti só pode ser cobrado pelo goleiro do time adversário." /></div>
             <Button onClick={salvar} disabled={saving || !titulo.trim() || !texto.trim()} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
               {saving ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+
+function VaquinhasTab({ grupo, membros, isCapitao }: { grupo: any; membros: Membro[]; isCapitao: boolean }) {
+  const { user } = useAuth();
+  const [vaquinhas, setVaquinhas] = useState<any[]>([]);
+  const [participantesPorVaquinha, setParticipantesPorVaquinha] = useState<Record<string, any[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [criarOpen, setCriarOpen] = useState(false);
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [valor, setValor] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data: vs } = await (supabase as any).from("vaquinhas").select("*").eq("grupo_id", grupo.id).order("criado_em", { ascending: false });
+    setVaquinhas(vs || []);
+    if (vs && vs.length) {
+      const ids = vs.map((v: any) => v.id);
+      const { data: parts } = await (supabase as any).from("vaquinha_participantes").select("*").in("vaquinha_id", ids);
+      const userIds: string[] = Array.from(new Set((parts || []).map((p: any) => p.user_id as string)));
+      const { data: profs } = userIds.length ? await supabase.from("profiles").select("user_id, nome").in("user_id", userIds) : { data: [] as any[] };
+      const grouped: Record<string, any[]> = {};
+      (parts || []).forEach((p: any) => {
+        const nome = (profs || []).find((x: any) => x.user_id === p.user_id)?.nome || "Jogador";
+        (grouped[p.vaquinha_id] ||= []).push({ ...p, nome });
+      });
+      setParticipantesPorVaquinha(grouped);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { void load(); }, [grupo.id]);
+
+  const criar = async () => {
+    if (!titulo.trim() || !descricao.trim() || !user) return;
+    setSaving(true);
+    try {
+      const { data: nova, error } = await (supabase as any).from("vaquinhas").insert({
+        grupo_id: grupo.id, titulo: titulo.trim(), descricao: descricao.trim(),
+        valor_sugerido: valor ? +valor : null, criado_por: user.id,
+      }).select("id").single();
+      if (error) throw error;
+      const vaquinhaId = nova.id;
+
+      const rows = membros.map((m) => ({ vaquinha_id: vaquinhaId, user_id: m.user_id }));
+      if (rows.length) {
+        const { error: errParts } = await (supabase as any).from("vaquinha_participantes").insert(rows);
+        if (errParts) throw errParts;
+      }
+
+      const notifs = membros.filter((m) => m.user_id !== user.id).map((m) => ({
+        user_id: m.user_id,
+        titulo: "💰 Nova vaquinha!",
+        mensagem: `O capitão criou a vaquinha "${titulo.trim()}" no grupo "${grupo.nome}". Você topa participar?`,
+        link: "/jogador/vaquinhas",
+      }));
+      if (notifs.length) await supabase.from("notificacoes").insert(notifs as never);
+
+      toast.success("Vaquinha criada!");
+      setCriarOpen(false); setTitulo(""); setDescricao(""); setValor("");
+      void load();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao criar vaquinha");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmarPagamento = async (participanteId: string) => {
+    const { error } = await (supabase as any).from("vaquinha_participantes").update({
+      pagamento_status: "confirmado", confirmado_em: new Date().toISOString(),
+    }).eq("id", participanteId);
+    if (error) return toast.error(error.message);
+    toast.success("Pagamento confirmado!");
+    void load();
+  };
+
+  if (loading) return <p className="text-sm text-muted-foreground">Carregando...</p>;
+
+  return (
+    <div className="space-y-3">
+      {isCapitao && (
+        <Button onClick={() => setCriarOpen(true)} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+          <Plus className="mr-2 h-4 w-4" /> Nova vaquinha
+        </Button>
+      )}
+
+      {vaquinhas.length === 0 ? (
+        <EmptyState icon={PiggyBank} title="Nenhuma vaquinha ainda" description={isCapitao ? "Crie uma vaquinha pra dividir custos do grupo." : "Quando o capitão criar, aparece aqui."} />
+      ) : (
+        <div className="space-y-3">
+          {vaquinhas.map((v) => {
+            const participantes = participantesPorVaquinha[v.id] || [];
+            const aceitos = participantes.filter((p) => p.status === "aceito");
+            const confirmados = participantes.filter((p) => p.pagamento_status === "confirmado");
+            const minhaLinha = participantes.find((p) => p.user_id === user?.id);
+            return (
+              <div key={v.id} className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                <div className="font-bold">💰 {v.titulo}</div>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{v.descricao}</p>
+                {v.valor_sugerido && <p className="text-sm">Valor sugerido: <span className="font-bold">R$ {Number(v.valor_sugerido).toFixed(2)}</span></p>}
+
+                {isCapitao ? (
+                  <>
+                    <div className="text-xs text-muted-foreground pt-1">
+                      {aceitos.length} de {participantes.length} toparam · {confirmados.length} pagamentos confirmados
+                    </div>
+                    <div className="space-y-1 pt-1">
+                      {participantes.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-2 rounded bg-secondary/30 px-2 py-1.5 text-xs">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold">{p.nome}</span>{" "}
+                            <span className="text-muted-foreground">
+                              {p.status === "aceito" ? "✅ topou" : p.status === "recusado" ? "❌ recusou" : "⏳ sem resposta"}
+                              {p.pagamento_status === "informado" && ` · 💳 disse que pagou (${p.forma_pagamento || "não informou como"})`}
+                              {p.pagamento_status === "confirmado" && " · ✅ pago confirmado"}
+                            </span>
+                          </div>
+                          {p.pagamento_status === "informado" && (
+                            <Button size="sm" onClick={() => confirmarPagamento(p.id)} className="shrink-0 bg-primary text-primary-foreground font-bold hover:bg-primary/90">Confirmar</Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  minhaLinha && (
+                    <p className="text-xs text-muted-foreground pt-1">
+                      Sua participação:{" "}
+                      {minhaLinha.status === "aceito" ? "✅ você topou" : minhaLinha.status === "recusado" ? "❌ você recusou" : "⏳ responda na Caixinha do Time"}
+                      {minhaLinha.pagamento_status === "confirmado" && " · pago ✅"}
+                    </p>
+                  )
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={criarOpen} onOpenChange={setCriarOpen}>
+        <DialogContent className="bg-card">
+          <DialogHeader><DialogTitle>Nova vaquinha</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Título</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Uniforme novo do time" /></div>
+            <div><Label>Descrição</Label><Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} placeholder="Explica pra que é e como pagar (Pix, valor, prazo etc)" /></div>
+            <div><Label>Valor sugerido por pessoa (opcional)</Label><Input type="number" min={0} step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="Ex: 25.00" /></div>
+            <Button onClick={criar} disabled={saving || !titulo.trim() || !descricao.trim()} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+              {saving ? "Criando..." : "Criar e notificar o grupo"}
             </Button>
           </div>
         </DialogContent>
