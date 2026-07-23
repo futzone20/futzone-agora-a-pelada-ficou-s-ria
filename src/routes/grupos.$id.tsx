@@ -804,6 +804,10 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label>Que horas a lista abre nesse dia?</Label>
+              <Input type="time" value={form.horario_abertura_lista} onChange={(e) => setForm({ ...form, horario_abertura_lista: e.target.value })} />
+            </div>
             <div className="text-xs text-muted-foreground">
               Toda semana, uma nova pelada com essa mesma configuração é criada automaticamente, com a lista já aberta pros jogadores confirmarem.
             </div>
