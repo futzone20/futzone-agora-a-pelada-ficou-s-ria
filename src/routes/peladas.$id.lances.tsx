@@ -677,7 +677,46 @@ function LancesPage() {
         </div>
       )}
 
-      {/* consumir pendingGol para eslint */}
+      {/* Drawer artilheiro (quem fez o gol, depois de marcar um frango) */}
+      {drawerArtilheiro && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => marcarArtilheiro(null)}>
+          <div
+            className="w-full rounded-t-2xl bg-[#1A1A1A] p-4 shadow-xl"
+            style={{ maxWidth: 480, margin: "0 auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Quem fez o gol? ⚽</h3>
+                <p className="text-xs text-white/60 mt-0.5">
+                  Jogador do <span className="font-bold" style={{ color: drawerArtilheiro.timeCor }}>{drawerArtilheiro.timeNome}</span>
+                </p>
+              </div>
+              <button onClick={() => marcarArtilheiro(null)} className="text-white/60">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
+              {jogadoresDoTime(drawerArtilheiro.timeId).map((j: any) => (
+                <button
+                  key={j.user_id}
+                  onClick={() => marcarArtilheiro(j.user_id)}
+                  className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
+                >
+                  <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => marcarArtilheiro(null)}
+              className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60"
+            >
+              Pular — sem artilheiro definido
+            </button>
+          </div>
+        </div>
+      )}
+
       {pendingGol && <span className="hidden" />}
     </div>
   );
