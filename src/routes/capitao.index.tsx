@@ -73,6 +73,7 @@ function Inicio() {
 
   return (
     <div className="space-y-6">
+      <ConvitesGrupoCard />
       {aoVivo && (
         <section>
           <Link
