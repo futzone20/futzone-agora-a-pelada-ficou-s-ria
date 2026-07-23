@@ -489,7 +489,7 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${v.cls}`}>{v.label}</span>;
 }
 
-function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: () => void }) {
+function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (peladaId?: string) => void }) {
   const { user } = useAuth();
   const [tipo, setTipo] = useState<"publica" | "cliente">("publica");
   const [quadras, setQuadras] = useState<Quadra[]>([]);
