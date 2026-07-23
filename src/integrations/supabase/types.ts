@@ -3103,6 +3103,88 @@ export type Database = {
           },
         ]
       }
+      vaquinha_participantes: {
+        Row: {
+          confirmado_em: string | null
+          forma_pagamento: string | null
+          id: string
+          informado_em: string | null
+          pagamento_status: string
+          status: string
+          user_id: string
+          vaquinha_id: string
+        }
+        Insert: {
+          confirmado_em?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          informado_em?: string | null
+          pagamento_status?: string
+          status?: string
+          user_id: string
+          vaquinha_id: string
+        }
+        Update: {
+          confirmado_em?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          informado_em?: string | null
+          pagamento_status?: string
+          status?: string
+          user_id?: string
+          vaquinha_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaquinha_participantes_vaquinha_id_fkey"
+            columns: ["vaquinha_id"]
+            isOneToOne: false
+            referencedRelation: "vaquinhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaquinhas: {
+        Row: {
+          criado_em: string
+          criado_por: string
+          descricao: string
+          grupo_id: string
+          id: string
+          status: string
+          titulo: string
+          valor_sugerido: number | null
+        }
+        Insert: {
+          criado_em?: string
+          criado_por: string
+          descricao: string
+          grupo_id: string
+          id?: string
+          status?: string
+          titulo: string
+          valor_sugerido?: number | null
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string
+          descricao?: string
+          grupo_id?: string
+          id?: string
+          status?: string
+          titulo?: string
+          valor_sugerido?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaquinhas_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "grupos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       confirmacoes_completas: {
