@@ -140,6 +140,8 @@ export function Inicio() {
   return (
     <div className="space-y-6 pb-20 animate-fade-in scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
 
+      <div className="px-4"><ConvitesGrupoCard /></div>
+
       {aoVivo && (
         <section className="px-4">
           <Link
