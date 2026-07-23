@@ -21,7 +21,7 @@ const TIPOS = [
   { v: "frango", label: "Frango", icon: "🐔", color: "#FB923C" },
   { v: "cartao_vermelho", label: "C. Vermelho", icon: "🟥", color: "#EF4444" },
   { v: "cartao_amarelo", label: "C. Amarelo", icon: "⚠️", color: "#FACC15" },
-  { v: "outro", label: "Outro", icon: "•••", color: "#9CA3AF" },
+  { v: "outro", label: "Reclamação", icon: "😤", color: "#9CA3AF" },
 ] as const;
 
 const TIPO_LABEL_COR: Record<string, { label: string; color: string }> = {
@@ -33,7 +33,7 @@ const TIPO_LABEL_COR: Record<string, { label: string; color: string }> = {
   frango: { label: "Frango", color: "#FB923C" },
   cartao_vermelho: { label: "Cartão vermelho", color: "#EF4444" },
   cartao_amarelo: { label: "Cartão amarelo", color: "#FACC15" },
-  outro: { label: "Outro", color: "#9CA3AF" },
+  outro: { label: "Reclamação", color: "#9CA3AF" },
 };
 
 function Wrapper() {
@@ -160,6 +160,10 @@ function LancesPage() {
     if (!proximaPreview || confirmandoProxima) return;
     setConfirmandoProxima(true);
     try {
+      if (proximaPreview.empateSorteio) {
+        const nomeTimeSort = times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time";
+        toast.info(`Empate na 1ª partida — sorteio decidiu que o ${nomeTimeSort} fica! 🎲`);
+      }
       await iniciarProximaPartida(id, pelada, proximaPreview);
       setProximaPreview(null);
     } catch (err: any) {
@@ -196,6 +200,21 @@ function LancesPage() {
     if (!ref?.iniciada_em) return "?'";
     const diff = Math.floor((new Date(l.criado_em).getTime() - new Date(ref.iniciada_em).getTime()) / 60000);
     return `${Math.max(1, diff)}'`;
+  };
+
+  const contarReclamacoes = (userId: string, lanceId: string) => {
+    const doUsuario = lancesAll
+      .filter((l) => l.tipo === "outro" && l.user_id === userId)
+      .sort((a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime());
+    const idx = doUsuario.findIndex((l) => l.id === lanceId);
+    return idx + 1;
+  };
+
+  const textoReclamacao = (nome: string, n: number) => {
+    if (n <= 1) return `${nome} reclamou`;
+    if (n === 2) return `${nome} reclamou de novo`;
+    if (n === 3) return `${nome} já tá reclamando demais hoje`;
+    return `${nome} esqueceu de jogar bola e só veio pra reclamar rs`;
   };
 
   const ordinal = (n: number) => {
@@ -536,17 +555,24 @@ function LancesPage() {
                       {lancesP.map((l, idx) => {
                         const info = TIPO_LABEL_COR[l.tipo] || { label: l.tipo, color: "#9CA3AF" };
                         const icon = TIPOS.find((t) => t.v === l.tipo)?.icon || "•";
+                        const nome = profiles[l.user_id]?.nome || "Jogador";
                         return (
                           <div key={l.id} className={`flex items-center gap-2 px-3 py-2 ${idx > 0 ? "border-t border-[#2A2A2A]" : ""}`}>
                             <div className="grid h-7 w-7 place-items-center rounded-full shrink-0" style={{ background: `${info.color}22` }}>
                               <span className="text-sm">{icon}</span>
                             </div>
                             <div className="flex-1 min-w-0 text-[12px] leading-tight">
-                              <span className="font-bold text-white">{profiles[l.user_id]?.nome || "Jogador"}</span>
-                              <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
-                              <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
-                              <span className="text-white/50"> — </span>
-                              <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
+                              {l.tipo === "outro" ? (
+                                <span className="font-semibold text-white/90">{textoReclamacao(nome, contarReclamacoes(l.user_id, l.id))}</span>
+                              ) : (
+                                <>
+                                  <span className="font-bold text-white">{nome}</span>
+                                  <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
+                                  <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
+                                  <span className="text-white/50"> — </span>
+                                  <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
+                                </>
+                              )}
                             </div>
                             <span className="rounded-full bg-[#0D0D0D] px-1.5 py-0.5 text-[10px] font-bold text-white/60 tabular-nums shrink-0">{minutoLance(l, p)}</span>
                             {ehAuxiliar && (

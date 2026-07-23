@@ -15,7 +15,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { mediaSkill, mediaTime, corTextoLegivel, type Jogador } from "@/lib/sorteio";
 import { escolherTimesIniciais } from "@/lib/rodizio";
-import { calcularProximaPartida as calcularProximaPartidaShared, iniciarProximaPartida as iniciarProximaPartidaShared, type ProximaPartidaPreview } from "@/lib/rotacaoPartida";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
 import { StatsPeladaModal } from "@/components/StatsPeladaModal";
@@ -71,7 +70,6 @@ function PeladaDetail() {
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [tempoAluguelSec, setTempoAluguelSec] = useState<number>(0);
   const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
-  const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
   const [avisoAluguelOpen, setAvisoAluguelOpen] = useState(false);
   const [graceSec, setGraceSec] = useState(180);
 
@@ -219,27 +217,8 @@ function PeladaDetail() {
     return () => clearInterval(i);
   }, [pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos, pelada?.status]);
 
-  const calcularProximaPartida = () => calcularProximaPartidaShared(id, pelada);
 
-  const iniciarProximaPartida = async (preview: ProximaPartidaPreview) => {
-    try {
-      await iniciarProximaPartidaShared(id, pelada, preview);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao iniciar a próxima partida");
-      return;
-    }
-    setProximaPreview(null);
-    void load();
-  };
 
-  const confirmarProximaPartida = async () => {
-    if (!proximaPreview) return;
-    if (proximaPreview.empateSorteio) {
-      const nomeTime = times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time";
-      toast.info(`Empate na 1ª partida — sorteio decidiu que o ${nomeTime} fica! 🎲`);
-    }
-    await iniciarProximaPartida(proximaPreview);
-  };
 
   const encerrarPeladaAuto = async () => {
     const { error: errP } = await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
@@ -320,21 +299,8 @@ function PeladaDetail() {
     void load();
   };
 
-  useEffect(() => {
-    if (loading) return;
-    if (!pelada || pelada.status !== "em_andamento" || !isCapitao) return;
-    if (partidaAtual) return;
-    if (proximaPreview) return;
-    if (!pelada.aluguel_iniciado_em) return;
-    const tempoLocado = pelada.tempo_locado_minutos ?? 60;
-    const fim = new Date(pelada.aluguel_iniciado_em).getTime() + tempoLocado * 60_000;
-    const restanteMin = (fim - Date.now()) / 60000;
-    const dur = pelada.duracao_partida_minutos || 8;
-    if (restanteMin >= dur * 0.5) {
-      void calcularProximaPartida().then((p) => { if (p) setProximaPreview(p); });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, partidaAtual, pelada?.status, isCapitao, proximaPreview]);
+
+
 
   useEffect(() => {
     if (loading || !partidaAtual || !isCapitao) return;
@@ -911,29 +877,8 @@ function PeladaDetail() {
         onDone={() => { setSorteioOpen(false); void load(); }}
       />
 
-      <AlertDialog open={!!proximaPreview && !partidaAtual && pelada.status === "em_andamento" && isCapitao} onOpenChange={(v) => { if (!v) setProximaPreview(null); }}>
-        <AlertDialogContent className="bg-[#0D0D0D] border-[#2A2A2A] text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">🏁 Partida encerrada!</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm text-[#CCC]">
-                {proximaPreview && (
-                  <div className="text-base font-bold text-white">
-                    Próxima partida: {times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time"}{" "}x{" "}
-                    {times.find((t) => t.id === proximaPreview.timeBId)?.nome || "Time"}
-                  </div>
-                )}
-                <p>Quando o time estiver pronto, toque em "Iniciar Partida".</p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={confirmarProximaPartida} className="bg-[#00FF87] text-black hover:bg-[#00E676] font-bold">
-              ▶ Iniciar Partida
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+
 
       <AlertDialog open={avisoAluguelOpen} onOpenChange={(v) => { if (!v) setAvisoAluguelOpen(false); }}>
         <AlertDialogContent className="bg-[#0D0D0D] border-[#CC0000] text-white">
