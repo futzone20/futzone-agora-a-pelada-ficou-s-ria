@@ -736,30 +736,35 @@ function PeladaDetail() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                {times.filter((t) => t !== meuTime).map((t) => (
-                  <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
-                    {temRodizio && estaDeFora(t) && (
-                      <span className="absolute right-3 top-3 flex items-center gap-1 text-[9px] font-bold text-[#AAA]"><User className="h-3 w-3" /> 1 fora</span>
-                    )}
-                    <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
-                      <div className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: t.cor }}>
-                        <Shirt className="h-5 w-5 text-white" />
+              {(() => {
+                const outros = times.filter((t) => t !== meuTime);
+                return (
+                  <div className={`grid gap-3 ${outros.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {outros.map((t) => (
+                      <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
+                        {temRodizio && estaDeFora(t) && (
+                          <span className="absolute right-3 top-3 flex items-center gap-1 text-[9px] font-bold text-[#AAA]"><User className="h-3 w-3" /> 1 fora</span>
+                        )}
+                        <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
+                          <div className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: t.cor }}>
+                            <Shirt className="h-5 w-5 text-white" />
+                          </div>
+                          <span className="truncate">{t.nome}</span>
+                        </div>
+                        <div className="space-y-1 mb-4">
+                          {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
+                        </div>
+                        <div className="absolute right-3 bottom-3 text-right">
+                          <div className="text-[9px] text-[#888] uppercase">Força</div>
+                          <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
+                        <div className="absolute bottom-0 left-0 h-1" style={{ width: `${(mediaTime(t.membros) / 5) * 100}%`, backgroundColor: t.cor }} />
                       </div>
-                      <span className="truncate">{t.nome}</span>
-                    </div>
-                    <div className="space-y-1 mb-4">
-                      {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
-                    </div>
-                    <div className="absolute right-3 bottom-3 text-right">
-                      <div className="text-[9px] text-[#888] uppercase">Força</div>
-                      <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
-                    </div>
-                    <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
-                    <div className="absolute bottom-0 left-0 h-1" style={{ width: `${(mediaTime(t.membros) / 5) * 100}%`, backgroundColor: t.cor }} />
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
           );
         })()}
@@ -829,7 +834,7 @@ function PeladaDetail() {
           );
         })()}
 
-        {pelada.status !== "encerrada" && (
+        {pelada.status !== "encerrada" && pelada.status !== "em_andamento" && (
           <div className="grid grid-cols-2 gap-3">
             {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
               <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
@@ -849,12 +854,12 @@ function PeladaDetail() {
               <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
             )}
 
-            {isCapitao && pelada.sorteio_feito && pelada.status !== "em_andamento" && (
+            {isCapitao && pelada.sorteio_feito && (
               <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
             )}
 
             {isCapitao && (
-              <div className="col-span-2 grid grid-cols-3 gap-2">
+              <div className="col-span-2 grid grid-cols-2 gap-2">
                 <button onClick={() => setPresencasOpen(true)} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
                   <Users className="h-5 w-5" />
                   <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Gerenciar<br />presenças</span>
@@ -865,21 +870,19 @@ function PeladaDetail() {
                     <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Refazer<br />sorteio</span>
                   </button>
                 )}
-                {pelada.status === "em_andamento" && (
-                  <Link to="/peladas/$id/lances" params={{ id }} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
-                    <Shield className="h-5 w-5" />
-                    <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Painel de<br />lances</span>
-                  </Link>
-                )}
               </div>
             )}
-
-            {!isCapitao && pelada.status === "em_andamento" && (
-              <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white uppercase tracking-wide h-12 rounded-xl">
-                <Link to="/peladas/$id/lances" params={{ id }}><ClipboardList className="mr-2 h-4 w-4" /> Painel de Lances</Link>
-              </Button>
-            )}
           </div>
+        )}
+
+        {pelada.status === "em_andamento" && (
+          <Link
+            to="/peladas/$id/lances"
+            params={{ id }}
+            className="flex items-center justify-center gap-3 rounded-2xl bg-[#00FF87] px-4 py-5 text-lg font-black uppercase tracking-wide text-black shadow-[0_0_25px_rgba(0,255,135,0.35)] transition hover:bg-[#00FF87]/90"
+          >
+            <Shield className="h-7 w-7" /> Painel de Lances
+          </Link>
         )}
 
         {pelada.status === "encerrada" && (() => {
