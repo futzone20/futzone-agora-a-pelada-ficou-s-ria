@@ -736,30 +736,35 @@ function PeladaDetail() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                {times.filter((t) => t !== meuTime).map((t) => (
-                  <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
-                    {temRodizio && estaDeFora(t) && (
-                      <span className="absolute right-3 top-3 flex items-center gap-1 text-[9px] font-bold text-[#AAA]"><User className="h-3 w-3" /> 1 fora</span>
-                    )}
-                    <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
-                      <div className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: t.cor }}>
-                        <Shirt className="h-5 w-5 text-white" />
+              {(() => {
+                const outros = times.filter((t) => t !== meuTime);
+                return (
+                  <div className={`grid gap-3 ${outros.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {outros.map((t) => (
+                      <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
+                        {temRodizio && estaDeFora(t) && (
+                          <span className="absolute right-3 top-3 flex items-center gap-1 text-[9px] font-bold text-[#AAA]"><User className="h-3 w-3" /> 1 fora</span>
+                        )}
+                        <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
+                          <div className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: t.cor }}>
+                            <Shirt className="h-5 w-5 text-white" />
+                          </div>
+                          <span className="truncate">{t.nome}</span>
+                        </div>
+                        <div className="space-y-1 mb-4">
+                          {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
+                        </div>
+                        <div className="absolute right-3 bottom-3 text-right">
+                          <div className="text-[9px] text-[#888] uppercase">Força</div>
+                          <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
+                        <div className="absolute bottom-0 left-0 h-1" style={{ width: `${(mediaTime(t.membros) / 5) * 100}%`, backgroundColor: t.cor }} />
                       </div>
-                      <span className="truncate">{t.nome}</span>
-                    </div>
-                    <div className="space-y-1 mb-4">
-                      {t.membros.map(m => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
-                    </div>
-                    <div className="absolute right-3 bottom-3 text-right">
-                      <div className="text-[9px] text-[#888] uppercase">Força</div>
-                      <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
-                    </div>
-                    <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
-                    <div className="absolute bottom-0 left-0 h-1" style={{ width: `${(mediaTime(t.membros) / 5) * 100}%`, backgroundColor: t.cor }} />
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
           );
         })()}
