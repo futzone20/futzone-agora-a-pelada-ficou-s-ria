@@ -116,6 +116,18 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
     void load();
   };
 
+  const encerrarListaManualmente = async () => {
+    if (!(await confirm({
+      title: "Encerrar lista agora",
+      description: `A lista tem ${totalOcupado} de ${capacidade} vagas preenchidas. Encerrar agora com essa escalação parcial?`,
+      confirmLabel: "Encerrar lista",
+    }))) return;
+    const { error } = await supabase.from("peladas").update({ status: "confirmada" } as never).eq("id", peladaId);
+    if (error) return toast.error(error.message);
+    toast.success("Lista encerrada! Já dá pra sortear os times.");
+    void load();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -129,7 +141,13 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
           <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
             <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
           </div>
+          {peladaStatus === "aguardando" && (
+            <Button size="sm" variant="outline" onClick={encerrarListaManualmente} className="w-full">
+              Encerrar lista agora (mesmo incompleta)
+            </Button>
+          )}
         </div>
+
 
         {loading ? <div className="py-8 text-center text-sm text-muted-foreground">Carregando...</div> : (
         <Tabs defaultValue="escalacao">
