@@ -160,6 +160,10 @@ function LancesPage() {
     if (!proximaPreview || confirmandoProxima) return;
     setConfirmandoProxima(true);
     try {
+      if (proximaPreview.empateSorteio) {
+        const nomeTimeSort = times.find((t) => t.id === proximaPreview.timeAId)?.nome || "Time";
+        toast.info(`Empate na 1ª partida — sorteio decidiu que o ${nomeTimeSort} fica! 🎲`);
+      }
       await iniciarProximaPartida(id, pelada, proximaPreview);
       setProximaPreview(null);
     } catch (err: any) {
