@@ -51,12 +51,17 @@ Deno.serve(async (_req) => {
 
       const {
         id, criado_em, status, sorteio_feito, aluguel_iniciado_em, atraso_registrado_em,
-        avaliacao_aberta, avaliacao_fecha_em, mvp_user_id, ...configBase
+        avaliacao_aberta, avaliacao_fecha_em, mvp_user_id, token_confirmacao, lista_liberada_em,
+        ...configBase
       } = raiz as any;
       void id; void criado_em; void status; void sorteio_feito; void aluguel_iniciado_em;
       void atraso_registrado_em; void avaliacao_aberta; void avaliacao_fecha_em; void mvp_user_id;
+      void token_confirmacao; void lista_liberada_em;
 
-      await supabase.from("peladas").insert({
+      const novoToken = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+      const agora = new Date().toISOString();
+
+      const { data: novaPelada, error: errInsert } = await supabase.from("peladas").insert({
         ...configBase,
         data: proximaStr,
         status: "aguardando",
@@ -64,8 +69,21 @@ Deno.serve(async (_req) => {
         aluguel_iniciado_em: null,
         recorrente: false,
         recorrente_raiz_id: raiz.id,
-      });
+        token_confirmacao: novoToken,
+        lista_liberada_em: agora,
+      }).select("id").single();
+      if (errInsert) { console.error("Erro ao criar pelada recorrente:", errInsert); continue; }
+      void novaPelada;
       criadas++;
+
+      const { data: membros } = await supabase.from("grupo_membros").select("user_id").eq("grupo_id", raiz.grupo_id).eq("status", "ativo");
+      const notifs = (membros || []).map((m: any) => ({
+        user_id: m.user_id,
+        titulo: "📢 Lista liberada!",
+        mensagem: `A lista da pelada "${raiz.nome_pelada}" já está aberta. Confirme sua presença!`,
+        link: `/pelada-confirmar/${novoToken}`,
+      }));
+      if (notifs.length) await supabase.from("notificacoes").insert(notifs);
     }
 
     return new Response(JSON.stringify({ ok: true, criadas }), {
