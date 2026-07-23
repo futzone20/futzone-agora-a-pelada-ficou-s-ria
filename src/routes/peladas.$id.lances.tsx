@@ -5,6 +5,7 @@ import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, T
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { calcularProximaPartida, iniciarProximaPartida, type ProximaPartidaPreview } from "@/lib/rotacaoPartida";
 
 
 export const Route = createFileRoute("/peladas/$id/lances")({ component: Wrapper });
@@ -59,15 +60,18 @@ function LancesPage() {
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [drawer, setDrawer] = useState<{ tipo: string; timeId: string } | null>(null);
   const [drawerGoleiro, setDrawerGoleiro] = useState<{ goleiroTimeId: string; goleiroTimeNome: string; goleiroTimeCor: string } | null>(null);
+  const [drawerArtilheiro, setDrawerArtilheiro] = useState<{ timeId: string; timeNome: string; timeCor: string } | null>(null);
   const [pendingGol, setPendingGol] = useState<{ userId: string; tipo: string; timeId: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [isCapitao, setIsCapitao] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
+  const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
+  const [confirmandoProxima, setConfirmandoProxima] = useState(false);
 
   const load = async () => {
     const { data: pelData } = await supabase
       .from("peladas")
-      .select("aluguel_iniciado_em, tempo_locado_minutos, grupo_id, gols_para_encerrar, modalidade_goleiro, data, horario_inicio, quadra_id")
+      .select("*")
       .eq("id", id)
       .maybeSingle();
     setPelada(pelData);
@@ -117,6 +121,7 @@ function LancesPage() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [id]);
@@ -145,7 +150,12 @@ function LancesPage() {
   const timeA = partida && times.find((t) => t.id === partida.time_a_id);
   const timeB = partida && times.find((t) => t.id === partida.time_b_id);
 
-  const jogadoresDoTime = (tid: string) => timeJogadores.filter((x) => x.time_id === tid);
+  const jogadoresDoTime = (tid: string, apenasGoleiro = false) => {
+    const todos = timeJogadores.filter((x) => x.time_id === tid);
+    if (!apenasGoleiro) return todos;
+    const goleiros = todos.filter((x) => x.eh_goleiro);
+    return goleiros.length > 0 ? goleiros : todos;
+  };
 
   const dataFmt = useMemo(() => {
     if (!pelada?.data) return "";
