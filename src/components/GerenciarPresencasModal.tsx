@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, UserPlus, Users, Copy } from "lucide-react";
+import { X, UserPlus, Users } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmProvider";
 
 
