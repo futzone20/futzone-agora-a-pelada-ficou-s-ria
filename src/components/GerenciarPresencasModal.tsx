@@ -147,20 +147,6 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
               Encerrar lista agora (mesmo incompleta)
             </Button>
           )}
-          {tokenConfirmacao && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                const link = `${window.location.origin}/pelada-confirmar/${tokenConfirmacao}`;
-                navigator.clipboard.writeText(link);
-                toast.success("Link de confirmação copiado! Só vale pra quem já está (ou vai entrar) no grupo.");
-              }}
-            >
-              <Copy className="mr-2 h-4 w-4" /> Copiar link de confirmação dessa pelada
-            </Button>
-          )}
         </div>
 
 
