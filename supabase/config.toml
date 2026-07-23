@@ -2,3 +2,7 @@ project_id = "ueihfrbmefmihtbidloq"
 
 [functions.encerrar-peladas-vencidas]
 verify_jwt = false
+
+[functions.gerar-peladas-recorrentes]
+verify_jwt = false
+

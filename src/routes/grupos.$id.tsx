@@ -434,6 +434,7 @@ function SkillsModal({ membro, onDone }: { membro: Membro; onDone: () => void })
 
 function PeladasTab({ grupoId, peladas, isCapitao, onChange }: { grupoId: string; peladas: Pelada[]; isCapitao: boolean; onChange: () => void }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   return (
     <div className="space-y-3">
       {isCapitao && (
@@ -444,11 +445,19 @@ function PeladasTab({ grupoId, peladas, isCapitao, onChange }: { grupoId: string
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto bg-card">
               <DialogHeader><DialogTitle>Nova pelada</DialogTitle></DialogHeader>
-              <CriarPeladaForm grupoId={grupoId} onCreated={() => { setOpen(false); onChange(); }} />
+              <CriarPeladaForm grupoId={grupoId} onCreated={(peladaId) => {
+                setOpen(false);
+                if (peladaId) {
+                  navigate({ to: "/peladas/$id", params: { id: peladaId } });
+                } else {
+                  onChange();
+                }
+              }} />
             </DialogContent>
           </Dialog>
         </div>
       )}
+
       {peladas.length === 0 ? (
         <EmptyState icon={CircleDot} title="Nenhuma pelada criada" description="Marque a primeira pelada deste grupo." />
       ) : (
@@ -480,7 +489,7 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${v.cls}`}>{v.label}</span>;
 }
 
-function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: () => void }) {
+function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (peladaId?: string) => void }) {
   const { user } = useAuth();
   const [tipo, setTipo] = useState<"publica" | "cliente">("publica");
   const [quadras, setQuadras] = useState<Quadra[]>([]);
@@ -500,7 +509,11 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
     modalidade_goleiro: "fixo" as "fixo" | "sorteado",
     sistema_disputa: "rodizio" as const,
     regra_empate_rodizio: "time_atual_sai" as "time_atual_sai" | "time_atual_fica",
+    recorrente: false,
+    dia_semana: 2 as number,
+    antecedencia_dias_lista: 3,
   });
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -531,14 +544,16 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
       ...rest,
       jogadores_por_time: form.jogadores_linha_por_time,
       gols_para_encerrar: gols_para_encerrar_ativo ? form.gols_para_encerrar : null,
+      dia_semana: form.recorrente ? form.dia_semana : null,
     };
     if (tipo === "publica" && quadraId) payload.quadra_id = quadraId;
-    const { error } = await supabase.from("peladas").insert(payload as never);
+    const { data: nova, error } = await supabase.from("peladas").insert(payload as never).select("id").single();
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Pelada criada");
-    onCreated();
+    onCreated((nova as any)?.id);
   };
+
 
   return (
     <form onSubmit={submit} className="space-y-3">
@@ -711,9 +726,61 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
         </div>
       )}
 
+      <div className="space-y-2 rounded-xl border border-border bg-secondary/30 p-3">
+        <Label>Essa pelada é recorrente (se repete toda semana)?</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, recorrente: false })}
+            className={`rounded-xl border p-2 text-sm font-bold ${!form.recorrente ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
+          >
+            Não, é única
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, recorrente: true })}
+            className={`rounded-xl border p-2 text-sm font-bold ${form.recorrente ? "border-primary bg-primary/10" : "border-border bg-secondary/30"}`}
+          >
+            Sim, toda semana
+          </button>
+        </div>
+        {form.recorrente && (
+          <div className="space-y-2 pt-2">
+            <div>
+              <Label>Dia da semana</Label>
+              <Select value={String(form.dia_semana)} onValueChange={(v) => setForm({ ...form, dia_semana: +v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"].map((nome, i) => (
+                    <SelectItem key={i} value={String(i)}>{nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Abrir a lista de confirmação com quantos dias de antecedência?</Label>
+              <Select value={String(form.antecedencia_dias_lista)} onValueChange={(v) => setForm({ ...form, antecedencia_dias_lista: +v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 dia antes</SelectItem>
+                  <SelectItem value="2">2 dias antes</SelectItem>
+                  <SelectItem value="3">3 dias antes</SelectItem>
+                  <SelectItem value="4">4 dias antes</SelectItem>
+                  <SelectItem value="5">5 dias antes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Toda semana, uma nova pelada com essa mesma configuração é criada automaticamente, com a lista já aberta pros jogadores confirmarem.
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="rounded-xl bg-secondary/50 p-3 text-xs text-muted-foreground">
         {form.numero_times} times de {form.jogadores_linha_por_time} na linha + {form.goleiros_por_time} goleiro(s) | Partidas de {form.duracao_partida_minutos}min{form.gols_para_encerrar_ativo ? ` ou ${form.gols_para_encerrar} gols` : ""} | Aluguel de {form.tempo_locado_minutos}min
       </div>
+
 
       <DialogFooter>
         <Button type="submit" disabled={loading} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">

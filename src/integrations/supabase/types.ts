@@ -2245,12 +2245,14 @@ export type Database = {
       peladas: {
         Row: {
           aluguel_iniciado_em: string | null
+          antecedencia_dias_lista: number
           atraso_registrado_em: string | null
           avaliacao_aberta: boolean
           avaliacao_fecha_em: string | null
           criado_em: string
           criado_por: string
           data: string
+          dia_semana: number | null
           duracao_partida_minutos: number
           goleiros_por_time: number
           gols_para_encerrar: number | null
@@ -2266,6 +2268,8 @@ export type Database = {
           numero_times: number
           quadra_cliente_id: string | null
           quadra_id: string | null
+          recorrente: boolean
+          recorrente_raiz_id: string | null
           regra_empate_rodizio: string
           sistema_disputa: Database["public"]["Enums"]["sistema_disputa"]
           sorteio_feito: boolean
@@ -2274,12 +2278,14 @@ export type Database = {
         }
         Insert: {
           aluguel_iniciado_em?: string | null
+          antecedencia_dias_lista?: number
           atraso_registrado_em?: string | null
           avaliacao_aberta?: boolean
           avaliacao_fecha_em?: string | null
           criado_em?: string
           criado_por: string
           data: string
+          dia_semana?: number | null
           duracao_partida_minutos?: number
           goleiros_por_time?: number
           gols_para_encerrar?: number | null
@@ -2295,6 +2301,8 @@ export type Database = {
           numero_times?: number
           quadra_cliente_id?: string | null
           quadra_id?: string | null
+          recorrente?: boolean
+          recorrente_raiz_id?: string | null
           regra_empate_rodizio?: string
           sistema_disputa?: Database["public"]["Enums"]["sistema_disputa"]
           sorteio_feito?: boolean
@@ -2303,12 +2311,14 @@ export type Database = {
         }
         Update: {
           aluguel_iniciado_em?: string | null
+          antecedencia_dias_lista?: number
           atraso_registrado_em?: string | null
           avaliacao_aberta?: boolean
           avaliacao_fecha_em?: string | null
           criado_em?: string
           criado_por?: string
           data?: string
+          dia_semana?: number | null
           duracao_partida_minutos?: number
           goleiros_por_time?: number
           gols_para_encerrar?: number | null
@@ -2324,6 +2334,8 @@ export type Database = {
           numero_times?: number
           quadra_cliente_id?: string | null
           quadra_id?: string | null
+          recorrente?: boolean
+          recorrente_raiz_id?: string | null
           regra_empate_rodizio?: string
           sistema_disputa?: Database["public"]["Enums"]["sistema_disputa"]
           sorteio_feito?: boolean
@@ -2343,6 +2355,13 @@ export type Database = {
             columns: ["quadra_id"]
             isOneToOne: false
             referencedRelation: "quadras_publicas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peladas_recorrente_raiz_id_fkey"
+            columns: ["recorrente_raiz_id"]
+            isOneToOne: false
+            referencedRelation: "peladas"
             referencedColumns: ["id"]
           },
         ]
