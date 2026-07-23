@@ -1,0 +1,1 @@
+ALTER TABLE public.peladas ADD COLUMN IF NOT EXISTS lista_liberada_em TIMESTAMPTZ;
