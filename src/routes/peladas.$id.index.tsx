@@ -71,10 +71,7 @@ function PeladaDetail() {
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [tempoAluguelSec, setTempoAluguelSec] = useState<number>(0);
   const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
-  const [proximaPreview, setProximaPreview] = useState<{
-    timeAId: string; timeBId: string; timeForaId: string | null; novaFila: string[];
-    saidas: { entrouEm: "A" | "B"; timeQueSaiu: string }[]; numeroPartida: number; empateSorteio: boolean;
-  } | null>(null);
+  const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
   const [avisoAluguelOpen, setAvisoAluguelOpen] = useState(false);
   const [graceSec, setGraceSec] = useState(180);
 
