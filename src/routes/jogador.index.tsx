@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ConvitesGrupoCard } from "@/components/ConvitesGrupoCard";
 
 export const Route = createFileRoute("/jogador/")({ component: Inicio });
 
@@ -138,6 +139,8 @@ export function Inicio() {
 
   return (
     <div className="space-y-6 pb-20 animate-fade-in scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+
+      <div className="px-4"><ConvitesGrupoCard /></div>
 
       {aoVivo && (
         <section className="px-4">

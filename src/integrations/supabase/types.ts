@@ -1422,6 +1422,44 @@ export type Database = {
           },
         ]
       }
+      grupo_regras: {
+        Row: {
+          criado_em: string
+          criado_por: string
+          grupo_id: string
+          id: string
+          ordem: number
+          texto: string
+          titulo: string
+        }
+        Insert: {
+          criado_em?: string
+          criado_por: string
+          grupo_id: string
+          id?: string
+          ordem?: number
+          texto: string
+          titulo: string
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string
+          grupo_id?: string
+          id?: string
+          ordem?: number
+          texto?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grupo_regras_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "grupos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grupos: {
         Row: {
           codigo_convite: string

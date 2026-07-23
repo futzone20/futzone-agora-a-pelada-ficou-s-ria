@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { PeladaStatusOuContagem, ConfirmadosProgress, useAgora } from "@/lib/pelada-status";
+import { ConvitesGrupoCard } from "@/components/ConvitesGrupoCard";
 
 export const Route = createFileRoute("/capitao/")({
   component: Inicio,
@@ -72,6 +73,7 @@ function Inicio() {
 
   return (
     <div className="space-y-6">
+      <ConvitesGrupoCard />
       {aoVivo && (
         <section>
           <Link
