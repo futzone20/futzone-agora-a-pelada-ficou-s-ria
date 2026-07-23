@@ -39,9 +39,8 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
   const load = async () => {
     setLoading(true);
 
-    const { data: pel } = await supabase.from("peladas").select("status, token_confirmacao").eq("id", peladaId).maybeSingle();
+    const { data: pel } = await supabase.from("peladas").select("status").eq("id", peladaId).maybeSingle();
     setPeladaStatus((pel as any)?.status || null);
-    setTokenConfirmacao((pel as any)?.token_confirmacao || null);
 
 
     const { data: gm } = await supabase
