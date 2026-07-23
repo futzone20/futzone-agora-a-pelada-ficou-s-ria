@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus, PiggyBank } from "lucide-react";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus, PiggyBank, ChevronRight, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -63,7 +63,9 @@ function GrupoPage() {
   const [membros, setMembros] = useState<Membro[]>([]);
   const [pendentes, setPendentes] = useState<Membro[]>([]);
   const [peladas, setPeladas] = useState<Pelada[]>([]);
+  const [temporadaNumero, setTemporadaNumero] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [secaoAtiva, setSecaoAtiva] = useState<"membros" | "peladas" | "regras" | "vaquinhas" | "temporada" | "config" | null>(null);
 
   const isCapitao = !!membros.find((m) => m.user_id === user?.id && (m.papel === "capitao" || m.papel === "auxiliar"));
   const souCapitaoExato = !!membros.find((m) => m.user_id === user?.id && m.papel === "capitao");
@@ -100,6 +102,9 @@ function GrupoPage() {
       setMembros(todos.filter((x: any) => x.status === "ativo"));
       setPendentes(todos.filter((x: any) => x.status === "pendente"));
       setPeladas((p.data as any) || []);
+
+      const { data: temp } = await supabase.from("temporadas").select("numero").eq("status", "ativa").maybeSingle();
+      setTemporadaNumero((temp as any)?.numero ?? null);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao carregar grupo");
     } finally {
@@ -109,54 +114,133 @@ function GrupoPage() {
 
   useEffect(() => { void load(); }, [id]);
 
+  const capitaoMembro = membros.find((m) => m.papel === "capitao");
+
+  const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const proximaPeladaLabel = useMemo(() => {
+    const agora = Date.now();
+    const futuras = peladas
+      .filter((p) => p.status !== "encerrada" && p.status !== "cancelada")
+      .map((p) => ({ p, ts: new Date(`${p.data}T${p.horario_inicio}`).getTime() }))
+      .filter((x) => Number.isFinite(x.ts) && x.ts >= agora)
+      .sort((a, b) => a.ts - b.ts);
+    if (!futuras.length) return "—";
+    const dt = new Date(futuras[0].ts);
+    return `${diasSemana[dt.getDay()]}, ${futuras[0].p.horario_inicio.slice(0, 5)}`;
+  }, [peladas]);
+
+  // "Nível do grupo" e "XP total" são derivados — ainda não existiam antes, calculados aqui
+  // a partir da força média dos membros e da quantidade de peladas já realizadas.
+  const mediaGrupo = useMemo(() => {
+    if (!membros.length) return 3;
+    const soma = membros.reduce((acc, m) => acc + (m.skill ? mediaSkill(m.skill) : 3), 0);
+    return soma / membros.length;
+  }, [membros]);
+  const nivelGrupo = mediaGrupo >= 4.5 ? "Elite" : mediaGrupo >= 4 ? "Avançado" : mediaGrupo >= 3 ? "Intermediário" : mediaGrupo >= 2 ? "Em evolução" : "Iniciante";
+  const pctNivel = Math.min(100, (mediaGrupo / 5) * 100);
+  const xpTotal = peladas.filter((p) => p.status === "encerrada").length * 100;
+
   if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!grupo) return <EmptyState icon={Shield} title="Grupo não encontrado" />;
+
+  if (secaoAtiva) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => setSecaoAtiva(null)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </button>
+        <div>
+          <h2 className="text-2xl font-bold">{grupo.nome}</h2>
+          <p className="text-sm text-muted-foreground">Código: <span className="text-foreground font-mono">{grupo.codigo_convite}</span></p>
+        </div>
+
+        {secaoAtiva === "membros" && <MembrosTab grupo={grupo} membros={membros} pendentes={pendentes} isCapitao={isCapitao} onChange={load} />}
+        {secaoAtiva === "peladas" && <PeladasTab grupoId={id} peladas={peladas} isCapitao={isCapitao} onChange={load} />}
+        {secaoAtiva === "regras" && <RegrasTab grupoId={id} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} />}
+        {secaoAtiva === "vaquinhas" && <VaquinhasTab grupo={grupo} membros={membros} isCapitao={isCapitao} />}
+        {secaoAtiva === "temporada" && <TemporadaTab grupoId={id} />}
+        {secaoAtiva === "config" && (
+          <ConfigTab grupo={grupo} membros={membros} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} peladas={peladas} onChange={load} onDeleted={() => navigate({ to: "/capitao/grupos" })} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <button onClick={() => navigate({ to: "/capitao/grupos" })} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </button>
-      <div>
-        <h2 className="text-2xl font-bold">{grupo.nome}</h2>
-        <p className="text-sm text-muted-foreground">Código: <span className="text-foreground font-mono">{grupo.codigo_convite}</span></p>
+
+      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5">
+        <h1 className="text-3xl font-black">{grupo.nome}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Código: <span className="font-mono font-bold text-primary">{grupo.codigo_convite}</span></p>
       </div>
 
-      <Tabs defaultValue="membros">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="membros"><Users className="mr-1 h-4 w-4" />Membros</TabsTrigger>
-          <TabsTrigger value="peladas"><CircleDot className="mr-1 h-4 w-4" />Peladas</TabsTrigger>
-          <TabsTrigger value="regras"><BookOpen className="mr-1 h-4 w-4" /></TabsTrigger>
-          <TabsTrigger value="vaquinhas"><PiggyBank className="mr-1 h-4 w-4" />💰</TabsTrigger>
-          <TabsTrigger value="temporada">🏆</TabsTrigger>
-          <TabsTrigger value="config"><Settings className="mr-1 h-4 w-4" /></TabsTrigger>
-        </TabsList>
+      <div className="space-y-4 rounded-2xl border border-primary/30 bg-card p-4">
+        <div className="text-sm font-bold text-primary">Resumo do grupo</div>
 
-        <TabsContent value="membros" className="mt-4">
-          <MembrosTab grupo={grupo} membros={membros} pendentes={pendentes} isCapitao={isCapitao} onChange={load} />
-        </TabsContent>
+        <div className="flex items-center gap-3">
+          <Avatar className="h-12 w-12 border-2 border-primary">
+            {capitaoMembro?.profile?.foto_url ? <AvatarImage src={capitaoMembro.profile.foto_url} /> : null}
+            <AvatarFallback className="bg-secondary">{(capitaoMembro?.profile?.nome || "C")[0]}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-bold">{capitaoMembro?.profile?.nome || "—"}</div>
+            <div className="flex items-center gap-1 text-xs text-primary"><Crown className="h-3 w-3" /> Capitão</div>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1 text-lg font-bold"><Users className="h-4 w-4 text-primary" />{membros.length}</div>
+            <div className="text-xs text-muted-foreground">membros</div>
+          </div>
+        </div>
 
-        <TabsContent value="peladas" className="mt-4">
-          <PeladasTab grupoId={id} peladas={peladas} isCapitao={isCapitao} onChange={load} />
-        </TabsContent>
+        <div className="flex items-center justify-between rounded-xl bg-secondary/40 p-3">
+          <span className="text-xs text-muted-foreground">Próxima pelada</span>
+          <span className="text-sm font-bold text-primary">{proximaPeladaLabel}</span>
+        </div>
 
-        <TabsContent value="regras" className="mt-4">
-          <RegrasTab grupoId={id} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} />
-        </TabsContent>
+        <div className="grid grid-cols-3 gap-3 border-t border-border pt-3 text-center">
+          <div>
+            <div className="text-xs text-muted-foreground">Nível do grupo</div>
+            <div className="text-sm font-bold text-primary">{nivelGrupo}</div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
+              <div className="h-full bg-primary" style={{ width: `${pctNivel}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">XP total</div>
+            <div className="text-sm font-bold">{xpTotal.toLocaleString("pt-BR")} ⭐</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Temporada ativa</div>
+            <div className="text-sm font-bold">{temporadaNumero != null ? `Temporada ${temporadaNumero}` : "—"}</div>
+          </div>
+        </div>
+      </div>
 
-        <TabsContent value="vaquinhas" className="mt-4">
-          <VaquinhasTab grupo={grupo} membros={membros} isCapitao={isCapitao} />
-        </TabsContent>
-
-        <TabsContent value="temporada" className="mt-4">
-          <TemporadaTab grupoId={id} />
-        </TabsContent>
-
-        <TabsContent value="config" className="mt-4">
-          <ConfigTab grupo={grupo} membros={membros} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} peladas={peladas} onChange={load} onDeleted={() => navigate({ to: "/capitao/grupos" })} />
-        </TabsContent>
-      </Tabs>
+      <div className="grid grid-cols-2 gap-3">
+        <HubCard icon={Users} title="Membros" subtitle="Jogadores e capitão" onClick={() => setSecaoAtiva("membros")} />
+        <HubCard icon={CircleDot} title="Peladas" subtitle="Agenda e histórico" onClick={() => setSecaoAtiva("peladas")} />
+        <HubCard icon={BookOpen} title="Regras" subtitle="Combinados do grupo" onClick={() => setSecaoAtiva("regras")} />
+        <HubCard icon={PiggyBank} title="Vaquinhas" subtitle="Pagamentos e rateios" onClick={() => setSecaoAtiva("vaquinhas")} />
+        <HubCard icon={Trophy} title="Temporadas" subtitle="Pontuação e evolução" onClick={() => setSecaoAtiva("temporada")} />
+        <HubCard icon={Settings} title="Configurações" subtitle="Ajustes do grupo" onClick={() => setSecaoAtiva("config")} />
+      </div>
     </div>
+  );
+}
+
+function HubCard({ icon: Icon, title, subtitle, onClick }: { icon: any; title: string; subtitle: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary/50">
+      <div className="flex w-full items-center justify-between">
+        <Icon className="h-7 w-7 text-primary" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="font-bold">{title}</div>
+      <div className="text-xs text-muted-foreground">{subtitle}</div>
+    </button>
   );
 }
 
@@ -1114,7 +1198,6 @@ function ConfigTab({ grupo, membros, isCapitao, souCapitaoExato, peladas, onChan
   const regen = async () => {
     const { error } = await supabase.from("grupos").update({ codigo_convite: "" } as never).eq("id", grupo.id);
     if (error) return toast.error(error.message);
-    // re-trigger by setting null then refetching — codigo_convite NOT NULL, so do an RPC alternative: regenerate client-side
     const novo = "FZ-" + Math.random().toString(36).slice(2, 6).toUpperCase();
     await supabase.from("grupos").update({ codigo_convite: novo } as never).eq("id", grupo.id);
     toast.success("Novo código gerado"); onChange();
@@ -1214,8 +1297,6 @@ function DuplicarGrupoModal({ open, onOpenChange, grupo, membros, onDone }: {
         const convites = Array.from(selecionados).map((convidado_id) => ({
           grupo_id: novoGrupoId, capitao_id: user.id, convidado_id,
         }));
-        // Usa o mesmo sistema de convite individual já existente (convites_grupo) — o convidado
-        // recebe notificação e precisa aceitar/recusar, não entra direto.
         await supabase.from("convites_grupo").insert(convites as never);
       }
 
