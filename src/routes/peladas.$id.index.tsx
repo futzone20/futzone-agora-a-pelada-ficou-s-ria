@@ -299,21 +299,8 @@ function PeladaDetail() {
     void load();
   };
 
-  useEffect(() => {
-    if (loading) return;
-    if (!pelada || pelada.status !== "em_andamento" || !isCapitao) return;
-    if (partidaAtual) return;
-    if (proximaPreview) return;
-    if (!pelada.aluguel_iniciado_em) return;
-    const tempoLocado = pelada.tempo_locado_minutos ?? 60;
-    const fim = new Date(pelada.aluguel_iniciado_em).getTime() + tempoLocado * 60_000;
-    const restanteMin = (fim - Date.now()) / 60000;
-    const dur = pelada.duracao_partida_minutos || 8;
-    if (restanteMin >= dur * 0.5) {
-      void calcularProximaPartida().then((p) => { if (p) setProximaPreview(p); });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, partidaAtual, pelada?.status, isCapitao, proximaPreview]);
+
+
 
   useEffect(() => {
     if (loading || !partidaAtual || !isCapitao) return;
