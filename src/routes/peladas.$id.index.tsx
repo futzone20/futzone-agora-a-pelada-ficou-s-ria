@@ -834,7 +834,7 @@ function PeladaDetail() {
           );
         })()}
 
-        {pelada.status !== "encerrada" && (
+        {pelada.status !== "encerrada" && pelada.status !== "em_andamento" && (
           <div className="grid grid-cols-2 gap-3">
             {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
               <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
@@ -854,12 +854,12 @@ function PeladaDetail() {
               <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
             )}
 
-            {isCapitao && pelada.sorteio_feito && pelada.status !== "em_andamento" && (
+            {isCapitao && pelada.sorteio_feito && (
               <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
             )}
 
             {isCapitao && (
-              <div className="col-span-2 grid grid-cols-3 gap-2">
+              <div className="col-span-2 grid grid-cols-2 gap-2">
                 <button onClick={() => setPresencasOpen(true)} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
                   <Users className="h-5 w-5" />
                   <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Gerenciar<br />presenças</span>
@@ -870,21 +870,19 @@ function PeladaDetail() {
                     <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Refazer<br />sorteio</span>
                   </button>
                 )}
-                {pelada.status === "em_andamento" && (
-                  <Link to="/peladas/$id/lances" params={{ id }} className="flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
-                    <Shield className="h-5 w-5" />
-                    <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Painel de<br />lances</span>
-                  </Link>
-                )}
               </div>
             )}
-
-            {!isCapitao && pelada.status === "em_andamento" && (
-              <Button asChild className="col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white uppercase tracking-wide h-12 rounded-xl">
-                <Link to="/peladas/$id/lances" params={{ id }}><ClipboardList className="mr-2 h-4 w-4" /> Painel de Lances</Link>
-              </Button>
-            )}
           </div>
+        )}
+
+        {pelada.status === "em_andamento" && (
+          <Link
+            to="/peladas/$id/lances"
+            params={{ id }}
+            className="flex items-center justify-center gap-3 rounded-2xl bg-[#00FF87] px-4 py-5 text-lg font-black uppercase tracking-wide text-black shadow-[0_0_25px_rgba(0,255,135,0.35)] transition hover:bg-[#00FF87]/90"
+          >
+            <Shield className="h-7 w-7" /> Painel de Lances
+          </Link>
         )}
 
         {pelada.status === "encerrada" && (() => {
