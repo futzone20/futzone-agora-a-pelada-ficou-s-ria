@@ -33,7 +33,7 @@ const TIPO_LABEL_COR: Record<string, { label: string; color: string }> = {
   frango: { label: "Frango", color: "#FB923C" },
   cartao_vermelho: { label: "Cartão vermelho", color: "#EF4444" },
   cartao_amarelo: { label: "Cartão amarelo", color: "#FACC15" },
-  outro: { label: "Outro", color: "#9CA3AF" },
+  outro: { label: "Reclamação", color: "#9CA3AF" },
 };
 
 function Wrapper() {
