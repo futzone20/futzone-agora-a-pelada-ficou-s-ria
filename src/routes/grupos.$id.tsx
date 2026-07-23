@@ -509,7 +509,11 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
     modalidade_goleiro: "fixo" as "fixo" | "sorteado",
     sistema_disputa: "rodizio" as const,
     regra_empate_rodizio: "time_atual_sai" as "time_atual_sai" | "time_atual_fica",
+    recorrente: false,
+    dia_semana: 2 as number,
+    antecedencia_dias_lista: 3,
   });
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
