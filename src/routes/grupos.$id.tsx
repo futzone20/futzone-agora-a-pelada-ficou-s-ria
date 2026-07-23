@@ -90,7 +90,7 @@ function GrupoPage() {
         ...x,
         profile: profilesMap[x.user_id] || null,
         skill: skillsMap[x.user_id] || null,
-        skill_origem: skillsMap[x.user_id]?.origem_ultima_atualizaçao || null,
+        skill_origem: skillsMap[x.user_id]?.origem_ultima_atualizacao || null,
       })));
       setPeladas((p.data as any) || []);
     } catch (err: any) {
