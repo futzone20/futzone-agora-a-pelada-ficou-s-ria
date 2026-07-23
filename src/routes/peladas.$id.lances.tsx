@@ -21,7 +21,7 @@ const TIPOS = [
   { v: "frango", label: "Frango", icon: "🐔", color: "#FB923C" },
   { v: "cartao_vermelho", label: "C. Vermelho", icon: "🟥", color: "#EF4444" },
   { v: "cartao_amarelo", label: "C. Amarelo", icon: "⚠️", color: "#FACC15" },
-  { v: "outro", label: "Outro", icon: "•••", color: "#9CA3AF" },
+  { v: "outro", label: "Reclamação", icon: "😤", color: "#9CA3AF" },
 ] as const;
 
 const TIPO_LABEL_COR: Record<string, { label: string; color: string }> = {
