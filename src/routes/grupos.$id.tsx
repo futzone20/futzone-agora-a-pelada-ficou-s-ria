@@ -545,6 +545,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
     recorrente: false,
     dia_semana: 2 as number,
     antecedencia_dias_lista: 3,
+    horario_abertura_lista: "09:00",
   });
 
   const [loading, setLoading] = useState(false);
