@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ConvitesGrupoCard } from "@/components/ConvitesGrupoCard";
 
 export const Route = createFileRoute("/jogador/")({ component: Inicio });
 
