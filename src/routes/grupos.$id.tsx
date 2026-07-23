@@ -793,8 +793,21 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
 
 function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: any; isCapitao: boolean; peladas: Pelada[]; onChange: () => void; onDeleted: () => void }) {
   const confirm = useConfirm();
+  const { user } = useAuth();
   const [nome, setNome] = useState(grupo.nome);
+  const [whatsappConectado, setWhatsappConectado] = useState(false);
+  const [whatsappNumero, setWhatsappNumero] = useState<string | null>(null);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
   const temAtiva = peladas.some((p) => p.status === "em_andamento");
+
+  useEffect(() => {
+    if (!user) return;
+    void supabase.from("profiles").select("whatsapp_conectado, whatsapp_numero").eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => {
+        setWhatsappConectado(!!(data as any)?.whatsapp_conectado);
+        setWhatsappNumero((data as any)?.whatsapp_numero || null);
+      });
+  }, [user?.id]);
 
   const salvar = async () => {
     const { error } = await supabase.from("grupos").update({ nome } as never).eq("id", grupo.id);
