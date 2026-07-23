@@ -11,10 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles } from "lucide-react";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -63,6 +66,7 @@ function GrupoPage() {
   const [loading, setLoading] = useState(true);
 
   const isCapitao = !!membros.find((m) => m.user_id === user?.id && (m.papel === "capitao" || m.papel === "auxiliar"));
+  const souCapitaoExato = !!membros.find((m) => m.user_id === user?.id && m.papel === "capitao");
 
   const load = async () => {
     try {
@@ -119,11 +123,12 @@ function GrupoPage() {
       </div>
 
       <Tabs defaultValue="membros">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="membros"><Users className="mr-2 h-4 w-4" />Membros</TabsTrigger>
-          <TabsTrigger value="peladas"><CircleDot className="mr-2 h-4 w-4" />Peladas</TabsTrigger>
-          <TabsTrigger value="temporada">🏆 Temporada</TabsTrigger>
-          <TabsTrigger value="config"><Settings className="mr-2 h-4 w-4" />Config</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="membros"><Users className="mr-1 h-4 w-4" />Membros</TabsTrigger>
+          <TabsTrigger value="peladas"><CircleDot className="mr-1 h-4 w-4" />Peladas</TabsTrigger>
+          <TabsTrigger value="regras"><BookOpen className="mr-1 h-4 w-4" />Regras</TabsTrigger>
+          <TabsTrigger value="temporada">🏆</TabsTrigger>
+          <TabsTrigger value="config"><Settings className="mr-1 h-4 w-4" /></TabsTrigger>
         </TabsList>
 
         <TabsContent value="membros" className="mt-4">
@@ -134,12 +139,16 @@ function GrupoPage() {
           <PeladasTab grupoId={id} peladas={peladas} isCapitao={isCapitao} onChange={load} />
         </TabsContent>
 
+        <TabsContent value="regras" className="mt-4">
+          <RegrasTab grupoId={id} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} />
+        </TabsContent>
+
         <TabsContent value="temporada" className="mt-4">
           <TemporadaTab grupoId={id} />
         </TabsContent>
 
         <TabsContent value="config" className="mt-4">
-          <ConfigTab grupo={grupo} isCapitao={isCapitao} peladas={peladas} onChange={load} onDeleted={() => navigate({ to: "/capitao/grupos" })} />
+          <ConfigTab grupo={grupo} membros={membros} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} peladas={peladas} onChange={load} onDeleted={() => navigate({ to: "/capitao/grupos" })} />
         </TabsContent>
       </Tabs>
     </div>
@@ -829,9 +838,110 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
   );
 }
 
-function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: any; isCapitao: boolean; peladas: Pelada[]; onChange: () => void; onDeleted: () => void }) {
+function RegrasTab({ grupoId, isCapitao, souCapitaoExato }: { grupoId: string; isCapitao: boolean; souCapitaoExato: boolean }) {
+  const { user } = useAuth();
   const confirm = useConfirm();
+  const [regras, setRegras] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editando, setEditando] = useState<any | null>(null);
+  const [titulo, setTitulo] = useState("");
+  const [texto, setTexto] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await (supabase as any).from("grupo_regras").select("*").eq("grupo_id", grupoId).order("ordem").order("criado_em");
+    setRegras(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { void load(); }, [grupoId]);
+
+  const abrirNova = () => { setEditando(null); setTitulo(""); setTexto(""); setFormOpen(true); };
+  const abrirEdicao = (r: any) => { setEditando(r); setTitulo(r.titulo); setTexto(r.texto); setFormOpen(true); };
+
+  const salvar = async () => {
+    if (!titulo.trim() || !texto.trim() || !user) return;
+    setSaving(true);
+    if (editando) {
+      const { error } = await (supabase as any).from("grupo_regras").update({ titulo: titulo.trim(), texto: texto.trim() } as never).eq("id", editando.id);
+      if (error) { toast.error(error.message); setSaving(false); return; }
+      toast.success("Regra atualizada");
+    } else {
+      const { error } = await (supabase as any).from("grupo_regras").insert({
+        grupo_id: grupoId, titulo: titulo.trim(), texto: texto.trim(), ordem: regras.length, criado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); setSaving(false); return; }
+      toast.success("Regra criada");
+    }
+    setSaving(false);
+    setFormOpen(false);
+    void load();
+  };
+
+  const excluir = async (r: any) => {
+    if (!(await confirm({ title: "Excluir regra", description: `Excluir a regra "${r.titulo}"?`, variant: "destructive", confirmLabel: "Excluir" }))) return;
+    const { error } = await (supabase as any).from("grupo_regras").delete().eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success("Regra excluída");
+    void load();
+  };
+
+  if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
+
+  return (
+    <div className="space-y-3">
+      {isCapitao && (
+        <Button onClick={abrirNova} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+          <Plus className="mr-2 h-4 w-4" /> Nova regra
+        </Button>
+      )}
+
+      {regras.length === 0 ? (
+        <EmptyState icon={Info} title="Nenhuma regra cadastrada" description={isCapitao ? "Crie tópicos como 'Pênalti', 'Faltas', 'Gol de goleiro', etc." : "O capitão ainda não cadastrou regras pra esse grupo."} />
+      ) : (
+        <Accordion type="multiple" className="space-y-2">
+          {regras.map((r) => (
+            <AccordionItem key={r.id} value={r.id} className="rounded-2xl border border-border bg-card px-4">
+              <AccordionTrigger className="text-sm font-bold">{r.titulo}</AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{r.texto}</p>
+                {isCapitao && (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => abrirEdicao(r)}>Editar</Button>
+                    {souCapitaoExato && (
+                      <Button size="sm" variant="destructive" onClick={() => excluir(r)}>Excluir</Button>
+                    )}
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="bg-card">
+          <DialogHeader><DialogTitle>{editando ? "Editar regra" : "Nova regra"}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Título (ex: Pênalti)</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
+            <div><Label>Regra</Label><Textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} placeholder="Ex: O pênalti só pode ser cobrado pelo goleiro do time adversário." /></div>
+            <Button onClick={salvar} disabled={saving || !titulo.trim() || !texto.trim()} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ConfigTab({ grupo, membros, isCapitao, souCapitaoExato, peladas, onChange, onDeleted }: { grupo: any; membros: Membro[]; isCapitao: boolean; souCapitaoExato: boolean; peladas: Pelada[]; onChange: () => void; onDeleted: () => void }) {
+  const confirm = useConfirm();
+  const navigate = useNavigate();
   const [nome, setNome] = useState(grupo.nome);
+  const [duplicarOpen, setDuplicarOpen] = useState(false);
   const temAtiva = peladas.some((p) => p.status === "em_andamento");
 
   const salvar = async () => {
@@ -868,12 +978,143 @@ function ConfigTab({ grupo, isCapitao, peladas, onChange, onDeleted }: { grupo: 
         <div className="font-mono text-sm">{grupo.codigo_convite}</div>
         <Button variant="secondary" onClick={regen}>Regenerar código</Button>
       </div>
+      {souCapitaoExato && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-bold"><FolderPlus className="h-4 w-4 text-primary" /> Duplicar grupo</div>
+          <p className="text-xs text-muted-foreground">
+            Cria um grupo novo já com as mesmas regras cadastradas — sem precisar configurar tudo de novo. Você escolhe se quer convidar membros também.
+          </p>
+          <Button variant="secondary" onClick={() => setDuplicarOpen(true)}>
+            <FolderPlus className="mr-2 h-4 w-4" /> Duplicar esse grupo
+          </Button>
+        </div>
+      )}
       <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
         <div className="text-sm font-bold text-destructive">Zona de perigo</div>
         <p className="text-xs text-muted-foreground">{temAtiva ? "Não é possível excluir com peladas em andamento." : "Esta ação não pode ser desfeita."}</p>
         <Button variant="destructive" onClick={excluir} disabled={temAtiva}><Trash2 className="mr-2 h-4 w-4" />Excluir grupo</Button>
       </div>
+
+      <DuplicarGrupoModal
+        open={duplicarOpen}
+        onOpenChange={setDuplicarOpen}
+        grupo={grupo}
+        membros={membros}
+        onDone={(novoGrupoId) => navigate({ to: "/grupos/$id", params: { id: novoGrupoId } })}
+      />
     </div>
+  );
+}
+
+function DuplicarGrupoModal({ open, onOpenChange, grupo, membros, onDone }: {
+  open: boolean; onOpenChange: (v: boolean) => void; grupo: any; membros: Membro[]; onDone: (novoGrupoId: string) => void;
+}) {
+  const { user } = useAuth();
+  const [novoNome, setNovoNome] = useState(`Cópia de ${grupo.nome}`);
+  const [incluirMembros, setIncluirMembros] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const outrosMembros = membros.filter((m) => m.user_id !== user?.id);
+
+  useEffect(() => {
+    if (open) { setNovoNome(`Cópia de ${grupo.nome}`); setIncluirMembros(false); setSelecionados(new Set()); }
+  }, [open, grupo.nome]);
+
+  const toggleTodos = () => {
+    setSelecionados((prev) => prev.size === outrosMembros.length ? new Set() : new Set(outrosMembros.map((m) => m.user_id)));
+  };
+
+  const duplicar = async () => {
+    if (!novoNome.trim() || !user || saving) return;
+    setSaving(true);
+    try {
+      const novoCodigo = "FZ-" + Math.random().toString(36).slice(2, 6).toUpperCase();
+      const { data: novoGrupo, error: errGrupo } = await supabase.from("grupos").insert({
+        nome: novoNome.trim(), criado_por: user.id, codigo_convite: novoCodigo,
+      } as never).select("id").single();
+      if (errGrupo) throw errGrupo;
+      const novoGrupoId = (novoGrupo as any).id;
+
+      const { error: errMembro } = await supabase.from("grupo_membros").insert({
+        grupo_id: novoGrupoId, user_id: user.id, papel: "capitao", status: "ativo",
+      } as never);
+      if (errMembro) throw errMembro;
+
+      const { data: regrasOriginais } = await (supabase as any).from("grupo_regras").select("titulo, texto, ordem").eq("grupo_id", grupo.id);
+      if (regrasOriginais && regrasOriginais.length > 0) {
+        await (supabase as any).from("grupo_regras").insert(
+          regrasOriginais.map((r: any) => ({ grupo_id: novoGrupoId, titulo: r.titulo, texto: r.texto, ordem: r.ordem, criado_por: user.id })) as never,
+        );
+      }
+
+      if (incluirMembros && selecionados.size > 0) {
+        const convites = Array.from(selecionados).map((convidado_id) => ({
+          grupo_id: novoGrupoId, capitao_id: user.id, convidado_id,
+        }));
+        // Usa o mesmo sistema de convite individual já existente (convites_grupo) — o convidado
+        // recebe notificação e precisa aceitar/recusar, não entra direto.
+        await supabase.from("convites_grupo").insert(convites as never);
+      }
+
+      toast.success(incluirMembros && selecionados.size > 0
+        ? `Grupo duplicado! Convite enviado pra ${selecionados.size} pessoa(s).`
+        : "Grupo duplicado!");
+      onOpenChange(false);
+      onDone(novoGrupoId);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao duplicar grupo");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto bg-card">
+        <DialogHeader><DialogTitle>Duplicar grupo</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><Label>Nome do novo grupo</Label><Input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} /></div>
+          <p className="text-xs text-muted-foreground">As regras cadastradas nesse grupo serão copiadas automaticamente pro novo.</p>
+
+          <div className="flex items-center gap-2">
+            <Checkbox checked={incluirMembros} onCheckedChange={(v) => setIncluirMembros(!!v)} id="incluir-membros" />
+            <Label htmlFor="incluir-membros">Convidar membros pro novo grupo</Label>
+          </div>
+
+          {incluirMembros && (
+            <div className="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground">{selecionados.size} de {outrosMembros.length} selecionados</span>
+                <button type="button" onClick={toggleTodos} className="text-xs font-bold text-primary">
+                  {selecionados.size === outrosMembros.length ? "Desmarcar todos" : "Marcar todos"}
+                </button>
+              </div>
+              {outrosMembros.map((m) => (
+                <label key={m.user_id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={selecionados.has(m.user_id)}
+                    onCheckedChange={(v) => {
+                      setSelecionados((prev) => {
+                        const next = new Set(prev);
+                        if (v) next.add(m.user_id); else next.delete(m.user_id);
+                        return next;
+                      });
+                    }}
+                  />
+                  {m.profile?.nome || "Jogador"}
+                </label>
+              ))}
+              {outrosMembros.length === 0 && <p className="text-xs text-muted-foreground">Nenhum outro membro nesse grupo ainda.</p>}
+            </div>
+          )}
+
+          <Button onClick={duplicar} disabled={saving || !novoNome.trim()} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+            {saving ? "Duplicando..." : "Duplicar grupo"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -962,4 +1203,3 @@ function AdicionarMembroManualModal({ grupoId, onDone }: { grupoId: string; onDo
     </form>
   );
 }
-
