@@ -15,7 +15,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { mediaSkill, mediaTime, corTextoLegivel, type Jogador } from "@/lib/sorteio";
 import { escolherTimesIniciais } from "@/lib/rodizio";
-import { calcularProximaPartida as calcularProximaPartidaShared, iniciarProximaPartida as iniciarProximaPartidaShared, type ProximaPartidaPreview } from "@/lib/rotacaoPartida";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { StatusBadge, ConfirmadosProgress } from "@/lib/pelada-status";
 import { StatsPeladaModal } from "@/components/StatsPeladaModal";
