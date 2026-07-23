@@ -70,7 +70,6 @@ function PeladaDetail() {
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [tempoAluguelSec, setTempoAluguelSec] = useState<number>(0);
   const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
-  const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
   const [avisoAluguelOpen, setAvisoAluguelOpen] = useState(false);
   const [graceSec, setGraceSec] = useState(180);
 
