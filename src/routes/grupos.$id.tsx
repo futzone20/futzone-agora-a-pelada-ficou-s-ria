@@ -434,6 +434,7 @@ function SkillsModal({ membro, onDone }: { membro: Membro; onDone: () => void })
 
 function PeladasTab({ grupoId, peladas, isCapitao, onChange }: { grupoId: string; peladas: Pelada[]; isCapitao: boolean; onChange: () => void }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   return (
     <div className="space-y-3">
       {isCapitao && (
@@ -444,11 +445,19 @@ function PeladasTab({ grupoId, peladas, isCapitao, onChange }: { grupoId: string
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto bg-card">
               <DialogHeader><DialogTitle>Nova pelada</DialogTitle></DialogHeader>
-              <CriarPeladaForm grupoId={grupoId} onCreated={() => { setOpen(false); onChange(); }} />
+              <CriarPeladaForm grupoId={grupoId} onCreated={(peladaId) => {
+                setOpen(false);
+                if (peladaId) {
+                  navigate({ to: "/peladas/$id", params: { id: peladaId } });
+                } else {
+                  onChange();
+                }
+              }} />
             </DialogContent>
           </Dialog>
         </div>
       )}
+
       {peladas.length === 0 ? (
         <EmptyState icon={CircleDot} title="Nenhuma pelada criada" description="Marque a primeira pelada deste grupo." />
       ) : (
