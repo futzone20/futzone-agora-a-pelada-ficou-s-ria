@@ -733,6 +733,41 @@ function PeladaDetail() {
           );
         })()}
 
+        {isCapitao && pelada.status === "aguardando" && pelada.token_confirmacao && (() => {
+          const linkCompleto = `${window.location.origin}/pelada-confirmar/${pelada.token_confirmacao}`;
+          const mensagemWhats = encodeURIComponent(`⚽ A lista da pelada "${pelada.nome_pelada}" está aberta! Confirma sua presença: ${linkCompleto}`);
+          return (
+            <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2 font-bold"><Copy className="h-4 w-4 text-[#00FF87]" /> Link de confirmação</div>
+              <p className="text-xs text-muted-foreground">Envie esse link pro pessoal do grupo confirmar presença nessa pelada.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { navigator.clipboard.writeText(linkCompleto); toast.success("Link copiado!"); }}
+                >
+                  <Copy className="mr-2 h-4 w-4" /> Copiar link
+                </Button>
+                <Button size="sm" className="bg-[#25D366] text-white hover:bg-[#25D366]/90" asChild>
+                  <a href={`https://wa.me/?text=${mensagemWhats}`} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
+                  </a>
+                </Button>
+              </div>
+              {!pelada.recorrente && (
+                <Button
+                  size="sm"
+                  onClick={liberarLista}
+                  disabled={acting || !!pelada.lista_liberada_em}
+                  className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90"
+                >
+                  {pelada.lista_liberada_em ? "✓ Lista já liberada" : "📢 Liberar Lista pra todo mundo"}
+                </Button>
+              )}
+            </div>
+          );
+        })()}
+
         {pelada.status !== "encerrada" && pelada.status !== "em_andamento" && (
           <div className="grid grid-cols-2 gap-3">
             {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
