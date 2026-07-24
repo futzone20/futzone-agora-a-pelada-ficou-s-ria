@@ -1,24 +1,16 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Home, CircleDot, Radio, Trophy, User } from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
 import { RequireAuth } from "@/components/RequireAuth";
+import { getNavItems } from "@/lib/navItems";
 
 export const Route = createFileRoute("/capitao")({
   component: CapitaoLayout,
 });
 
-const items = [
-  { to: "/capitao", label: "Início", icon: Home },
-  { to: "/capitao/peladas", label: "Peladas", icon: CircleDot },
-  { to: "/capitao/resenha", label: "Resenha", icon: Radio, destaque: true },
-  { to: "/capitao/ranking", label: "Ranking", icon: Trophy },
-  { to: "/capitao/perfil", label: "Perfil", icon: User },
-];
-
 function CapitaoLayout() {
   return (
     <RequireAuth allow={["capitao"]}>
-      <MobileShell items={items as any}><Outlet /></MobileShell>
+      <MobileShell items={getNavItems("capitao")}><Outlet /></MobileShell>
     </RequireAuth>
   );
 }
