@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { ArrowLeft, Shuffle, CircleDot, Home, Trophy, User, Users, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Shuffle, CircleDot, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getNavItems } from "@/lib/navItems";
 import { CORES_TIMES, type Jogador, mediaSkill, mediaTime, sortear } from "@/lib/sorteio";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -17,17 +18,11 @@ export const Route = createFileRoute("/peladas/$id/sorteio")({
   component: Wrapper,
 });
 
-const items = [
-  { to: "/capitao", label: "Início", icon: Home },
-  { to: "/capitao/grupos", label: "Grupos", icon: Users },
-  { to: "/capitao/ranking", label: "Ranking", icon: Trophy },
-  { to: "/capitao/perfil", label: "Perfil", icon: User },
-];
-
 function Wrapper() {
+  const { user } = useAuth();
   return (
     <RequireAuth allow={["capitao", "admin"]}>
-      <MobileShell items={items as any}><SorteioPage /></MobileShell>
+      <MobileShell items={getNavItems(user?.role)}><SorteioPage /></MobileShell>
     </RequireAuth>
   );
 }
