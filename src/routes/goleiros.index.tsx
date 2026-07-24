@@ -23,7 +23,7 @@ function GoleirosCat() {
 
   useEffect(() => {
     (async () => {
-      const { data: g } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, whatsapp)").eq("ativo_catalogo", true);
+      const { data: g } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, whatsapp, handle)").eq("ativo_catalogo", true);
       const ids = (g ?? []).map((x:any)=>x.id);
       let medias: Record<string, {soma:number; n:number}> = {};
       if (ids.length) {
@@ -68,7 +68,10 @@ function GoleirosCat() {
           <Card className="p-3 flex gap-3 items-center">
             <div className="w-14 h-14 rounded-full bg-muted overflow-hidden">{g.profiles?.foto_url && <img src={g.profiles.foto_url} className="w-full h-full object-cover"/>}</div>
             <div className="flex-1">
-              <div className="font-bold">{g.profiles?.nome}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold">{g.profiles?.nome}</span>
+                {g.profiles?.handle && <span className="text-xs font-medium text-primary">@{g.profiles.handle}</span>}
+              </div>
               <div className="text-xs text-muted-foreground">{g.profiles?.cidade}{g.profiles?.estado && `/${g.profiles.estado}`}</div>
               <div className="flex gap-1 mt-1">{g.tipos_quadra?.map((t:string)=><Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>)}</div>
               <div className="flex items-center gap-2 mt-1 text-xs">
