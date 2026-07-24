@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth, rolePath, type UserRole } from "@/lib/auth";
 import { toast } from "sonner";
 import { User, Building2, Gift, Crown } from "lucide-react";
@@ -20,11 +21,13 @@ const ACCOUNT_TYPES: { value: Exclude<UserRole, "admin">; label: string; icon: a
   { value: "parceiro", label: "Parceiro Fidelidade", icon: Gift, desc: "Ofereça resgates e fidelize jogadores." },
 ];
 
+const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 function SignupPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    nome: "", email: "", whatsapp: "", nascimento: "", password: "", confirm: "",
+    nome: "", email: "", whatsapp: "", nascimento: "", password: "", confirm: "", cidade: "", estado: "",
   });
   const [goleiro, setGoleiro] = useState(false);
   const [role, setRole] = useState<typeof ACCOUNT_TYPES[number]["value"]>("jogador");
@@ -34,6 +37,7 @@ function SignupPage() {
     e.preventDefault();
     if (form.password !== form.confirm) return toast.error("As senhas não coincidem");
     if (form.password.length < 6) return toast.error("Senha mínima de 6 caracteres");
+    if (!form.cidade.trim() || !form.estado) return toast.error("Preencha cidade e estado");
     setLoading(true);
     try {
       const u = await signUp({
@@ -44,6 +48,8 @@ function SignupPage() {
         password: form.password,
         role,
         goleiro,
+        cidade: form.cidade.trim(),
+        estado: form.estado,
       });
       toast.success("Conta criada!");
       const invite = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_invite") : null;
@@ -83,6 +89,19 @@ function SignupPage() {
             <div>
               <Label htmlFor="dob">Data de nascimento</Label>
               <Input id="dob" type="date" required value={form.nascimento} onChange={(e) => setForm({ ...form, nascimento: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input id="cidade" required value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} placeholder="Ex: São Paulo" />
+              </div>
+              <div>
+                <Label>Estado</Label>
+                <Select value={form.estado} onValueChange={(v) => setForm({ ...form, estado: v })} required>
+                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                  <SelectContent>{ESTADOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
