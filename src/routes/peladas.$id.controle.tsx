@@ -3,27 +3,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { ArrowLeft, Play, Pause, Square, Copy, Tv, Home, Users, Trophy, User } from "lucide-react";
+import { ArrowLeft, Play, Pause, Square, Copy, Tv } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getNavItems } from "@/lib/navItems";
 import { slugify, calcularTabela } from "@/lib/placar";
 import { notificarVencedoresPelada } from "@/lib/notificarVencedores";
 import { useConfirm } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/peladas/$id/controle")({ component: Wrapper });
 
-const items = [
-  { to: "/capitao", label: "Início", icon: Home },
-  { to: "/capitao/grupos", label: "Grupos", icon: Users },
-  { to: "/capitao/ranking", label: "Ranking", icon: Trophy },
-  { to: "/capitao/perfil", label: "Perfil", icon: User },
-];
-
 function Wrapper() {
+  const { user } = useAuth();
   return (
     <RequireAuth allow={["capitao", "admin"]}>
-      <MobileShell items={items as any}><Controle /></MobileShell>
+      <MobileShell items={getNavItems(user?.role)}><Controle /></MobileShell>
     </RequireAuth>
   );
 }
