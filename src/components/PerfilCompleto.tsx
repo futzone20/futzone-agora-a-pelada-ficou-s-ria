@@ -44,8 +44,6 @@ export function PerfilCompleto() {
   const [historico, setHistorico] = useState<any[]>([]);
   const [temporadas, setTemporadas] = useState<any[]>([]);
   const [indicacoes, setIndicacoes] = useState<any[]>([]);
-  const [meusGrupos, setMeusGrupos] = useState<any[]>([]);
-  const [grupoSel, setGrupoSel] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -75,10 +73,6 @@ export function PerfilCompleto() {
       setTemporadas(ts || []);
       const { data: inds } = await supabase.from("convites_indicacao").select("*").eq("indicador_id", user.id);
       setIndicacoes(inds || []);
-      const { data: gms } = await supabase.from("grupo_membros").select("grupo_id, grupos!inner(id,nome,codigo_convite)").eq("user_id", user.id).eq("status","ativo");
-      const gs = (gms || []).map((x: any) => x.grupos);
-      setMeusGrupos(gs);
-      if (gs[0]) setGrupoSel(gs[0].id);
     })();
   }, [user?.id]);
 
@@ -248,7 +242,7 @@ export function PerfilCompleto() {
         </div>
       </div>
 
-      <IndicacoesBox indicacoes={indicacoes} meusGrupos={meusGrupos} grupoSel={grupoSel} setGrupoSel={setGrupoSel} userId={user?.id} isCapitao={user?.role === "capitao"} />
+      <IndicacoesBox indicacoes={indicacoes} userId={user?.id} isCapitao={user?.role === "capitao"} />
 
       {temporadas.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
@@ -269,47 +263,44 @@ export function PerfilCompleto() {
   );
 }
 
-function IndicacoesBox({ indicacoes, meusGrupos, grupoSel, setGrupoSel, userId, isCapitao }: any) {
+function IndicacoesBox({ indicacoes, userId, isCapitao }: any) {
   const [codigo, setCodigo] = useState<string | null>(null);
   useEffect(() => {
-    if (!userId || !grupoSel) return;
+    if (!userId) return;
     void (async () => {
-      const { data } = await supabase.from("convites_indicacao")
-        .select("codigo_unico").eq("indicador_id", userId).eq("grupo_id", grupoSel).maybeSingle();
-      setCodigo(data?.codigo_unico || null);
+      const { data } = await (supabase as any).rpc("criar_codigo_indicacao", {
+        _user_id: userId, _grupo_id: null, _tipo: isCapitao ? "capitao" : "jogador",
+      });
+      setCodigo(typeof data === "string" ? data : null);
     })();
-  }, [userId, grupoSel]);
+  }, [userId, isCapitao]);
   const totalJogou = indicacoes.filter((i: any) => i.jogou_primeira_pelada).length;
-  const link = codigo && typeof window !== "undefined" ? `${window.location.origin}/convite/${codigo}` : "";
+  const totalCadastrou = indicacoes.filter((i: any) => i.cadastrou).length;
+  const link = codigo && typeof window !== "undefined" ? `${window.location.origin}/indicar/${codigo}` : "";
   const copy = () => { if (link) { navigator.clipboard.writeText(link); toast.success("Link copiado"); } };
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Minhas Indicações</h3>
+      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Indique um amigo pro MrFut</h3>
+      <p className="text-xs text-muted-foreground">
+        Esse link é pessoal e não coloca ninguém em nenhum grupo automaticamente — é só pra trazer gente nova pro app.
+        Depois, qualquer capitão pode buscar o @ da pessoa e convidar ela pra um grupo, separadamente.
+      </p>
       {isCapitao && <div className="rounded-lg bg-primary/10 p-2 text-xs text-primary font-bold">👑 Você ganha pontos em dobro por cada indicação!</div>}
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-secondary/30 p-2 text-center"><div className="text-[10px] uppercase text-muted-foreground">Bem-sucedidas</div><div className="text-xl font-extrabold text-primary">{totalJogou}</div></div>
-        <div className="rounded-xl bg-secondary/30 p-2 text-center"><div className="text-[10px] uppercase text-muted-foreground">Pontos ganhos</div><div className="text-xl font-extrabold">{totalJogou * (isCapitao ? 60 : 30)}</div></div>
+        <div className="rounded-xl bg-secondary/30 p-2 text-center"><div className="text-[10px] uppercase text-muted-foreground">Se cadastraram</div><div className="text-xl font-extrabold">{totalCadastrou}</div></div>
+        <div className="rounded-xl bg-secondary/30 p-2 text-center"><div className="text-[10px] uppercase text-muted-foreground">Jogaram (bem-sucedidas)</div><div className="text-xl font-extrabold text-primary">{totalJogou}</div></div>
       </div>
-      {meusGrupos.length > 0 && (
-        <div>
-          <Label className="text-xs">Grupo</Label>
-          <Select value={grupoSel} onValueChange={setGrupoSel}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{meusGrupos.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>)}</SelectContent>
-          </Select>
-          {link && (
-            <div className="flex gap-2 mt-2">
-              <Input readOnly value={link} className="font-mono text-xs" />
-              <Button size="sm" variant="secondary" onClick={copy}><Copy className="h-4 w-4" /></Button>
-            </div>
-          )}
+      {link && (
+        <div className="flex gap-2">
+          <Input readOnly value={link} className="font-mono text-xs" />
+          <Button size="sm" variant="secondary" onClick={copy}><Copy className="h-4 w-4" /></Button>
         </div>
       )}
       <div className="space-y-1">
         {indicacoes.length === 0 ? <p className="text-xs text-muted-foreground">Você ainda não fez indicações.</p> :
           indicacoes.map((i: any) => {
-            const status = i.jogou_primeira_pelada ? "⚽ Jogou — +30 pts" : i.cadastrou ? "✅ Cadastrou" : "🔗 Link gerado";
+            const status = i.jogou_primeira_pelada ? "⚽ Jogou" : i.cadastrou ? "✅ Cadastrou" : "🔗 Link gerado";
             return (
               <div key={i.id} className="flex justify-between rounded bg-secondary/30 px-2 py-1.5 text-xs">
                 <span className="font-mono">{i.codigo_unico}</span>
