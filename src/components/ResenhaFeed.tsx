@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { criarPostJogador } from "@/lib/postJogador";
 import { EmptyState } from "@/components/EmptyState";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageCircle, Send, Trash2, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Reação principal (estilo "curtir" do Instagram) + outras disponíveis num picker secundário
 const REACAO_PRINCIPAL = "bola";
@@ -180,6 +183,8 @@ export function ResenhaFeed() {
         </button>
       </div>
 
+      {aba === "grupo" && <ComposerPost gruposMap={gruposMap} />}
+
       {aba === "todos" ? (
         <EmptyState icon={MessageCircle} title="Em breve" description="A aba Todos vai mostrar a resenha de quem você segue — isso chega numa próxima atualização." />
       ) : loading ? (
@@ -198,6 +203,64 @@ export function ResenhaFeed() {
           />
         ))
       )}
+    </div>
+  );
+}
+
+function ComposerPost({ gruposMap }: { gruposMap: Record<string, string> }) {
+  const { user } = useAuth();
+  const gruposIds = Object.keys(gruposMap);
+  const [grupoSel, setGrupoSel] = useState(gruposIds[0] || "");
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    if (!grupoSel && gruposIds.length) setGrupoSel(gruposIds[0]);
+  }, [gruposIds.join(",")]);
+
+  const postar = async () => {
+    if (!user || !texto.trim() || !grupoSel) return;
+    setEnviando(true);
+    const { error } = await criarPostJogador(user.id, grupoSel, texto);
+    setEnviando(false);
+    if (error) return toast.error(error.message);
+    setTexto("");
+    toast.success("Postado! 🎉");
+  };
+
+  if (!gruposIds.length) return null;
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-start gap-2">
+        <Avatar className="h-9 w-9 shrink-0">
+          {user?.foto_url ? <AvatarImage src={user.foto_url} /> : null}
+          <AvatarFallback className="bg-secondary text-xs">{(user?.nome || "?")[0]}</AvatarFallback>
+        </Avatar>
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value.slice(0, 280))}
+          placeholder="No que você está pensando, craque?"
+          rows={2}
+          className="flex-1 resize-none rounded-lg bg-secondary px-3 py-2 text-sm outline-none"
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        {gruposIds.length > 1 ? (
+          <Select value={grupoSel} onValueChange={setGrupoSel}>
+            <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>{gruposIds.map((id) => <SelectItem key={id} value={id}>{gruposMap[id]}</SelectItem>)}</SelectContent>
+          </Select>
+        ) : (
+          <span className="text-xs text-muted-foreground">{gruposMap[grupoSel]}</span>
+        )}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{280 - texto.length}</span>
+          <Button size="sm" onClick={postar} disabled={!texto.trim() || enviando}>
+            <Send className="mr-1.5 h-3.5 w-3.5" /> Postar
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -506,6 +569,8 @@ function PostBody({ tipo, c }: { tipo: string; c: any }) {
         </div>
       );
     }
+    case "post_jogador":
+      return <p className="whitespace-pre-wrap text-base">{c.texto}</p>;
     case "patrocinio":
       return <div><div className="text-lg font-bold">📣 {c.titulo}</div><div className="text-sm">{c.mensagem}</div></div>;
     default:
