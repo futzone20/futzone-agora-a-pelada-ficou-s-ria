@@ -264,10 +264,13 @@ export function PerfilCompleto() {
   return (
     <div className="space-y-4 pb-20">
       <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5">
-        <div className="flex items-start gap-4">
+        <Button variant="outline" size="sm" onClick={() => setSecaoAtiva("dados")} className="absolute right-4 top-4 shrink-0">
+          <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar perfil
+        </Button>
+        <div className="flex items-start gap-4 pr-1">
           <div className="shrink-0"><AvatarUpload size={80} /></div>
-          <div className="min-w-0 flex-1 pt-1">
-            <h2 className="truncate text-2xl font-bold">{user?.nome}</h2>
+          <div className="min-w-0 flex-1 pt-1 pr-20">
+            <h2 className="break-words text-2xl font-bold">{user?.nome}</h2>
             {user?.handle && <p className="text-sm font-medium text-primary">@{user.handle}</p>}
             <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{tituloRole}</span>
             {(user?.cidade || user?.estado) && (
@@ -276,9 +279,6 @@ export function PerfilCompleto() {
               </p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setSecaoAtiva("dados")} className="shrink-0">
-            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar perfil
-          </Button>
         </div>
       </div>
 
