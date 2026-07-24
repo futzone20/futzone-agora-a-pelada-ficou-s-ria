@@ -62,16 +62,20 @@ export function ResenhaFeed() {
     (gs || []).forEach((g: any) => { gMap[g.id] = g.nome; });
     setGruposMap(gMap);
 
-    // Membros de cada grupo (pra sugestão de @menção nos comentários)
+    // Membros de cada grupo (pra sugestão de @menção nos comentários) — busca em duas
+    // consultas separadas porque grupo_membros.user_id referencia auth.users, não profiles
+    // diretamente, então o PostgREST não consegue montar o "join" automático.
     if (gruposIds.length) {
-      const { data: todosMembros } = await supabase
-        .from("grupo_membros")
-        .select("grupo_id, user_id, profiles(nome, handle, foto_url)")
-        .in("grupo_id", gruposIds)
-        .eq("status", "ativo");
+      const { data: gmRows } = await supabase.from("grupo_membros").select("grupo_id, user_id").in("grupo_id", gruposIds).eq("status", "ativo");
+      const idsUnicos = Array.from(new Set((gmRows || []).map((g: any) => g.user_id as string)));
+      const { data: memberProfiles } = idsUnicos.length
+        ? await supabase.from("profiles").select("user_id, nome, handle, foto_url").in("user_id", idsUnicos)
+        : { data: [] as any[] };
+      const profileById: Record<string, any> = {};
+      (memberProfiles || []).forEach((p: any) => { profileById[p.user_id] = p; });
       const porGrupo: Record<string, Membro[]> = {};
-      (todosMembros || []).forEach((m: any) => {
-        const p = m.profiles;
+      (gmRows || []).forEach((m: any) => {
+        const p = profileById[m.user_id];
         (porGrupo[m.grupo_id] ||= []).push({ user_id: m.user_id, nome: p?.nome || "Jogador", handle: p?.handle || null, foto_url: p?.foto_url || null });
       });
       setMembrosPorGrupo(porGrupo);
@@ -106,6 +110,20 @@ export function ResenhaFeed() {
   };
 
   useEffect(() => { void load(); }, [user?.id]);
+
+  // Quando vem de uma notificação (link tipo /jogador/resenha?post=ID), rola até o post
+  // certo e dá um destaque rápido nele.
+  useEffect(() => {
+    if (loading || typeof window === "undefined") return;
+    const postId = new URLSearchParams(window.location.search).get("post");
+    if (!postId) return;
+    const el = document.getElementById(`post-${postId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary");
+      setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2500);
+    }
+  }, [loading, posts]);
 
   // Atualização em tempo real SEM recarregar a lista inteira — só mescla o que mudou no
   // post certo, sem mexer na rolagem nem no resto da tela.
@@ -236,7 +254,7 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
   const autorNome = autorId ? profilesMap[autorId]?.nome : null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+    <div id={`post-${post.id}`} className="rounded-2xl border border-border bg-card p-4 space-y-3 transition-all">
       <div className="flex items-center gap-2">
         {mostrarAvatar && (
           <Avatar className="h-8 w-8 shrink-0">
