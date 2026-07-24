@@ -10,7 +10,7 @@ export const Route = createFileRoute("/capitao")({
 const items = [
   { to: "/capitao", label: "Início", icon: Home },
   { to: "/capitao/peladas", label: "Peladas", icon: CircleDot },
-  { to: "/capitao/peladas", label: "Ao vivo", icon: Radio, destaque: true },
+  { to: "/capitao/resenha", label: "Resenha", icon: Radio, destaque: true },
   { to: "/capitao/ranking", label: "Ranking", icon: Trophy },
   { to: "/capitao/perfil", label: "Perfil", icon: User },
 ];
