@@ -9,11 +9,12 @@ import { Progress } from "@/components/ui/progress";
 import { CentralMensagensCard } from "@/components/CentralMensagensCard";
 import {
   Copy, ArrowLeft, ChevronRight, User, Radar as RadarIcon, Flame, Star,
-  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut,
+  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { calcularResumoJogadorPelada, type ResumoJogadorPelada } from "@/lib/resumoJogadorPelada";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 
 const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -23,7 +24,7 @@ const SKILL_LABELS: Record<typeof SKILL_KEYS[number], string> = {
   chute: "💥 Chute", resistencia: "🫁 Resistência", posicionamento: "🧠 Posicionamento",
 };
 type SkillKey = typeof SKILL_KEYS[number];
-type Secao = "dados" | "skills" | "ofensiva" | "pontos" | "whatsapp" | "indicar" | "conta" | null;
+type Secao = "dados" | "skills" | "ofensiva" | "pontos" | "whatsapp" | "indicar" | "conta" | "historico" | null;
 
 const skillColor = (v: number) => v >= 4 ? "bg-green-500" : v >= 2.5 ? "bg-yellow-500" : "bg-red-500";
 const nivelLabel = (m: number) => m >= 4.5 ? "Elite" : m >= 4 ? "Acima da média" : m >= 3 ? "Bom" : m >= 2 ? "Em evolução" : "Iniciante";
@@ -253,6 +254,8 @@ export function PerfilCompleto() {
         )}
 
         {secaoAtiva === "conta" && <ContaPreferenciasBox signOut={signOut} />}
+
+        {secaoAtiva === "historico" && <HistoricoPeladasBox userId={user?.id} />}
       </div>
     );
   }
@@ -343,6 +346,10 @@ export function PerfilCompleto() {
         onClick={() => setSecaoAtiva("indicar")}
       />
       <MenuRow
+        icon={CalendarDays} titulo="Histórico de peladas" subtitulo="Minutos jogados e avaliações por partida"
+        onClick={() => setSecaoAtiva("historico")}
+      />
+      <MenuRow
         icon={Settings} titulo="Conta e preferências" subtitulo="Segurança, privacidade e configurações"
         onClick={() => setSecaoAtiva("conta")}
       />
@@ -404,6 +411,92 @@ function ContaPreferenciasBox({ signOut }: { signOut: () => Promise<void> }) {
           <LogOut className="mr-2 h-4 w-4" /> Sair da conta
         </Button>
       </div>
+    </div>
+  );
+}
+
+function HistoricoPeladasBox({ userId }: { userId: string | undefined }) {
+  const [peladas, setPeladas] = useState<{ id: string; nome_pelada: string; data: string; grupo_nome: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [aberta, setAberta] = useState<string | null>(null);
+  const [resumos, setResumos] = useState<Record<string, ResumoJogadorPelada | null>>({});
+
+  useEffect(() => {
+    if (!userId) return;
+    void (async () => {
+      setLoading(true);
+      const { data: tj } = await supabase.from("time_jogadores").select("pelada_id").eq("user_id", userId);
+      const peladaIds = Array.from(new Set((tj || []).map((x: any) => x.pelada_id as string)));
+      if (!peladaIds.length) { setPeladas([]); setLoading(false); return; }
+      const { data: ps } = await supabase.from("peladas").select("id, nome_pelada, data, grupo_id, status").in("id", peladaIds).eq("status", "encerrada").order("data", { ascending: false });
+      const grupoIds = Array.from(new Set((ps || []).map((p: any) => p.grupo_id)));
+      const { data: gs } = grupoIds.length ? await supabase.from("grupos").select("id, nome").in("id", grupoIds) : { data: [] as any[] };
+      const gMap: Record<string, string> = {};
+      (gs || []).forEach((g: any) => { gMap[g.id] = g.nome; });
+      setPeladas((ps || []).map((p: any) => ({ id: p.id, nome_pelada: p.nome_pelada, data: p.data, grupo_nome: gMap[p.grupo_id] || "Grupo" })));
+      setLoading(false);
+    })();
+  }, [userId]);
+
+  const abrir = async (peladaId: string) => {
+    if (aberta === peladaId) { setAberta(null); return; }
+    setAberta(peladaId);
+    if (!resumos[peladaId] && userId) {
+      const r = await calcularResumoJogadorPelada(peladaId, userId);
+      setResumos((prev) => ({ ...prev, [peladaId]: r }));
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Peladas</h3>
+      <p className="text-xs text-muted-foreground">Clique numa pelada pra ver seus minutos jogados e as notas que você recebeu.</p>
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : peladas.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Você ainda não jogou nenhuma pelada.</p>
+      ) : (
+        <div className="space-y-2">
+          {peladas.map((p) => {
+            const r = resumos[p.id];
+            const estaAberta = aberta === p.id;
+            return (
+              <div key={p.id} className="rounded-xl border border-border bg-secondary/20 overflow-hidden">
+                <button onClick={() => abrir(p.id)} className="flex w-full items-center justify-between p-3 text-left">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-bold">{p.nome_pelada}</div>
+                    <div className="text-xs text-muted-foreground">{p.grupo_nome} · {p.data.split("-").reverse().join("/")}</div>
+                  </div>
+                  <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${estaAberta ? "rotate-90" : ""}`} />
+                </button>
+                {estaAberta && (
+                  <div className="border-t border-border p-3">
+                    {!r ? (
+                      <p className="text-xs text-muted-foreground">Carregando resumo...</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-secondary/40 p-2">
+                          <div className="flex items-center justify-center gap-1 text-sm font-bold"><Clock className="h-3.5 w-3.5 text-primary" /> {r.minutosJogados}</div>
+                          <div className="text-[10px] text-muted-foreground">minutos jogados</div>
+                        </div>
+                        <div className="rounded-lg bg-secondary/40 p-2">
+                          <div className="text-sm font-bold">⭐ {r.notaLances.toFixed(1)}</div>
+                          <div className="text-[10px] text-muted-foreground">nota (lances)</div>
+                        </div>
+                        <div className="rounded-lg bg-secondary/40 p-2">
+                          <div className="text-sm font-bold">{r.notaAvaliacoes != null ? `⭐ ${r.notaAvaliacoes.toFixed(1)}` : "—"}</div>
+                          <div className="text-[10px] text-muted-foreground">{r.totalAvaliacoes > 0 ? `avaliação (${r.totalAvaliacoes})` : "sem avaliação"}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
