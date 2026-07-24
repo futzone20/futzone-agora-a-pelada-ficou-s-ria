@@ -2,11 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getNavItems } from "@/lib/navItems";
 import { calcularTabela } from "@/lib/placar";
 import { Button } from "@/components/ui/button";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Home, CircleDot, Trophy, User, Download, Share2, ArrowLeft, Loader2 } from "lucide-react";
+import { Download, Share2, ArrowLeft, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
 
@@ -14,17 +15,11 @@ export const Route = createFileRoute("/peladas/$id/card")({
   component: Wrapper,
 });
 
-const items = [
-  { to: "/jogador", label: "Início", icon: Home },
-  { to: "/jogador/peladas", label: "Peladas", icon: CircleDot },
-  { to: "/jogador/ranking", label: "Ranking", icon: Trophy },
-  { to: "/jogador/perfil", label: "Perfil", icon: User },
-];
-
 function Wrapper() {
+  const { user } = useAuth();
   return (
     <RequireAuth allow={["jogador", "capitao", "admin"]}>
-      <MobileShell items={items as any}><Card /></MobileShell>
+      <MobileShell items={getNavItems(user?.role)}><Card /></MobileShell>
     </RequireAuth>
   );
 }
