@@ -33,6 +33,14 @@ type Ja = {
 
 const DESEMPENHO_LABELS = ["", "Muito abaixo", "Abaixo", "Como esperado", "Acima", "Muito acima"];
 
+const CATEGORIAS_RESENHA = [
+  { v: "craque", label: "Craque da Rodada", emoji: "⚽" },
+  { v: "pereba", label: "Pereba da Rodada", emoji: "🥴" },
+  { v: "perde_gol", label: "Perde-Gol da Rodada", emoji: "🎯" },
+  { v: "frangueiro", label: "Frangueiro da Rodada", emoji: "🐔" },
+  { v: "racudo", label: "Raçudo da Rodada", emoji: "🔥" },
+] as const;
+
 function Avaliar() {
   const { id } = Route.useParams();
   const { user } = useAuth();
@@ -40,6 +48,7 @@ function Avaliar() {
   const [pelada, setPelada] = useState<any>(null);
   const [jogadores, setJogadores] = useState<Ja[]>([]);
   const [mvp, setMvp] = useState<string>("");
+  const [votosResenha, setVotosResenha] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -112,6 +121,15 @@ function Avaliar() {
       const { error: e2 } = await supabase.from("mvp_votos").insert({ pelada_id: id, votante_id: user.id, votado_id: mvp } as never);
       if (e2) toast.error(e2.message);
     }
+
+    const votosRows = Object.entries(votosResenha)
+      .filter(([, votado_id]) => !!votado_id)
+      .map(([categoria, votado_id]) => ({ pelada_id: id, categoria, votante_id: user.id, votado_id }));
+    if (votosRows.length) {
+      const { error: e3 } = await (supabase as any).from("resenha_votos").insert(votosRows);
+      if (e3) toast.error(e3.message);
+    }
+
     toast.success("Avaliação enviada!");
     navigate({ to: "/jogador/peladas" });
   };
@@ -192,6 +210,30 @@ function Avaliar() {
             </label>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+        <div>
+          <div className="font-bold">🎉 Resenha da pelada</div>
+          <p className="text-xs text-muted-foreground">100% anônimo — nem o capitão vê quem votou em quem. Pode deixar em branco qualquer categoria.</p>
+        </div>
+        {CATEGORIAS_RESENHA.map((cat) => (
+          <div key={cat.v}>
+            <div className="mb-1.5 text-sm font-bold">{cat.emoji} {cat.label}</div>
+            <div className="grid grid-cols-2 gap-2">
+              {jogadores.map((j) => (
+                <button
+                  key={j.user_id}
+                  type="button"
+                  onClick={() => setVotosResenha((v) => ({ ...v, [cat.v]: v[cat.v] === j.user_id ? "" : j.user_id }))}
+                  className={`rounded-lg border px-3 py-2 text-left text-xs font-medium transition ${votosResenha[cat.v] === j.user_id ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30"}`}
+                >
+                  {j.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <Button onClick={enviar} disabled={saving} className="w-full bg-primary font-bold">
