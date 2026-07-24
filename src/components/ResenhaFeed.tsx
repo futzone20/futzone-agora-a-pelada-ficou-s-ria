@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Send, Trash2, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Reação principal (estilo "curtir" do Instagram) + outras disponíveis num picker secundário
+const REACAO_PRINCIPAL = "bola";
 const REACOES = [
   { tipo: "bola", icon: "⚽" },
   { tipo: "fogo", icon: "🔥" },
@@ -29,7 +31,7 @@ const PREMIOS: Record<string, { titulo: string; emoji: string; cor: string }> = 
 // Tipos de post que são "do sistema/grupo" — não mostram foto de um jogador específico
 const TIPOS_SEM_AVATAR = new Set(["resultado_pelada", "patrocinio"]);
 
-type Comentario = { id: string; post_id: string; user_id: string; texto: string; deletado: boolean; criado_em: string };
+type Comentario = { id: string; post_id: string; user_id: string; texto: string; deletado: boolean; criado_em: string; resposta_para: string | null };
 type Reacao = { id: string; post_id: string; user_id: string; tipo: string };
 type Post = {
   id: string; grupo_id: string | null; tipo: string; pelada_id: string | null; user_id: string | null;
@@ -206,8 +208,9 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
   onLocalChange: (fn: (p: Post) => Post) => void;
 }) {
   const { user } = useAuth();
-  const [openReact, setOpenReact] = useState(false);
+  const [openPicker, setOpenPicker] = useState(false);
   const [openComents, setOpenComents] = useState(false);
+  const [respondendoPara, setRespondendoPara] = useState<Comentario | null>(null);
 
   const c = post.conteudo || {};
   const counts: Record<string, number> = {};
@@ -217,8 +220,13 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
     if (r.user_id === user?.id) minhas.add(r.tipo);
   });
   const totalReacoes = post.reacoes.length;
-  const comentariosVisiveis = post.comentarios.filter((x) => true);
-  const shown = openComents ? comentariosVisiveis : comentariosVisiveis.slice(-3);
+  const euCurti = minhas.has(REACAO_PRINCIPAL) || minhas.size > 0;
+
+  // Comentários raiz + respostas agrupadas por comentário-pai (estilo Instagram)
+  const raizes = post.comentarios.filter((cm) => !cm.resposta_para);
+  const respostasDe = (id: string) => post.comentarios.filter((cm) => cm.resposta_para === id);
+  const totalComentarios = post.comentarios.length;
+  const raizesMostradas = openComents ? raizes : raizes.slice(-2);
 
   const toggleReact = async (tipo: string) => {
     if (!user) return;
@@ -232,12 +240,23 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
     }
   };
 
-  const adicionarComentario = async (texto: string) => {
+  // Clique rápido no ícone principal = alterna a reação padrão (⚽), estilo "curtir" do Instagram
+  const curtirRapido = () => {
+    if (minhas.size > 0) {
+      // já reagiu com algo — remove TODAS as reações minhas nesse post
+      Array.from(minhas).forEach((t) => void toggleReact(t));
+    } else {
+      void toggleReact(REACAO_PRINCIPAL);
+    }
+  };
+
+  const adicionarComentario = async (texto: string, respostaPara: string | null) => {
     if (!user || !texto.trim()) return;
-    const otimista: Comentario = { id: `tmp-${Date.now()}`, post_id: post.id, user_id: user.id, texto: texto.slice(0, 140), deletado: false, criado_em: new Date().toISOString() };
+    const otimista: Comentario = { id: `tmp-${Date.now()}`, post_id: post.id, user_id: user.id, texto: texto.slice(0, 140), deletado: false, criado_em: new Date().toISOString(), resposta_para: respostaPara };
     onLocalChange((p) => ({ ...p, comentarios: [...p.comentarios, otimista] }));
     setOpenComents(true);
-    const { data, error } = await supabase.from("feed_comentarios").insert({ post_id: post.id, user_id: user.id, texto: texto.slice(0, 140) } as never).select().maybeSingle();
+    setRespondendoPara(null);
+    const { data, error } = await supabase.from("feed_comentarios").insert({ post_id: post.id, user_id: user.id, texto: texto.slice(0, 140), resposta_para: respostaPara } as never).select().maybeSingle();
     if (!error && data) {
       onLocalChange((p) => ({ ...p, comentarios: p.comentarios.map((x) => (x.id === otimista.id ? (data as any) : x)) }));
     }
@@ -252,6 +271,31 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
   const mostrarAvatar = autorId && !TIPOS_SEM_AVATAR.has(post.tipo);
   const autorFoto = autorId ? profilesMap[autorId]?.foto_url : null;
   const autorNome = autorId ? profilesMap[autorId]?.nome : null;
+
+  const renderComentario = (cm: Comentario, resposta: boolean) => (
+    <div key={cm.id} className={`flex items-start gap-2 text-sm ${resposta ? "ml-8 mt-2" : ""}`}>
+      <Avatar className={resposta ? "h-5 w-5 shrink-0" : "h-6 w-6 shrink-0"}>
+        {profilesMap[cm.user_id]?.foto_url ? <AvatarImage src={profilesMap[cm.user_id]!.foto_url!} /> : null}
+        <AvatarFallback className="bg-secondary text-[10px]">{(profilesMap[cm.user_id]?.nome || "?")[0]}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div>
+          <span className="font-semibold">{profilesMap[cm.user_id]?.nome || "Jogador"}: </span>
+          <span className={cm.deletado ? "italic text-muted-foreground" : ""}>
+            {cm.deletado ? "Comentário removido" : renderTextoComMencoes(cm.texto)}
+          </span>
+        </div>
+        {!cm.deletado && (
+          <button onClick={() => setRespondendoPara(cm)} className="mt-0.5 text-xs font-bold text-muted-foreground hover:text-primary">
+            Responder
+          </button>
+        )}
+      </div>
+      {!cm.deletado && cm.user_id === user?.id && (
+        <button onClick={() => delComent(cm.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+      )}
+    </div>
+  );
 
   return (
     <div id={`post-${post.id}`} className="rounded-2xl border border-border bg-card p-4 space-y-3 transition-all">
@@ -270,23 +314,26 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
 
       <PostBody tipo={post.tipo} c={c} />
 
-      {(totalReacoes > 0 || comentariosVisiveis.length > 0) && (
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {totalReacoes > 0 && (
-            <span className="flex items-center gap-1">
-              {Object.keys(counts).slice(0, 3).map((t) => REACOES.find((r) => r.tipo === t)?.icon).join(" ")} {totalReacoes}
-            </span>
-          )}
-          {comentariosVisiveis.length > 0 && <span>💬 {comentariosVisiveis.length} comentário(s)</span>}
+      {/* Barra de ações estilo Instagram: ícone + contador lado a lado */}
+      <div className="flex items-center gap-5 border-t border-border pt-2">
+        <div className="flex items-center gap-1.5">
+          <button onClick={curtirRapido} onDoubleClick={() => setOpenPicker((v) => !v)} className="transition active:scale-90">
+            <span className={`text-2xl transition ${euCurti ? "" : "opacity-50 grayscale"}`}>⚽</span>
+          </button>
+          {totalReacoes > 0 && <span className="text-sm font-bold text-muted-foreground">{totalReacoes}</span>}
         </div>
-      )}
-
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" onClick={() => setOpenReact((x) => !x)}>Reagir</Button>
-        <Button size="sm" variant="outline" onClick={() => setOpenComents((x) => !x)}>Comentar</Button>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => setOpenComents((v) => !v)} className="transition active:scale-90">
+            <MessageCircle className="h-6 w-6 text-muted-foreground" />
+          </button>
+          {totalComentarios > 0 && <span className="text-sm font-bold text-muted-foreground">{totalComentarios}</span>}
+        </div>
+        <button onClick={() => setOpenPicker((v) => !v)} className="ml-auto text-xs text-muted-foreground hover:text-foreground">
+          outras reações
+        </button>
       </div>
 
-      {openReact && (
+      {openPicker && (
         <div className="flex gap-2 rounded-xl bg-secondary/40 p-2">
           {REACOES.map((r) => (
             <button key={r.tipo} onClick={() => toggleReact(r.tipo)}
@@ -297,29 +344,27 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
         </div>
       )}
 
-      {(openComents || comentariosVisiveis.length > 0) && (
-        <div className="space-y-2 border-t border-border pt-3">
-          {!openComents && comentariosVisiveis.length > 3 && (
-            <button onClick={() => setOpenComents(true)} className="text-xs text-primary">Ver todos os {comentariosVisiveis.length} comentários</button>
+      {(openComents || raizes.length > 0) && (
+        <div className="space-y-1 border-t border-border pt-3">
+          {!openComents && raizes.length > 2 && (
+            <button onClick={() => setOpenComents(true)} className="text-xs text-primary">Ver todos os {totalComentarios} comentários</button>
           )}
-          {shown.map((cm) => (
-            <div key={cm.id} className="flex items-start gap-2 text-sm">
-              <Avatar className="h-6 w-6 shrink-0">
-                {profilesMap[cm.user_id]?.foto_url ? <AvatarImage src={profilesMap[cm.user_id]!.foto_url!} /> : null}
-                <AvatarFallback className="bg-secondary text-[10px]">{(profilesMap[cm.user_id]?.nome || "?")[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <span className="font-semibold">{profilesMap[cm.user_id]?.nome || "Jogador"}: </span>
-                <span className={cm.deletado ? "italic text-muted-foreground" : ""}>
-                  {cm.deletado ? "Comentário removido" : renderTextoComMencoes(cm.texto)}
-                </span>
-              </div>
-              {!cm.deletado && cm.user_id === user?.id && (
-                <button onClick={() => delComent(cm.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
-              )}
+          {raizesMostradas.map((cm) => (
+            <div key={cm.id}>
+              {renderComentario(cm, false)}
+              {respostasDe(cm.id).map((r) => renderComentario(r, true))}
             </div>
           ))}
-          <ComentarioInput membros={membros} onEnviar={adicionarComentario} />
+          {respondendoPara && (
+            <div className="flex items-center gap-2 rounded-lg bg-secondary/40 px-2 py-1 text-xs text-muted-foreground">
+              Respondendo {profilesMap[respondendoPara.user_id]?.nome || "comentário"}
+              <button onClick={() => setRespondendoPara(null)} className="ml-auto font-bold hover:text-foreground">✕</button>
+            </div>
+          )}
+          <ComentarioInput
+            membros={membros}
+            onEnviar={(texto) => adicionarComentario(texto, respondendoPara?.id || null)}
+          />
         </div>
       )}
     </div>
