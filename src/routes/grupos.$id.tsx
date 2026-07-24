@@ -425,13 +425,14 @@ function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros:
   const memberIds = useMemo(() => new Set(membros.map((m) => m.user_id)), [membros]);
 
   useEffect(() => {
-    if (termo.trim().length < 3) { setResultados([]); return; }
+    const termoLimpo = termo.trim().replace(/^@/, "");
+    if (termoLimpo.length < 3) { setResultados([]); return; }
     setBuscando(true);
     const t = setTimeout(async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("user_id, nome, email, foto_url, cidade, role")
-        .or(`nome.ilike.%${termo}%,whatsapp.ilike.%${termo}%`)
+        .select("user_id, nome, email, foto_url, cidade, estado, role, handle")
+        .or(`nome.ilike.%${termoLimpo}%,whatsapp.ilike.%${termoLimpo}%,handle.ilike.%${termoLimpo}%`)
         .not("role", "in", '("dono_quadra","parceiro","admin")')
         .limit(20);
       if (error) toast.error(error.message);
@@ -466,7 +467,7 @@ function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros:
       </TabsList>
 
       <TabsContent value="buscar" className="mt-3 space-y-3">
-        <Input placeholder="Nome ou WhatsApp (mínimo 3 letras)" value={termo} onChange={(e) => setTermo(e.target.value)} autoFocus />
+        <Input placeholder="Nome, @usuário ou WhatsApp (mínimo 3 letras)" value={termo} onChange={(e) => setTermo(e.target.value)} autoFocus />
         {buscando && <p className="text-xs text-muted-foreground">Buscando...</p>}
         {!buscando && termo.length >= 3 && resultados.length === 0 && (
           <p className="text-xs text-muted-foreground">Nenhum jogador encontrado.</p>
@@ -481,9 +482,12 @@ function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros:
                   <AvatarFallback className="bg-secondary text-xs">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold truncate">{r.nome}</div>
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-sm font-bold truncate">{r.nome}</span>
+                    {r.handle && <span className="shrink-0 text-xs text-primary">@{r.handle}</span>}
+                  </div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {r.cidade || "—"} · {r.role === "capitao" ? "👑 Capitão" : "🎮 Jogador"}
+                    {r.cidade || "—"}{r.cidade && r.estado ? `/${r.estado}` : r.estado || ""} · {r.role === "capitao" ? "👑 Capitão" : "🎮 Jogador"}
                   </div>
                 </div>
                 <Button size="sm" onClick={() => convidar(r.user_id)}>Convidar</Button>
