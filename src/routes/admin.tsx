@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { LayoutDashboard, Users, MapPin, Handshake, Megaphone, Gamepad2, DollarSign, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Users, MapPin, Handshake, Megaphone, Gamepad2, DollarSign, MessageSquare, Palette } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { RequireAuth } from "@/components/RequireAuth";
 
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/admin")({
         { to: "/admin/gamificacao", label: "Gamificação", icon: Gamepad2 },
         { to: "/admin/financeiro", label: "Financeiro", icon: DollarSign },
         { to: "/admin/comunicacao", label: "Comunicação", icon: MessageSquare },
+        { to: "/admin/aparencia", label: "Aparência", icon: Palette },
       ] as any}>
         <Outlet />
       </DashboardShell>
