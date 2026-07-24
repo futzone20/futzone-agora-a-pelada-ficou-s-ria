@@ -130,18 +130,25 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
             const active = path === it.to || (it.to !== "/" && path.startsWith(it.to + "/"));
             if (it.destaque) {
               return (
-                <Link key={it.to} to={it.to} className="relative -mt-6 flex flex-col items-center gap-1 px-3 pb-2">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#00FF87] bg-[#0D0D0D] shadow-[0_0_18px_rgba(0,255,135,0.6)]">
-                    <it.icon className="h-6 w-6 text-[#00FF87]" />
+                <Link key={it.to} to={it.to} className="relative -mt-7 flex flex-col items-center gap-1.5 px-3 pb-2">
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#00FF87] bg-[#0D0D0D] shadow-[0_0_22px_rgba(0,255,135,0.7)]">
+                    <div className="absolute inset-0 rounded-full bg-[#00FF87]/10 blur-md" />
+                    <span className="relative text-2xl">⚽</span>
                   </div>
-                  <span className="rounded-full bg-[#00FF87]/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00FF87]">{it.label}</span>
+                  <span className="flex items-center gap-1 rounded-full bg-[#00FF87]/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00FF87]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00FF87]" />
+                    {it.label}
+                  </span>
                 </Link>
               );
             }
             return (
-              <Link key={it.to} to={it.to} className={`flex flex-col items-center gap-1 px-3 py-3 text-[10px] font-bold uppercase transition ${active ? "text-[#00FF87]" : "text-[#666] hover:text-foreground"}`}>
-                <it.icon className={`h-5 w-5 ${active ? "text-[#00FF87]" : ""}`} />
-                <span>{it.label}</span>
+              <Link key={it.to} to={it.to} className="relative flex flex-col items-center gap-1 px-3 py-3 text-[10px] font-bold uppercase transition">
+                {active && (
+                  <span className="absolute inset-x-0.5 inset-y-1 -z-10 rounded-2xl bg-gradient-to-b from-[#00FF87]/20 via-[#00FF87]/5 to-transparent" />
+                )}
+                <it.icon className={`h-5 w-5 transition ${active ? "text-[#00FF87]" : "text-[#666]"}`} />
+                <span className={active ? "text-[#00FF87]" : "text-[#666]"}>{it.label}</span>
               </Link>
             );
           })}
