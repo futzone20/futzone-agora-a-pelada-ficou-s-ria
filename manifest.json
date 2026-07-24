@@ -1,0 +1,17 @@
+{
+  "name": "MrFut — Agora a pelada ficou séria!",
+  "short_name": "MrFut",
+  "description": "MrFut: organize, sorteie e gamifique suas peladas de futebol.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0D0D",
+  "theme_color": "#00FF87",
+  "icons": [
+    {
+      "src": "https://zizvdvekktiaqiqcacty.supabase.co/storage/v1/object/public/branding/pwa-icon",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
