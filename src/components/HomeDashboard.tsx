@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Bell, MessageCircle, Calendar, Clock, MapPin, Users, BarChart3, ChevronRight,
-  CalendarDays, Trophy, Zap, Radio,
+  CalendarDays, Trophy, Zap, Radio, CircleDot, Hexagon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -141,25 +141,30 @@ export function HomeDashboard() {
         <Link
           to="/peladas/$id"
           params={{ id: aoVivo.id }}
-          className="block rounded-2xl border border-primary bg-gradient-to-br from-primary/10 to-card p-5 shadow-[0_0_25px_rgba(0,255,135,0.15)]"
+          className="relative block overflow-hidden rounded-2xl border border-primary p-5 shadow-[0_0_25px_rgba(0,255,135,0.15)]"
         >
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Ao vivo
-          </span>
-          <div className="mt-2 text-xl font-black leading-tight">Sua pelada está rolando agora! 🔥</div>
-          <div className="mt-0.5 text-sm text-muted-foreground">{aoVivo.nome_pelada}</div>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {aoVivo.horario_inicio.slice(0, 5)}</span>
-            {aoVivo.quadraNome && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {aoVivo.quadraNome}</span>}
-            <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {aoVivo.confirmados}/{aoVivo.capacidade}</span>
-          </div>
-          <div className="mt-4 flex items-center gap-2">
-            <span className="flex flex-1 items-center justify-center gap-1 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground">
-              Entrar na resenha <ChevronRight className="h-4 w-4" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-card to-card" />
+          <div className="pointer-events-none absolute -right-8 -top-8 h-44 w-44 rounded-full bg-primary/10 blur-2xl" />
+          <CircleDot className="pointer-events-none absolute -right-4 -top-4 h-32 w-32 text-primary/10" strokeWidth={0.75} />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Ao vivo
             </span>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border">
-              <BarChart3 className="h-4 w-4" />
-            </span>
+            <div className="mt-2 text-xl font-black leading-tight">Sua pelada está rolando agora! 🔥</div>
+            <div className="mt-0.5 text-sm text-muted-foreground">{aoVivo.nome_pelada}</div>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {aoVivo.horario_inicio.slice(0, 5)}</span>
+              {aoVivo.quadraNome && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {aoVivo.quadraNome}</span>}
+              <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {aoVivo.confirmados}/{aoVivo.capacidade}</span>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <span className="flex flex-1 items-center justify-center gap-1 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground">
+                Entrar na resenha <ChevronRight className="h-4 w-4" />
+              </span>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border">
+                <BarChart3 className="h-4 w-4" />
+              </span>
+            </div>
           </div>
         </Link>
       ) : (
@@ -175,22 +180,29 @@ export function HomeDashboard() {
       <div className="grid grid-cols-2 gap-3">
         <Link to={proxima ? "/peladas/$id" : `${base}/peladas`} params={proxima ? { id: proxima.id } : undefined} className="rounded-2xl border border-border bg-card p-4">
           <Calendar className="h-6 w-6 text-primary" />
-          <div className="mt-2 font-bold">Próxima Pelada</div>
+          <div className="mt-2 text-lg font-black leading-tight">Próxima Pelada</div>
           <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">Ver detalhes <ChevronRight className="h-3 w-3" /></div>
         </Link>
         <Link to={`${base}/grupos` as any} className="rounded-2xl border border-border bg-card p-4">
           <Users className="h-6 w-6 text-primary" />
-          <div className="mt-2 font-bold">Meus Grupos</div>
+          <div className="mt-2 text-lg font-black leading-tight">Meus Grupos</div>
           <div className="mt-0.5 text-xs text-muted-foreground">{gruposCount} grupo(s) ativo(s)</div>
         </Link>
         <Link to={`${base}/ranking`} className="rounded-2xl border border-border bg-card p-4">
           <BarChart3 className="h-6 w-6 text-primary" />
-          <div className="mt-2 font-bold">Ranking e XP</div>
+          <div className="mt-2 text-lg font-black leading-tight">Ranking e XP</div>
           <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">Ver posição <ChevronRight className="h-3 w-3" /></div>
         </Link>
         <Link to={`${base}/perfil`} className="rounded-2xl border border-border bg-card p-4">
-          <Bell className="h-6 w-6 text-primary" />
-          <div className="mt-2 font-bold">Convites e Alertas</div>
+          <div className="relative inline-block">
+            <Bell className="h-6 w-6 text-primary" />
+            {alertasCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                {alertasCount > 9 ? "9+" : alertasCount}
+              </span>
+            )}
+          </div>
+          <div className="mt-2 text-lg font-black leading-tight">Convites e Alertas</div>
           <div className="mt-0.5 text-xs text-muted-foreground">{alertasCount} pendente(s)</div>
         </Link>
       </div>
@@ -206,21 +218,30 @@ export function HomeDashboard() {
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-2xl border border-border bg-card p-3">
+          <div className="relative rounded-2xl border border-border bg-card p-3">
+            <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 text-primary">
+              <Hexagon className="h-3.5 w-3.5" />
+            </div>
             <div className="text-[10px] text-muted-foreground">Total de XP</div>
-            <div className="mt-1 text-lg font-black">{pontos.toLocaleString("pt-BR")}</div>
+            <div className="mt-1 text-lg font-black">{pontos.toLocaleString("pt-BR")} <span className="text-[10px] font-bold text-muted-foreground">XP</span></div>
             <div className="text-[10px] text-muted-foreground">Nível {nivel}</div>
             <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-secondary">
               <div className="h-full bg-primary" style={{ width: `${pctNivel}%` }} />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-3">
+          <div className="relative rounded-2xl border border-border bg-card p-3">
+            <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 text-primary">
+              <Calendar className="h-3.5 w-3.5" />
+            </div>
             <div className="text-[10px] text-muted-foreground">Próxima pelada</div>
             {proxima ? (
               <>
-                <div className="mt-1 truncate text-sm font-bold">{proxima.nome_pelada}</div>
-                <div className="mt-0.5 text-[10px] text-muted-foreground">{proxima.data.split("-").reverse().join("/")} · {proxima.horario_inicio.slice(0, 5)}</div>
+                <div className="mt-1 truncate pr-6 text-sm font-bold">{proxima.nome_pelada}</div>
+                {proxima.status === "aguardando" && (
+                  <span className="mt-1 inline-block rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-yellow-500">Lista liberada</span>
+                )}
+                <div className="mt-1 text-[10px] text-muted-foreground">{proxima.data.split("-").reverse().join("/")} · {proxima.horario_inicio.slice(0, 5)}</div>
                 {proxima.quadraNome && <div className="truncate text-[10px] text-muted-foreground">{proxima.quadraNome}</div>}
               </>
             ) : (
@@ -228,7 +249,10 @@ export function HomeDashboard() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+          <div className="relative rounded-2xl border border-border bg-card p-3 text-center">
+            <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 text-primary">
+              <Zap className="h-3.5 w-3.5" />
+            </div>
             <div className="text-[10px] text-muted-foreground">Sequência atual</div>
             <div className="mt-1 flex items-center justify-center gap-1 text-lg font-black">
               {ofensiva} {ofensiva > 0 && "🔥"}
