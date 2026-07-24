@@ -26,11 +26,8 @@ function ConvitePage() {
 
   useEffect(() => {
     void (async () => {
-      const { data } = await supabase
-        .from("grupos")
-        .select("id, nome, criado_por")
-        .eq("codigo_convite", codigo)
-        .maybeSingle();
+      const { data: rows } = await (supabase as any).rpc("buscar_info_grupo", { _codigo: codigo } as never);
+      const data = Array.isArray(rows) ? (rows as any[])[0] : rows;
       if (!data) return;
       setGrupo(data as any);
       const { data: prof } = await supabase.from("profiles").select("nome").eq("user_id", (data as any).criado_por).maybeSingle();
