@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Copy } from "lucide-react";
+import { CentralMensagensCard } from "@/components/CentralMensagensCard";
+import {
+  Copy, ArrowLeft, ChevronRight, User, Radar as RadarIcon, Flame, Star,
+  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -19,6 +23,7 @@ const SKILL_LABELS: Record<typeof SKILL_KEYS[number], string> = {
   chute: "💥 Chute", resistencia: "🫁 Resistência", posicionamento: "🧠 Posicionamento",
 };
 type SkillKey = typeof SKILL_KEYS[number];
+type Secao = "dados" | "skills" | "ofensiva" | "pontos" | "whatsapp" | "indicar" | "conta" | null;
 
 const skillColor = (v: number) => v >= 4 ? "bg-green-500" : v >= 2.5 ? "bg-yellow-500" : "bg-red-500";
 const nivelLabel = (m: number) => m >= 4.5 ? "Elite" : m >= 4 ? "Acima da média" : m >= 3 ? "Bom" : m >= 2 ? "Em evolução" : "Iniciante";
@@ -31,12 +36,12 @@ function maskPhone(v: string) {
 }
 
 export function PerfilCompleto() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, signOut } = useAuth();
+  const [secaoAtiva, setSecaoAtiva] = useState<Secao>(null);
   const [form, setForm] = useState({
     nome: "", whatsapp: "", nascimento: "", cidade: "", estado: "",
-    peso: "", altura: "", posicao: "linha", bio: "", handle: "",
+    peso: "", altura: "", posicao: "linha", bio: "",
   });
-  const [handleStatus, setHandleStatus] = useState<"ocioso" | "checando" | "disponivel" | "indisponivel" | "invalido">("ocioso");
   const [skills, setSkills] = useState<Record<SkillKey, number>>({ velocidade:3,drible:3,passe:3,chute:3,resistencia:3,posicionamento:3 });
   const [skillsMeta, setSkillsMeta] = useState({ total: 0, peso: 1 });
   const [pontos, setPontos] = useState(0);
@@ -44,6 +49,7 @@ export function PerfilCompleto() {
   const [historico, setHistorico] = useState<any[]>([]);
   const [temporadas, setTemporadas] = useState<any[]>([]);
   const [indicacoes, setIndicacoes] = useState<any[]>([]);
+  const [whatsapp, setWhatsapp] = useState<{ conectado: boolean; numero: string | null }>({ conectado: false, numero: null });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -52,7 +58,7 @@ export function PerfilCompleto() {
       nome: user.nome || "", whatsapp: user.whatsapp || "", nascimento: user.nascimento || "",
       cidade: user.cidade || "", estado: user.estado || "",
       peso: user.peso?.toString() || "", altura: user.altura?.toString() || "",
-      posicao: user.posicao || "linha", bio: user.bio || "", handle: user.handle || "",
+      posicao: user.posicao || "linha", bio: user.bio || "",
     });
     void (async () => {
       const { data: sk } = await supabase.from("skills")
@@ -62,8 +68,9 @@ export function PerfilCompleto() {
         setSkills(sk as any);
         setSkillsMeta({ total: (sk as any).total_avaliacoes_recebidas || 0, peso: (sk as any).peso_capitao_atual ?? 1 });
       }
-      const { data: prof } = await supabase.from("profiles").select("pontos_total").eq("user_id", user.id).maybeSingle();
-      setPontos(prof?.pontos_total || 0);
+      const { data: prof } = await supabase.from("profiles").select("pontos_total, whatsapp_conectado, whatsapp_numero").eq("user_id", user.id).maybeSingle();
+      setPontos((prof as any)?.pontos_total || 0);
+      setWhatsapp({ conectado: !!(prof as any)?.whatsapp_conectado, numero: (prof as any)?.whatsapp_numero || null });
       const { data: of } = await supabase.from("ofensivas").select("*").eq("user_id", user.id).maybeSingle();
       setOfensiva(of);
       const { data: h } = await supabase.from("pontos_historico").select("*").eq("user_id", user.id).order("criado_em", { ascending: false }).limit(10);
@@ -76,25 +83,8 @@ export function PerfilCompleto() {
     })();
   }, [user?.id]);
 
-  useEffect(() => {
-    const h = form.handle.trim().toLowerCase();
-    if (!user) return;
-    if (h === (user.handle || "")) { setHandleStatus("ocioso"); return; }
-    if (!h) { setHandleStatus("ocioso"); return; }
-    if (!/^[a-z0-9_]{3,20}$/.test(h)) { setHandleStatus("invalido"); return; }
-    setHandleStatus("checando");
-    const t = setTimeout(async () => {
-      const { data } = await (supabase.from("profiles") as any).select("user_id").eq("handle", h).maybeSingle();
-      setHandleStatus(!data || (data as any).user_id === user.id ? "disponivel" : "indisponivel");
-    }, 400);
-    return () => clearTimeout(t);
-  }, [form.handle, user?.id, user?.handle]);
-
   const save = async () => {
     if (!form.nome.trim()) return toast.error("Nome é obrigatório");
-    const h = form.handle.trim().toLowerCase();
-    if (h && !/^[a-z0-9_]{3,20}$/.test(h)) return toast.error("O @ só pode ter letras minúsculas, números e _ (3 a 20 caracteres)");
-    if (h && handleStatus === "indisponivel") return toast.error("Esse @ já está em uso por outra pessoa");
     setSaving(true);
     try {
       await updateUser({
@@ -107,7 +97,6 @@ export function PerfilCompleto() {
         altura: form.altura ? Number(form.altura) : null,
         posicao: form.posicao,
         bio: form.bio || null,
-        handle: h || null,
       });
       toast.success("✅ Perfil atualizado!");
     } catch (e: any) {
@@ -122,143 +111,299 @@ export function PerfilCompleto() {
   const seq = ofensiva?.sequencia_atual || 0;
   const proxMarco = marcos.find((m) => m > seq) || seq;
   const tituloRole = user?.role === "capitao" ? "👑 Capitão" : user?.role === "dono" ? "🏟️ Dono de Quadra" : user?.role === "parceiro" ? "🤝 Parceiro" : "🎮 Jogador";
+  const ultimoPonto = historico[0];
 
-  return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col items-center text-center space-y-2">
-        <AvatarUpload size={96} />
-        <h2 className="text-2xl font-bold mt-2">{user?.nome}</h2>
-        {user?.handle && <p className="text-sm font-medium text-primary">@{user.handle}</p>}
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{tituloRole}</span>
-        {(user?.cidade || user?.estado) && <p className="text-sm text-muted-foreground">{user?.cidade}{user?.cidade && user?.estado ? ", " : ""}{user?.estado}</p>}
-      </div>
+  // ===================== SUB-TELAS =====================
+  if (secaoAtiva) {
+    return (
+      <div className="space-y-4 pb-20">
+        <button onClick={() => setSecaoAtiva(null)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </button>
 
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Dados Pessoais</h3>
-        <div><Label>Nome completo *</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
-        <div>
-          <Label>Seu @ (pra outros te acharem e adicionarem no grupo)</Label>
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
-            <Input
-              className="pl-7"
-              value={form.handle}
-              onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
-              placeholder="seuusuario"
-              maxLength={20}
-            />
-          </div>
-          {handleStatus === "invalido" && <p className="mt-1 text-xs text-destructive">Só letras minúsculas, números e _ (3 a 20 caracteres)</p>}
-          {handleStatus === "checando" && <p className="mt-1 text-xs text-muted-foreground">Verificando...</p>}
-          {handleStatus === "disponivel" && <p className="mt-1 text-xs text-primary">✓ Disponível</p>}
-          {handleStatus === "indisponivel" && <p className="mt-1 text-xs text-destructive">Esse @ já está em uso</p>}
-        </div>
-        <div><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} placeholder="(00) 00000-0000" /></div>
-        <div><Label>Data de nascimento</Label><Input type="date" value={form.nascimento} onChange={(e) => setForm({ ...form, nascimento: e.target.value })} /></div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-2"><Label>Cidade</Label><Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} /></div>
-          <div><Label>Estado</Label>
-            <Select value={form.estado} onValueChange={(v) => setForm({ ...form, estado: v })}>
-              <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-              <SelectContent>{ESTADOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div><Label>Peso (kg)</Label><Input type="number" value={form.peso} onChange={(e) => setForm({ ...form, peso: e.target.value })} /></div>
-          <div><Label>Altura (cm)</Label><Input type="number" value={form.altura} onChange={(e) => setForm({ ...form, altura: e.target.value })} /></div>
-        </div>
-        <div>
-          <Label>Posição preferida</Label>
-          <div className="grid grid-cols-3 gap-2 mt-1">
-            {[["linha","⚽ Linha"],["goleiro","🧤 Goleiro"],["ambos","🔄 Ambos"]].map(([v, l]) => (
-              <Button key={v} type="button" size="sm" variant={form.posicao === v ? "default" : "outline"} onClick={() => setForm({ ...form, posicao: v })}>{l}</Button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <Label>Bio <span className="text-xs text-muted-foreground">({form.bio.length}/200)</span></Label>
-          <Textarea maxLength={200} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} rows={3} placeholder="Conte algo sobre você..." />
-        </div>
-        <Button onClick={save} disabled={saving} className="w-full bg-primary text-primary-foreground font-bold">{saving ? "Salvando..." : "Salvar alterações"}</Button>
-      </div>
-
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Minhas Skills</h3>
-        <div className="text-center">
-          <div className="text-4xl font-extrabold text-primary">{media.toFixed(1)}</div>
-          <div className="text-xs text-muted-foreground">{nivelLabel(media)}</div>
-        </div>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={radarData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11 }} />
-              <PolarRadiusAxis domain={[0, 5]} tick={false} />
-              <Radar dataKey="valor" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.4} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {SKILL_KEYS.map((k) => (
-            <div key={k} className="rounded-lg bg-secondary/30 p-2">
-              <div className="flex justify-between text-xs"><span>{SKILL_LABELS[k]}</span><span className="font-bold">{skills[k]}</span></div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
-                <div className={`h-full ${skillColor(skills[k])}`} style={{ width: `${(skills[k] / 5) * 100}%` }} />
+        {secaoAtiva === "dados" && (
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Dados Pessoais</h3>
+            <div className="flex justify-center"><AvatarUpload size={96} /></div>
+            <div><Label>Nome completo *</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
+            <div>
+              <Label>Seu @</Label>
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                <span className="font-bold text-primary">@{user?.handle}</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">O @ é definido no cadastro e não pode ser alterado depois.</p>
+            </div>
+            <div><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} placeholder="(00) 00000-0000" /></div>
+            <div><Label>Data de nascimento</Label><Input type="date" value={form.nascimento} onChange={(e) => setForm({ ...form, nascimento: e.target.value })} /></div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2"><Label>Cidade</Label><Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} /></div>
+              <div><Label>Estado</Label>
+                <Select value={form.estado} onValueChange={(v) => setForm({ ...form, estado: v })}>
+                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                  <SelectContent>{ESTADOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
             </div>
-          ))}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Baseado em {skillsMeta.total} avaliações · 👑 Capitão: {pctCap}% | 👥 Companheiros: {100 - pctCap}%
-        </div>
-        <p className="text-[11px] text-muted-foreground italic">Suas skills são definidas pelo Capitão e atualizadas pelas avaliações dos seus companheiros após cada pelada.</p>
-      </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Peso (kg)</Label><Input type="number" value={form.peso} onChange={(e) => setForm({ ...form, peso: e.target.value })} /></div>
+              <div><Label>Altura (cm)</Label><Input type="number" value={form.altura} onChange={(e) => setForm({ ...form, altura: e.target.value })} /></div>
+            </div>
+            <div>
+              <Label>Posição preferida</Label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                {[["linha","⚽ Linha"],["goleiro","🧤 Goleiro"],["ambos","🔄 Ambos"]].map(([v, l]) => (
+                  <Button key={v} type="button" size="sm" variant={form.posicao === v ? "default" : "outline"} onClick={() => setForm({ ...form, posicao: v })}>{l}</Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Bio <span className="text-xs text-muted-foreground">({form.bio.length}/200)</span></Label>
+              <Textarea maxLength={200} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} rows={3} placeholder="Conte algo sobre você..." />
+            </div>
+            <Button onClick={save} disabled={saving} className="w-full bg-primary text-primary-foreground font-bold">{saving ? "Salvando..." : "Salvar alterações"}</Button>
+          </div>
+        )}
 
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-2 text-center">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Minha Ofensiva</h3>
-        <div className="text-5xl font-extrabold">{seq > 5 ? "🔥" : ""} {seq}</div>
-        <div className="text-xs text-muted-foreground">peladas consecutivas · maior: {ofensiva?.maior_sequencia || 0}</div>
-        {proxMarco > seq && (
+        {secaoAtiva === "skills" && (
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Minhas Skills</h3>
+            <div className="text-center">
+              <div className="text-4xl font-extrabold text-primary">{media.toFixed(1)}</div>
+              <div className="text-xs text-muted-foreground">{nivelLabel(media)}</div>
+            </div>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11 }} />
+                  <PolarRadiusAxis domain={[0, 5]} tick={false} />
+                  <Radar dataKey="valor" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.4} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {SKILL_KEYS.map((k) => (
+                <div key={k} className="rounded-lg bg-secondary/30 p-2">
+                  <div className="flex justify-between text-xs"><span>{SKILL_LABELS[k]}</span><span className="font-bold">{skills[k]}</span></div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
+                    <div className={`h-full ${skillColor(skills[k])}`} style={{ width: `${(skills[k] / 5) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Baseado em {skillsMeta.total} avaliações · 👑 Capitão: {pctCap}% | 👥 Companheiros: {100 - pctCap}%
+            </div>
+            <p className="text-[11px] text-muted-foreground italic">Suas skills são definidas pelo Capitão e atualizadas pelas avaliações dos seus companheiros após cada pelada.</p>
+          </div>
+        )}
+
+        {secaoAtiva === "ofensiva" && (
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-2 text-center">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Minha Ofensiva</h3>
+            <div className="text-5xl font-extrabold">{seq > 5 ? "🔥" : ""} {seq}</div>
+            <div className="text-xs text-muted-foreground">peladas consecutivas · maior: {ofensiva?.maior_sequencia || 0}</div>
+            {proxMarco > seq && (
+              <>
+                <Progress value={(seq / proxMarco) * 100} />
+                <div className="text-xs text-muted-foreground">Faltam {proxMarco - seq} peladas para o próximo marco ({proxMarco})</div>
+              </>
+            )}
+          </div>
+        )}
+
+        {secaoAtiva === "pontos" && (
           <>
-            <Progress value={(seq / proxMarco) * 100} />
-            <div className="text-xs text-muted-foreground">Faltam {proxMarco - seq} peladas para o próximo marco ({proxMarco})</div>
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">⭐ Meus Pontos</h3>
+              <div className="text-3xl font-extrabold text-primary text-center">{pontos}</div>
+              <div className="space-y-1 mt-2">
+                {historico.length === 0 ? <p className="text-xs text-muted-foreground text-center">Sem histórico ainda.</p> :
+                  historico.map((h) => (
+                    <div key={h.id} className="flex items-center justify-between rounded bg-secondary/30 px-2 py-1.5 text-xs">
+                      <span className="flex-1">{h.descricao_legivel || h.acao}</span>
+                      <span className={h.valor_pontos >= 0 ? "font-bold text-green-500" : "font-bold text-red-500"}>{h.valor_pontos > 0 ? "+" : ""}{h.valor_pontos}</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+            {temporadas.length > 0 && (
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Temporadas</h3>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={temporadas.map((t) => ({ nome: `T${t.temporadas?.numero}`, nivel: Number(t.nivel_geral_fim) || 0 }))}>
+                      <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
+                      <YAxis domain={[0, 5]} tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="nivel" stroke="hsl(var(--primary))" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
           </>
         )}
+
+        {secaoAtiva === "whatsapp" && <CentralMensagensCard />}
+
+        {secaoAtiva === "indicar" && (
+          <IndicacoesBox indicacoes={indicacoes} userId={user?.id} isCapitao={user?.role === "capitao"} />
+        )}
+
+        {secaoAtiva === "conta" && <ContaPreferenciasBox signOut={signOut} />}
       </div>
+    );
+  }
 
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">⭐ Meus Pontos</h3>
-        <div className="text-3xl font-extrabold text-primary text-center">{pontos}</div>
-        <div className="space-y-1 mt-2">
-          {historico.length === 0 ? <p className="text-xs text-muted-foreground text-center">Sem histórico ainda.</p> :
-            historico.map((h) => (
-              <div key={h.id} className="flex items-center justify-between rounded bg-secondary/30 px-2 py-1.5 text-xs">
-                <span className="flex-1">{h.descricao_legivel || h.acao}</span>
-                <span className={h.valor_pontos >= 0 ? "font-bold text-green-500" : "font-bold text-red-500"}>{h.valor_pontos > 0 ? "+" : ""}{h.valor_pontos}</span>
-              </div>
-            ))
-          }
-        </div>
-      </div>
-
-      <IndicacoesBox indicacoes={indicacoes} userId={user?.id} isCapitao={user?.role === "capitao"} />
-
-      {temporadas.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Temporadas</h3>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={temporadas.map((t) => ({ nome: `T${t.temporadas?.numero}`, nivel: Number(t.nivel_geral_fim) || 0 }))}>
-                <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
-                <YAxis domain={[0, 5]} tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="nivel" stroke="hsl(var(--primary))" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+  // ===================== HUB =====================
+  return (
+    <div className="space-y-4 pb-20">
+      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5">
+        <div className="flex items-start gap-4">
+          <div className="shrink-0"><AvatarUpload size={80} /></div>
+          <div className="min-w-0 flex-1 pt-1">
+            <h2 className="truncate text-2xl font-bold">{user?.nome}</h2>
+            {user?.handle && <p className="text-sm font-medium text-primary">@{user.handle}</p>}
+            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{tituloRole}</span>
+            {(user?.cidade || user?.estado) && (
+              <p className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5" /> {user?.cidade}{user?.cidade && user?.estado ? ", " : ""}{user?.estado}
+              </p>
+            )}
           </div>
+          <Button variant="outline" size="sm" onClick={() => setSecaoAtiva("dados")} className="shrink-0">
+            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar perfil
+          </Button>
         </div>
-      )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-2xl border border-border bg-card p-3 text-center">
+          <div className="text-2xl font-black text-primary">{media.toFixed(1)}</div>
+          <div className="text-[10px] uppercase text-muted-foreground">Skill Geral</div>
+          <div className="text-xs font-bold text-primary">{nivelLabel(media)}</div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-3 text-center">
+          <div className="text-2xl font-black">{pontos.toLocaleString("pt-BR")}</div>
+          <div className="text-[10px] uppercase text-muted-foreground">XP Total</div>
+          <div className="text-xs font-bold text-muted-foreground">XP</div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-2xl font-black">🔥 {seq}</div>
+          <div className="text-[10px] uppercase text-muted-foreground">Ofensiva</div>
+          <div className="text-xs font-bold text-muted-foreground">Maior: {ofensiva?.maior_sequencia || 0}</div>
+        </div>
+      </div>
+
+      <MenuRow
+        icon={User} titulo="Dados pessoais" subtitulo="Suas informações e posição preferida"
+        preview={<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-[10px] font-black text-muted-foreground"><Shirt className="h-5 w-5" /></div>}
+        onClick={() => setSecaoAtiva("dados")}
+      />
+      <MenuRow
+        icon={RadarIcon} titulo="Minhas skills" subtitulo="Acompanhe seu desempenho"
+        preview={<div className="text-sm font-bold text-primary">{media.toFixed(1)}</div>}
+        onClick={() => setSecaoAtiva("skills")}
+      />
+      <MenuRow
+        icon={Flame} titulo="Minha ofensiva" subtitulo="Sequência de peladas e metas"
+        preview={
+          <div className="w-24 shrink-0 text-right">
+            <div className="text-sm font-bold">🔥 {seq}</div>
+            {proxMarco > seq && <div className="mt-1 h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{ width: `${(seq / proxMarco) * 100}%` }} /></div>}
+          </div>
+        }
+        onClick={() => setSecaoAtiva("ofensiva")}
+      />
+      <MenuRow
+        icon={Star} titulo="Meus pontos" subtitulo="Histórico de pontos e conquistas"
+        preview={
+          <div className="text-right">
+            <div className="text-sm font-bold text-primary">⭐ {pontos}{ultimoPonto && ultimoPonto.valor_pontos > 0 ? ` +${ultimoPonto.valor_pontos}` : ""}</div>
+            <div className="text-[10px] text-muted-foreground">Últimas atividades</div>
+          </div>
+        }
+        onClick={() => setSecaoAtiva("pontos")}
+      />
+      <MenuRow
+        icon={MessageCircle} titulo="Central de mensagens" subtitulo="Conecte seu WhatsApp"
+        preview={
+          <div className="text-right">
+            <div className={`text-xs font-bold ${whatsapp.conectado ? "text-primary" : "text-muted-foreground"}`}>{whatsapp.conectado ? "🟢 Conectado" : "Não conectado"}</div>
+            {whatsapp.numero && <div className="text-[10px] text-muted-foreground">{whatsapp.numero}</div>}
+          </div>
+        }
+        onClick={() => setSecaoAtiva("whatsapp")}
+      />
+      <MenuRow
+        icon={UserPlus} titulo="Indique um amigo" subtitulo="Convide e ganhe bônus exclusivos"
+        preview={<div className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">🎁 Ativo</div>}
+        onClick={() => setSecaoAtiva("indicar")}
+      />
+      <MenuRow
+        icon={Settings} titulo="Conta e preferências" subtitulo="Segurança, privacidade e configurações"
+        onClick={() => setSecaoAtiva("conta")}
+      />
+    </div>
+  );
+}
+
+function MenuRow({ icon: Icon, titulo, subtitulo, preview, onClick }: { icon: any; titulo: string; subtitulo: string; preview?: React.ReactNode; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary/50">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Icon className="h-5 w-5" /></div>
+      <div className="min-w-0 flex-1">
+        <div className="font-bold">{titulo}</div>
+        <div className="text-xs text-muted-foreground">{subtitulo}</div>
+      </div>
+      {preview}
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+function ContaPreferenciasBox({ signOut }: { signOut: () => Promise<void> }) {
+  const { user } = useAuth();
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmaSenha, setConfirmaSenha] = useState("");
+  const [trocando, setTrocando] = useState(false);
+
+  const trocarSenha = async () => {
+    if (novaSenha.length < 6) return toast.error("A senha precisa ter pelo menos 6 caracteres.");
+    if (novaSenha !== confirmaSenha) return toast.error("As senhas não coincidem.");
+    setTrocando(true);
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+    setTrocando(false);
+    if (error) return toast.error(error.message);
+    toast.success("Senha atualizada!");
+    setNovaSenha(""); setConfirmaSenha("");
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Conta</h3>
+        <div><Label>E-mail</Label><Input value={user?.email || ""} disabled /></div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Trocar senha</h3>
+        <div><Label>Nova senha</Label><Input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} placeholder="Mínimo 6 caracteres" /></div>
+        <div><Label>Confirmar nova senha</Label><Input type="password" value={confirmaSenha} onChange={(e) => setConfirmaSenha(e.target.value)} /></div>
+        <Button onClick={trocarSenha} disabled={trocando} className="w-full bg-primary text-primary-foreground font-bold">
+          {trocando ? "Salvando..." : "Atualizar senha"}
+        </Button>
+      </div>
+
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 space-y-2">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-destructive">Sair</h3>
+        <p className="text-xs text-muted-foreground">Você precisa entrar de novo com seu e-mail e senha depois disso.</p>
+        <Button variant="destructive" onClick={() => void signOut()} className="w-full">
+          <LogOut className="mr-2 h-4 w-4" /> Sair da conta
+        </Button>
+      </div>
     </div>
   );
 }
