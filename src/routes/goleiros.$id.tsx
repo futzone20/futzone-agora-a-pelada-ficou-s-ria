@@ -29,7 +29,7 @@ function GoleiroPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url)").eq("id", id).maybeSingle();
+      const { data } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, handle)").eq("id", id).maybeSingle();
       setG(data);
       const { data: d } = await supabase.from("goleiros_disponibilidade").select("*").eq("goleiro_id", id).order("dia_semana");
       setDisp(d ?? []);
@@ -71,6 +71,7 @@ function GoleiroPage() {
         <div className="w-20 h-20 rounded-full bg-muted overflow-hidden">{g.profiles?.foto_url && <img src={g.profiles.foto_url} className="w-full h-full object-cover"/>}</div>
         <div className="flex-1">
           <h1 className="text-xl font-bold">{g.profiles?.nome}</h1>
+          {g.profiles?.handle && <p className="text-sm font-medium text-primary">@{g.profiles.handle}</p>}
           <p className="text-sm text-muted-foreground">{g.profiles?.cidade}{g.profiles?.estado && `/${g.profiles.estado}`}</p>
           <div className="flex items-center gap-1 mt-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/><span className="font-bold">{media.toFixed(1)}</span><span className="text-xs text-muted-foreground">({avs.length})</span></div>
         </div>
