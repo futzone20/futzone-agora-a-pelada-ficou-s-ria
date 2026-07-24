@@ -14,6 +14,9 @@ export interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Quando true, esse item vira um botão circular flutuante e brilhante no meio da barra
+   *  (usado pro item "Ao vivo"), em vez do ícone+texto padrão. */
+  destaque?: boolean;
 }
 
 type Notif = { id: string; titulo: string; mensagem: string; lida: boolean; criado_em: string; tipo: string; link: string | null };
@@ -125,6 +128,16 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
         <div className="mx-auto flex max-w-3xl items-stretch justify-around px-2">
           {items.map((it) => {
             const active = path === it.to || (it.to !== "/" && path.startsWith(it.to + "/"));
+            if (it.destaque) {
+              return (
+                <Link key={it.to} to={it.to} className="relative -mt-6 flex flex-col items-center gap-1 px-3 pb-2">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#00FF87] bg-[#0D0D0D] shadow-[0_0_18px_rgba(0,255,135,0.6)]">
+                    <it.icon className="h-6 w-6 text-[#00FF87]" />
+                  </div>
+                  <span className="rounded-full bg-[#00FF87]/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00FF87]">{it.label}</span>
+                </Link>
+              );
+            }
             return (
               <Link key={it.to} to={it.to} className={`flex flex-col items-center gap-1 px-3 py-3 text-[10px] font-bold uppercase transition ${active ? "text-[#00FF87]" : "text-[#666] hover:text-foreground"}`}>
                 <it.icon className={`h-5 w-5 ${active ? "text-[#00FF87]" : ""}`} />
