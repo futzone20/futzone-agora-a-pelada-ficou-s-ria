@@ -21,6 +21,7 @@ import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2,
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getNavItems } from "@/lib/navItems";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { SKILL_KEYS, mediaSkill, type SkillRow } from "@/lib/sorteio";
 import { AvaliarMembroModal } from "@/components/AvaliarMembroModal";
@@ -31,17 +32,11 @@ export const Route = createFileRoute("/grupos/$id")({
   component: GrupoPageWrapper,
 });
 
-const items = [
-  { to: "/capitao", label: "Início", icon: Home },
-  { to: "/capitao/grupos", label: "Grupos", icon: Shield },
-  { to: "/capitao/peladas", label: "Peladas", icon: CircleDot },
-  { to: "/capitao/perfil", label: "Perfil", icon: User },
-];
-
 function GrupoPageWrapper() {
+  const { user } = useAuth();
   return (
     <RequireAuth allow={["jogador", "capitao", "admin"]}>
-      <MobileShell items={items as any}><GrupoPage /></MobileShell>
+      <MobileShell items={getNavItems(user?.role)}><GrupoPage /></MobileShell>
     </RequireAuth>
   );
 }
