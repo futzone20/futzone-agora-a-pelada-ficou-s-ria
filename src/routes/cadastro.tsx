@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth, rolePath, type UserRole } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { User, Building2, Gift, Crown } from "lucide-react";
 
@@ -52,6 +53,11 @@ function SignupPage() {
         estado: form.estado,
       });
       toast.success("Conta criada!");
+      const indicacaoCodigo = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_indicacao") : null;
+      if (indicacaoCodigo) {
+        sessionStorage.removeItem("mrfut_indicacao");
+        await (supabase as any).rpc("marcar_indicacao_cadastro", { _codigo: indicacaoCodigo, _novo_user_id: u.id });
+      }
       const invite = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_invite") : null;
       const peladaToken = typeof window !== "undefined" ? sessionStorage.getItem("mrfut_pelada_confirmacao") : null;
       if (invite) { sessionStorage.removeItem("mrfut_invite"); navigate({ to: "/convite/$codigo", params: { codigo: invite } }); }
