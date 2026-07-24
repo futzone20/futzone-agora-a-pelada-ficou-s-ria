@@ -80,6 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#00FF87" },
       { title: "MrFut — Agora a pelada ficou séria!" },
       { name: "description", content: "MrFut: organize, sorteie e gamifique suas peladas de futebol." },
       { name: "author", content: "MRFUT" },
@@ -96,6 +97,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "icon",
+        href: `${import.meta.env.VITE_SUPABASE_URL || ""}/storage/v1/object/public/branding/favicon`,
+      },
+      {
+        rel: "apple-touch-icon",
+        href: `${import.meta.env.VITE_SUPABASE_URL || ""}/storage/v1/object/public/branding/pwa-icon`,
+      },
+      {
+        rel: "manifest",
+        href: "/manifest.json",
       },
     ],
   }),
