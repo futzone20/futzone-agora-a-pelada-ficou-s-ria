@@ -54,8 +54,9 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
       avaliador_id: user.id, avaliado_id: avaliado.user_id, grupo_id: grupoId,
       tipo: "conhecimento_previo", conhece_jogador: true, ...vals,
     } as never);
+    if (error) { setSaving(false); return toast.error(error.message); }
+    await supabase.rpc("creditar_pontos", { _user_id: user.id, _acao: "avaliou_novo_membro" } as never);
     setSaving(false);
-    if (error) return toast.error(error.message);
     toast.success("Avaliação enviada! +8 pontos");
     onDone?.(); onClose();
   };
