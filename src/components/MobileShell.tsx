@@ -78,12 +78,19 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
                       case 'resultado_pelada': return { char: '🏆', color: 'bg-[#4A3500] text-white' };
                       case 'nova_pelada': return { char: '👥', color: 'bg-[#1A2D4A] text-white' };
                       case 'rivalidade': return { char: '⚡', color: 'bg-[#4A1A1A] text-white' };
+                      case 'comentario_feed': return { char: '💬', color: 'bg-[#1A2D4A] text-white' };
+                      case 'reacao_feed': return { char: '👍', color: 'bg-[#1A2D4A] text-white' };
+                      case 'mencao_feed': return { char: '📣', color: 'bg-[#4A3500] text-white' };
                       default: return { char: '🔔', color: 'bg-[#2A2A2A] text-white' };
                     }
                   };
                   const iconData = getNotifIcon(n.tipo);
+                  const NotifWrapper = n.link && n.tipo !== "resultado_pelada" ? Link : "div";
+                  const wrapperProps = n.link && n.tipo !== "resultado_pelada"
+                    ? { to: n.link, onClick: () => setOpenNotif(false) }
+                    : {};
                   return (
-                    <div key={n.id} className="flex gap-4 py-4 transition hover:bg-white/[0.02]">
+                    <NotifWrapper key={n.id} {...(wrapperProps as any)} className="flex gap-4 py-4 transition hover:bg-white/[0.02]">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${iconData.color}`}>
                         {iconData.char}
                       </div>
@@ -110,7 +117,7 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
                       {!n.lida && (
                         <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#00FF87]" />
                       )}
-                    </div>
+                    </NotifWrapper>
                   );
                 })}
               </div>
