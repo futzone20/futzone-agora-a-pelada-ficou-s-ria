@@ -286,7 +286,7 @@ function IndicacoesBox({ indicacoes, userId, isCapitao }: any) {
         Esse link é pessoal e não coloca ninguém em nenhum grupo automaticamente — é só pra trazer gente nova pro app.
         Depois, qualquer capitão pode buscar o @ da pessoa e convidar ela pra um grupo, separadamente.
       </p>
-      {isCapitao && <div className="rounded-lg bg-primary/10 p-2 text-xs text-primary font-bold">👑 Você ganha pontos em dobro por cada indicação!</div>}
+      {isCapitao && <div className="rounded-lg bg-primary/10 p-2 text-xs text-primary font-bold">👑 Como capitão, você ganha um bônus extra por cada indicação!</div>}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl bg-secondary/30 p-2 text-center"><div className="text-[10px] uppercase text-muted-foreground">Se cadastraram</div><div className="text-xl font-extrabold">{totalCadastrou}</div></div>
         <div className="rounded-xl bg-secondary/30 p-2 text-center"><div className="text-[10px] uppercase text-muted-foreground">Jogaram (bem-sucedidas)</div><div className="text-xl font-extrabold text-primary">{totalJogou}</div></div>
