@@ -28,14 +28,19 @@ function Page() {
 function Pontos() {
   const [rows, setRows] = useState<any[]>([]);
   useEffect(() => { void (async () => { const { data } = await supabase.from("pontos_config").select("*").order("acao"); setRows(data ?? []); })(); }, []);
-  const save = async (r: any) => { const { error } = await supabase.from("pontos_config").update({ valor_pontos: r.valor_pontos, multiplicador_capitao: r.multiplicador_capitao, ativo: r.ativo }).eq("id", r.id); if (error) toast.error(error.message); else toast.success("Salvo"); };
+  const save = async (r: any) => { const { error } = await supabase.from("pontos_config").update({ valor_pontos: r.valor_pontos, bonus_capitao: r.bonus_capitao, ativo: r.ativo } as never).eq("id", r.id); if (error) toast.error(error.message); else toast.success("Salvo"); };
   return (
     <div className="space-y-1">
+      <div className="flex items-center gap-2 px-2 text-[10px] uppercase text-muted-foreground">
+        <div className="flex-1">Ação</div>
+        <div className="w-20 text-center">Pontos</div>
+        <div className="w-20 text-center">Bônus capitão</div>
+      </div>
       {rows.map((r,i)=>(
         <Card key={r.id} className="p-2 flex items-center gap-2">
           <div className="flex-1"><div className="text-sm font-bold">{r.acao}</div><div className="text-xs text-muted-foreground">{r.descricao}</div></div>
           <Input className="w-20 h-8" type="number" value={r.valor_pontos} onChange={e=>{const c=[...rows]; c[i].valor_pontos=+e.target.value; setRows(c);}}/>
-          <Input className="w-20 h-8" type="number" step="0.1" value={r.multiplicador_capitao} onChange={e=>{const c=[...rows]; c[i].multiplicador_capitao=+e.target.value; setRows(c);}}/>
+          <Input className="w-20 h-8" type="number" value={r.bonus_capitao} onChange={e=>{const c=[...rows]; c[i].bonus_capitao=+e.target.value; setRows(c);}}/>
           <Button size="sm" variant={r.ativo?"default":"outline"} onClick={()=>{const c=[...rows]; c[i].ativo=!r.ativo; setRows(c); save(c[i]);}}>{r.ativo?"On":"Off"}</Button>
           <Button size="sm" onClick={()=>save(r)}>Salvar</Button>
         </Card>
