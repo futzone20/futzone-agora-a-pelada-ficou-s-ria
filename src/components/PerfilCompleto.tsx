@@ -34,8 +34,9 @@ export function PerfilCompleto() {
   const { user, updateUser } = useAuth();
   const [form, setForm] = useState({
     nome: "", whatsapp: "", nascimento: "", cidade: "", estado: "",
-    peso: "", altura: "", posicao: "linha", bio: "",
+    peso: "", altura: "", posicao: "linha", bio: "", handle: "",
   });
+  const [handleStatus, setHandleStatus] = useState<"ocioso" | "checando" | "disponivel" | "indisponivel" | "invalido">("ocioso");
   const [skills, setSkills] = useState<Record<SkillKey, number>>({ velocidade:3,drible:3,passe:3,chute:3,resistencia:3,posicionamento:3 });
   const [skillsMeta, setSkillsMeta] = useState({ total: 0, peso: 1 });
   const [pontos, setPontos] = useState(0);
@@ -53,7 +54,7 @@ export function PerfilCompleto() {
       nome: user.nome || "", whatsapp: user.whatsapp || "", nascimento: user.nascimento || "",
       cidade: user.cidade || "", estado: user.estado || "",
       peso: user.peso?.toString() || "", altura: user.altura?.toString() || "",
-      posicao: user.posicao || "linha", bio: user.bio || "",
+      posicao: user.posicao || "linha", bio: user.bio || "", handle: user.handle || "",
     });
     void (async () => {
       const { data: sk } = await supabase.from("skills")
@@ -81,8 +82,25 @@ export function PerfilCompleto() {
     })();
   }, [user?.id]);
 
+  useEffect(() => {
+    const h = form.handle.trim().toLowerCase();
+    if (!user) return;
+    if (h === (user.handle || "")) { setHandleStatus("ocioso"); return; }
+    if (!h) { setHandleStatus("ocioso"); return; }
+    if (!/^[a-z0-9_]{3,20}$/.test(h)) { setHandleStatus("invalido"); return; }
+    setHandleStatus("checando");
+    const t = setTimeout(async () => {
+      const { data } = await (supabase.from("profiles") as any).select("user_id").eq("handle", h).maybeSingle();
+      setHandleStatus(!data || (data as any).user_id === user.id ? "disponivel" : "indisponivel");
+    }, 400);
+    return () => clearTimeout(t);
+  }, [form.handle, user?.id, user?.handle]);
+
   const save = async () => {
     if (!form.nome.trim()) return toast.error("Nome é obrigatório");
+    const h = form.handle.trim().toLowerCase();
+    if (h && !/^[a-z0-9_]{3,20}$/.test(h)) return toast.error("O @ só pode ter letras minúsculas, números e _ (3 a 20 caracteres)");
+    if (h && handleStatus === "indisponivel") return toast.error("Esse @ já está em uso por outra pessoa");
     setSaving(true);
     try {
       await updateUser({
@@ -95,6 +113,7 @@ export function PerfilCompleto() {
         altura: form.altura ? Number(form.altura) : null,
         posicao: form.posicao,
         bio: form.bio || null,
+        handle: h || null,
       });
       toast.success("✅ Perfil atualizado!");
     } catch (e: any) {
@@ -115,6 +134,7 @@ export function PerfilCompleto() {
       <div className="flex flex-col items-center text-center space-y-2">
         <AvatarUpload size={96} />
         <h2 className="text-2xl font-bold mt-2">{user?.nome}</h2>
+        {user?.handle && <p className="text-sm font-medium text-primary">@{user.handle}</p>}
         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{tituloRole}</span>
         {(user?.cidade || user?.estado) && <p className="text-sm text-muted-foreground">{user?.cidade}{user?.cidade && user?.estado ? ", " : ""}{user?.estado}</p>}
       </div>
@@ -122,6 +142,23 @@ export function PerfilCompleto() {
       <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Dados Pessoais</h3>
         <div><Label>Nome completo *</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
+        <div>
+          <Label>Seu @ (pra outros te acharem e adicionarem no grupo)</Label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+            <Input
+              className="pl-7"
+              value={form.handle}
+              onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
+              placeholder="seuusuario"
+              maxLength={20}
+            />
+          </div>
+          {handleStatus === "invalido" && <p className="mt-1 text-xs text-destructive">Só letras minúsculas, números e _ (3 a 20 caracteres)</p>}
+          {handleStatus === "checando" && <p className="mt-1 text-xs text-muted-foreground">Verificando...</p>}
+          {handleStatus === "disponivel" && <p className="mt-1 text-xs text-primary">✓ Disponível</p>}
+          {handleStatus === "indisponivel" && <p className="mt-1 text-xs text-destructive">Esse @ já está em uso</p>}
+        </div>
         <div><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} placeholder="(00) 00000-0000" /></div>
         <div><Label>Data de nascimento</Label><Input type="date" value={form.nascimento} onChange={(e) => setForm({ ...form, nascimento: e.target.value })} /></div>
         <div className="grid grid-cols-3 gap-2">
