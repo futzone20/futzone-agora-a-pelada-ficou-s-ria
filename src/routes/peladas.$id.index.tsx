@@ -8,11 +8,12 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
 import { GerenciarPresencasModal } from "@/components/GerenciarPresencasModal";
-import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, Home, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown, Copy, MessageCircle } from "lucide-react";
+import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown, Copy, MessageCircle } from "lucide-react";
 import { calcularTabela } from "@/lib/placar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getNavItems } from "@/lib/navItems";
 import { mediaSkill, mediaTime, corTextoLegivel, type Jogador } from "@/lib/sorteio";
 import { escolherTimesIniciais } from "@/lib/rodizio";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -25,17 +26,11 @@ export const Route = createFileRoute("/peladas/$id/")({
   component: Wrapper,
 });
 
-const items = [
-  { to: "/jogador", label: "Início", icon: Home },
-  { to: "/jogador/peladas", label: "Peladas", icon: CircleDot },
-  { to: "/jogador/ranking", label: "Ranking", icon: Trophy },
-  { to: "/jogador/perfil", label: "Perfil", icon: User },
-];
-
 function Wrapper() {
+  const { user } = useAuth();
   return (
     <RequireAuth allow={["jogador", "capitao", "admin"]}>
-      <MobileShell items={items as any}><PeladaDetail /></MobileShell>
+      <MobileShell items={getNavItems(user?.role)}><PeladaDetail /></MobileShell>
     </RequireAuth>
   );
 }
