@@ -240,16 +240,6 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
     }
   };
 
-  // Clique rápido no ícone principal = alterna a reação padrão (⚽), estilo "curtir" do Instagram
-  const curtirRapido = () => {
-    if (minhas.size > 0) {
-      // já reagiu com algo — remove TODAS as reações minhas nesse post
-      Array.from(minhas).forEach((t) => void toggleReact(t));
-    } else {
-      void toggleReact(REACAO_PRINCIPAL);
-    }
-  };
-
   const adicionarComentario = async (texto: string, respostaPara: string | null) => {
     if (!user || !texto.trim()) return;
     const otimista: Comentario = { id: `tmp-${Date.now()}`, post_id: post.id, user_id: user.id, texto: texto.slice(0, 140), deletado: false, criado_em: new Date().toISOString(), resposta_para: respostaPara };
@@ -317,7 +307,7 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
       {/* Barra de ações estilo Instagram: ícone + contador lado a lado */}
       <div className="flex items-center gap-5 border-t border-border pt-2">
         <div className="flex items-center gap-1.5">
-          <button onClick={curtirRapido} onDoubleClick={() => setOpenPicker((v) => !v)} className="transition active:scale-90">
+          <button onClick={() => setOpenPicker((v) => !v)} className="transition active:scale-90">
             <span className={`text-2xl transition ${euCurti ? "" : "opacity-50 grayscale"}`}>⚽</span>
           </button>
           {totalReacoes > 0 && <span className="text-sm font-bold text-muted-foreground">{totalReacoes}</span>}
@@ -328,9 +318,6 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
           </button>
           {totalComentarios > 0 && <span className="text-sm font-bold text-muted-foreground">{totalComentarios}</span>}
         </div>
-        <button onClick={() => setOpenPicker((v) => !v)} className="ml-auto text-xs text-muted-foreground hover:text-foreground">
-          outras reações
-        </button>
       </div>
 
       {openPicker && (
