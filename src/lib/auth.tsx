@@ -23,6 +23,7 @@ export interface FZUser {
   peso?: number | null;
   altura?: number | null;
   bio?: string | null;
+  handle?: string | null;
 }
 
 export interface SignUpData {
@@ -33,6 +34,8 @@ export interface SignUpData {
   password: string;
   role: UserRole;
   goleiro?: boolean;
+  cidade?: string;
+  estado?: string;
 }
 
 interface AuthCtx {
@@ -50,7 +53,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 async function loadProfile(userId: string): Promise<FZUser | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("user_id, nome, email, whatsapp, data_nascimento, role, quer_ser_goleiro, posicao_preferida, foto_url, cidade, estado, peso, altura, bio")
+    .select("user_id, nome, email, whatsapp, data_nascimento, role, quer_ser_goleiro, posicao_preferida, foto_url, cidade, estado, peso, altura, bio, handle")
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) return null;
@@ -67,6 +70,7 @@ async function loadProfile(userId: string): Promise<FZUser | null> {
     foto_url: d.foto_url,
     cidade: d.cidade,
     estado: d.estado,
+    handle: d.handle,
     peso: d.peso,
     altura: d.altura,
     bio: d.bio,
@@ -129,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data_nascimento: d.nascimento,
           role: appToDb(d.role),
           quer_ser_goleiro: !!d.goleiro,
+          cidade: d.cidade || "",
+          estado: d.estado || "",
         },
       },
     });
@@ -169,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (patch.peso !== undefined) dbPatch.peso = patch.peso;
     if (patch.altura !== undefined) dbPatch.altura = patch.altura;
     if (patch.bio !== undefined) dbPatch.bio = patch.bio;
+    if (patch.handle !== undefined) dbPatch.handle = patch.handle;
     const { error } = await supabase.from("profiles").update(dbPatch as never).eq("user_id", user.id);
     if (error) throw new Error(error.message);
     setUser({ ...user, ...patch });
