@@ -15,6 +15,7 @@ import {
   Trophy,
   BarChart3,
   Loader2,
+  Clock,
 } from "lucide-react";
 
 type Time = { id: string; nome: string; cor: string };
@@ -29,13 +30,14 @@ type Partida = {
 };
 type Lance = { id: string; tipo: string; user_id: string; time_id: string; partida_id: string; criado_em: string };
 
-type TabId = "times" | "artilheiros" | "partidas" | "goleiros";
+type TabId = "times" | "artilheiros" | "partidas" | "goleiros" | "jogadores";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "times", label: "Times", icon: <Users className="h-5 w-5" /> },
   { id: "artilheiros", label: "Artilheiros", icon: <SoccerBallIcon className="h-5 w-5" /> },
   { id: "partidas", label: "Partidas", icon: <CalendarDays className="h-5 w-5" /> },
   { id: "goleiros", label: "Goleiros", icon: <Hand className="h-5 w-5" /> },
+  { id: "jogadores", label: "Jogadores", icon: <Clock className="h-5 w-5" /> },
 ];
 
 const FOOTER_TEXT: Record<TabId, string> = {
@@ -43,6 +45,7 @@ const FOOTER_TEXT: Record<TabId, string> = {
   artilheiros: "Acompanhe os artilheiros da pelada e quem está decidindo os jogos!",
   partidas: "Reviva os confrontos e o resultado de cada partida da pelada!",
   goleiros: "Acompanhe o desempenho dos goleiros e quem segura (ou não) a bronca!",
+  jogadores: "Minutos jogados e as notas de cada jogador nessa pelada.",
 };
 
 function SoccerBallIcon({ className }: { className?: string }) {
@@ -79,6 +82,8 @@ export function StatsPeladaModal({
   const [times, setTimes] = useState<Time[]>([]);
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [lances, setLances] = useState<Lance[]>([]);
+  const [timeJogadores, setTimeJogadores] = useState<{ time_id: string; user_id: string }[]>([]);
+  const [avaliacoesPos, setAvaliacoesPos] = useState<{ avaliado_id: string; nota_geral: number }[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [peladaInfo, setPeladaInfo] = useState<{ nome: string; data: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,17 +101,24 @@ export function StatsPeladaModal({
     if (!open) return;
     void (async () => {
       setLoading(true);
-      const [{ data: t }, { data: p }, { data: l }, { data: pel }] = await Promise.all([
+      const [{ data: t }, { data: p }, { data: l }, { data: pel }, { data: tj }, { data: av }] = await Promise.all([
         supabase.from("times").select("id, nome, cor").eq("pelada_id", peladaId),
         supabase.from("partidas").select("*").eq("pelada_id", peladaId).eq("status", "encerrada").order("numero_partida"),
         supabase.from("lances").select("*").eq("pelada_id", peladaId),
         supabase.from("peladas").select("nome_pelada, data").eq("id", peladaId).single(),
+        supabase.from("time_jogadores").select("time_id, user_id").eq("pelada_id", peladaId),
+        supabase.from("avaliacoes_pos_pelada").select("avaliado_id, nota_geral").eq("pelada_id", peladaId),
       ]);
       setTimes((t as any) || []);
       setPartidas((p as any) || []);
       setLances((l as any) || []);
+      setTimeJogadores((tj as any) || []);
+      setAvaliacoesPos((av as any) || []);
       if (pel) setPeladaInfo({ nome: (pel as any).nome_pelada, data: (pel as any).data });
-      const uids = Array.from(new Set(((l as any) || []).map((x: any) => x.user_id).filter(Boolean))) as string[];
+      const uids = Array.from(new Set([
+        ...(((l as any) || []).map((x: any) => x.user_id).filter(Boolean)),
+        ...(((tj as any) || []).map((x: any) => x.user_id).filter(Boolean)),
+      ])) as string[];
       if (uids.length) {
         const { data: prs } = await supabase.from("profiles").select("user_id, nome").in("user_id", uids);
         const map: Record<string, string> = {};
@@ -176,6 +188,59 @@ export function StatsPeladaModal({
 
   const menosVazado = goleiros[0] || null;
   const maisVazado = goleiros.length > 1 ? goleiros[goleiros.length - 1] : null;
+
+  const resumoJogadores = useMemo(() => {
+    const contagensPorUser: Record<string, Record<string, number>> = {};
+    lances.forEach((l: any) => {
+      if (!l.user_id) return;
+      const bucket = (contagensPorUser[l.user_id] ||= {});
+      bucket[l.tipo] = (bucket[l.tipo] || 0) + 1;
+    });
+
+    const avaliacoesPorUser: Record<string, number[]> = {};
+    avaliacoesPos.forEach((a) => { (avaliacoesPorUser[a.avaliado_id] ||= []).push(a.nota_geral); });
+
+    return timeJogadores.map((tj) => {
+      let minutos = 0;
+      partidas.forEach((p: any) => {
+        if (p.time_a_id !== tj.time_id && p.time_b_id !== tj.time_id) return;
+        let dur: number;
+        if (p.iniciada_em && p.encerrada_em) {
+          const inicioMs = new Date(p.iniciada_em).getTime();
+          const fimMs = new Date(p.encerrada_em).getTime();
+          const pausaMs = (p.tempo_pausado_total_seg || 0) * 1000;
+          dur = Math.max(0, (fimMs - inicioMs - pausaMs) / 60000);
+        } else {
+          dur = p.duracao_minutos || 0;
+        }
+        minutos += dur;
+      });
+
+      const c = contagensPorUser[tj.user_id] || {};
+      let nota = 3
+        + (c.gol || 0) * 0.3
+        + (c.passe_decisivo || 0) * 0.2
+        + (c.defesa || 0) * 0.2
+        + (c.entrada_forte || 0) * 0.1
+        - (c.frango || 0) * 0.3
+        - (c.falta || 0) * 0.15
+        - (c.cartao_amarelo || 0) * 0.4
+        - (c.cartao_vermelho || 0) * 0.8;
+      nota = Math.max(0, Math.min(5, nota));
+
+      const notasAval = avaliacoesPorUser[tj.user_id] || [];
+      const notaAvaliacoes = notasAval.length ? notasAval.reduce((a, b) => a + b, 0) / notasAval.length : null;
+
+      return {
+        uid: tj.user_id,
+        nome: profiles[tj.user_id] || "Jogador",
+        minutos: Math.round(minutos),
+        notaLances: Math.round(nota * 10) / 10,
+        notaAvaliacoes: notaAvaliacoes != null ? Math.round(notaAvaliacoes * 10) / 10 : null,
+        totalAvaliacoes: notasAval.length,
+      };
+    }).sort((a, b) => b.minutos - a.minutos);
+  }, [timeJogadores, partidas, lances, avaliacoesPos, profiles]);
 
   const timeNome = (id: string) => times.find((t) => t.id === id)?.nome || "Time";
   const timeCor = (id: string) => times.find((t) => t.id === id)?.cor || "#00FF87";
@@ -479,6 +544,45 @@ export function StatsPeladaModal({
                         </div>
                       </div>
                     </>
+                  ))}
+
+                {tab === "jogadores" &&
+                  (resumoJogadores.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum jogador escalado nessa pelada.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {resumoJogadores.map((r) => {
+                        const souEu = r.uid === user?.id;
+                        return (
+                          <div key={r.uid} className={`rounded-xl border border-white/10 p-3 ${souEu ? "bg-white/[0.06]" : "bg-white/5"}`}>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-sm ${souEu ? "font-bold" : "font-medium"} text-white`}>
+                                {r.nome}
+                                {souEu && <span className="ml-1.5 text-[10px] font-semibold text-primary">(você)</span>}
+                              </span>
+                              <span className="flex items-center gap-1 text-xs font-bold text-primary">
+                                <Clock className="h-3 w-3" /> {r.minutos} min
+                              </span>
+                            </div>
+                            <div className="mt-2 grid grid-cols-2 gap-2 text-center">
+                              <div className="rounded-lg bg-black/30 p-1.5">
+                                <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Nota (lances)</div>
+                                <div className="text-sm font-bold text-white">⭐ {r.notaLances.toFixed(1)}</div>
+                              </div>
+                              <div className="rounded-lg bg-black/30 p-1.5">
+                                <div className="text-[9px] uppercase tracking-wide text-muted-foreground">Avaliação da galera</div>
+                                <div className="text-sm font-bold text-white">
+                                  {r.notaAvaliacoes != null ? `⭐ ${r.notaAvaliacoes.toFixed(1)} (${r.totalAvaliacoes})` : "Sem avaliações"}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <p className="pt-1 text-center text-[10px] text-muted-foreground">
+                        "Nota (lances)" é calculada com base nos gols, passes, defesas e faltas registrados durante o jogo.
+                      </p>
+                    </div>
                   ))}
               </div>
 
