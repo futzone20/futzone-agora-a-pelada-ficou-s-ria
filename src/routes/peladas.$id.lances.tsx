@@ -57,6 +57,7 @@ function LancesPage() {
   const [partidasAll, setPartidasAll] = useState<any[]>([]);
   const [lancesAll, setLancesAll] = useState<any[]>([]);
   const [auxiliar, setAuxiliar] = useState<any>(null);
+  const [souAuxiliarPelada, setSouAuxiliarPelada] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [drawer, setDrawer] = useState<{ tipo: string; timeId: string } | null>(null);
   const [drawerGoleiro, setDrawerGoleiro] = useState<{ goleiroTimeId: string; goleiroTimeNome: string; goleiroTimeCor: string } | null>(null);
@@ -91,6 +92,10 @@ function LancesPage() {
     setTimeJogadores(tj || []);
     const { data: lsAll } = await supabase.from("lances").select("*").eq("pelada_id", id).order("criado_em", { ascending: false });
     setLancesAll(lsAll || []);
+    if (user) {
+      const { data: souAux } = await (supabase as any).from("pelada_auxiliares").select("id").eq("pelada_id", id).eq("user_id", user.id).eq("status", "aceito").maybeSingle();
+      setSouAuxiliarPelada(!!souAux);
+    }
     if (ativa) {
       const { data: ax } = await supabase.from("auxiliares_partida").select("*").eq("partida_id", ativa.id).maybeSingle();
       setAuxiliar(ax);
@@ -134,7 +139,7 @@ function LancesPage() {
     return Math.max(0, Math.floor((fim - now) / 1000));
   }, [pelada, now]);
 
-  const ehAuxiliar = isCapitao || (auxiliar && auxiliar.user_id === user?.id);
+  const ehAuxiliar = isCapitao || souAuxiliarPelada || (auxiliar && auxiliar.user_id === user?.id);
   const restanteSec = useMemo(() => {
     if (!partida?.iniciada_em || partida.status !== "em_andamento") return partida ? partida.duracao_minutos * 60 : 0;
     const ini = new Date(partida.iniciada_em).getTime();
