@@ -1,16 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bell, LogOut, Send } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Dialog, DialogContent } from "./ui/dialog";
+import { NovoPostForm, type MembroPost } from "@/components/NovoPostForm";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { criarPostJogador } from "@/lib/postJogador";
-import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -32,38 +30,39 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
   const [openNotif, setOpenNotif] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [quickPostOpen, setQuickPostOpen] = useState(false);
-  const [quickTexto, setQuickTexto] = useState("");
-  const [quickGrupos, setQuickGrupos] = useState<{ id: string; nome: string }[]>([]);
-  const [quickGrupoSel, setQuickGrupoSel] = useState("");
-  const [quickEnviando, setQuickEnviando] = useState(false);
+  const [quickGruposMap, setQuickGruposMap] = useState<Record<string, string>>({});
+  const [quickMembrosPorGrupo, setQuickMembrosPorGrupo] = useState<Record<string, MembroPost[]>>({});
   const holdTimerRef = useRef<number | null>(null);
   const holdAtivadoRef = useRef(false);
 
   const abrirPostRapido = async () => {
     if (!user) return;
     holdAtivadoRef.current = true;
-    if (quickGrupos.length === 0) {
+    if (Object.keys(quickGruposMap).length === 0) {
       const { data: gms } = await supabase.from("grupo_membros").select("grupo_id").eq("user_id", user.id).eq("status", "ativo");
-      const gruposIds = Array.from(new Set((gms || []).map((g: any) => g.grupo_id)));
+      const gruposIds = Array.from(new Set((gms || []).map((g: any) => g.grupo_id as string)));
       if (gruposIds.length) {
-        const { data: gs } = await supabase.from("grupos").select("id, nome").in("id", gruposIds);
-        const lista = (gs as any[]) || [];
-        setQuickGrupos(lista);
-        setQuickGrupoSel(lista[0]?.id || "");
+        const [{ data: gs }, { data: gmRows }] = await Promise.all([
+          supabase.from("grupos").select("id, nome").in("id", gruposIds),
+          supabase.from("grupo_membros").select("grupo_id, user_id").in("grupo_id", gruposIds).eq("status", "ativo"),
+        ]);
+        const gMap: Record<string, string> = {};
+        ((gs as any[]) || []).forEach((g) => { gMap[g.id] = g.nome; });
+        setQuickGruposMap(gMap);
+
+        const idsUnicos = Array.from(new Set(((gmRows as any[]) || []).map((g) => g.user_id as string)));
+        const { data: profs } = idsUnicos.length ? await supabase.from("profiles").select("user_id, nome, handle, foto_url").in("user_id", idsUnicos) : { data: [] as any[] };
+        const profById: Record<string, any> = {};
+        (profs || []).forEach((p: any) => { profById[p.user_id] = p; });
+        const porGrupo: Record<string, MembroPost[]> = {};
+        ((gmRows as any[]) || []).forEach((m) => {
+          const p = profById[m.user_id];
+          (porGrupo[m.grupo_id] ||= []).push({ user_id: m.user_id, nome: p?.nome || "Jogador", handle: p?.handle || null, foto_url: p?.foto_url || null });
+        });
+        setQuickMembrosPorGrupo(porGrupo);
       }
     }
     setQuickPostOpen(true);
-  };
-
-  const enviarPostRapido = async () => {
-    if (!user || !quickTexto.trim() || !quickGrupoSel) return;
-    setQuickEnviando(true);
-    const { error } = await criarPostJogador(user.id, quickGrupoSel, quickTexto);
-    setQuickEnviando(false);
-    if (error) return toast.error(error.message);
-    toast.success("Postado na Resenha! 🎉");
-    setQuickTexto("");
-    setQuickPostOpen(false);
   };
 
   const loadNotifs = async () => {
@@ -212,39 +211,13 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
       </nav>
 
       <Dialog open={quickPostOpen} onOpenChange={setQuickPostOpen}>
-        <DialogContent className="bg-[#0D0D0D] border-[#2A2A2A]">
-          <DialogHeader><DialogTitle className="text-white">📣 Postar na Resenha</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="flex items-start gap-2">
-              <Avatar className="h-9 w-9 shrink-0">
-                {user?.foto_url ? <AvatarImage src={user.foto_url} /> : null}
-                <AvatarFallback className="bg-[#2A2A2A] text-xs text-white">{(user?.nome || "?")[0]}</AvatarFallback>
-              </Avatar>
-              <textarea
-                value={quickTexto}
-                onChange={(e) => setQuickTexto(e.target.value.slice(0, 280))}
-                placeholder="No que você está pensando, craque?"
-                rows={3}
-                autoFocus
-                className="flex-1 resize-none rounded-lg bg-[#1A1A1A] px-3 py-2 text-sm text-white outline-none"
-              />
-            </div>
-            {quickGrupos.length > 1 && (
-              <select
-                value={quickGrupoSel}
-                onChange={(e) => setQuickGrupoSel(e.target.value)}
-                className="w-full rounded-lg bg-[#1A1A1A] px-3 py-2 text-xs text-white outline-none"
-              >
-                {quickGrupos.map((g) => <option key={g.id} value={g.id}>{g.nome}</option>)}
-              </select>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#666]">{280 - quickTexto.length}</span>
-              <Button size="sm" onClick={enviarPostRapido} disabled={!quickTexto.trim() || quickEnviando || !quickGrupoSel} className="bg-[#00FF87] font-bold text-black hover:bg-[#00FF87]/90">
-                <Send className="mr-1.5 h-3.5 w-3.5" /> {quickEnviando ? "Enviando..." : "Postar"}
-              </Button>
-            </div>
-          </div>
+        <DialogContent className="bg-transparent border-none p-0 shadow-none">
+          <NovoPostForm
+            gruposMap={quickGruposMap}
+            membrosPorGrupo={quickMembrosPorGrupo}
+            titulo
+            onPosted={() => setQuickPostOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
