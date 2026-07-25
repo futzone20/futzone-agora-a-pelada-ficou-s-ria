@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
-import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, Trophy, User, Trash2 } from "lucide-react";
+import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, Trophy, User, Trash2, ChevronDown, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { calcularProximaPartida, iniciarProximaPartida, type ProximaPartidaPreview } from "@/lib/rotacaoPartida";
+import { calcularTabela } from "@/lib/placar";
 
 
 export const Route = createFileRoute("/peladas/$id/lances")({ component: Wrapper });
@@ -68,6 +69,7 @@ function LancesPage() {
   const [encerrando, setEncerrando] = useState(false);
   const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
   const [confirmandoProxima, setConfirmandoProxima] = useState(false);
+  const [acordiaoOverride, setAcordiaoOverride] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     const { data: pelData } = await supabase
@@ -234,6 +236,17 @@ function LancesPage() {
     const goleiros = todos.filter((x) => x.eh_goleiro);
     return goleiros.length > 0 ? goleiros : todos;
   };
+
+  const classificacao = useMemo(() => {
+    const tab = calcularTabela(partidasAll, times);
+    return Object.values(tab).sort((a, b) => {
+      if (b.v !== a.v) return b.v - a.v;
+      const saldoA = a.gp - a.gc, saldoB = b.gp - b.gc;
+      if (saldoB !== saldoA) return saldoB - saldoA;
+      if (b.gp !== a.gp) return b.gp - a.gp;
+      return b.e - a.e;
+    });
+  }, [partidasAll, times]);
 
   const dataFmt = useMemo(() => {
     if (!pelada?.data) return "";
@@ -555,6 +568,51 @@ function LancesPage() {
         </div>
       </div>
 
+      {/* BLOCO 2.5 — CLASSIFICAÇÃO AO VIVO */}
+      {classificacao.length > 0 && partidasAll.some((p) => p.status === "encerrada") && (
+        <div className="border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5">
+          <div className="mb-2 flex items-center gap-1.5">
+            <ListOrdered className="h-3.5 w-3.5" style={{ color: "#00FF87" }} />
+            <span className="text-xs font-bold uppercase tracking-wider text-white">Classificação ao vivo</span>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-[#1F1F1F]">
+            <div className="grid grid-cols-[1.6rem_1fr_1.4rem_1.4rem_1.4rem_2.2rem_2rem] items-center gap-1 bg-[#111111] px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white/40">
+              <span>#</span>
+              <span>Time</span>
+              <span className="text-center">V</span>
+              <span className="text-center">E</span>
+              <span className="text-center">D</span>
+              <span className="text-center">SG</span>
+              <span className="text-center">GP</span>
+            </div>
+            {classificacao.map((t, idx) => {
+              const saldo = t.gp - t.gc;
+              const lider = idx === 0 && t.v > 0;
+              return (
+                <div
+                  key={t.time_id}
+                  className={`grid grid-cols-[1.6rem_1fr_1.4rem_1.4rem_1.4rem_2.2rem_2rem] items-center gap-1 px-2 py-2 ${idx > 0 ? "border-t border-[#1F1F1F]" : ""}`}
+                  style={lider ? { background: "rgba(0,255,135,0.06)" } : undefined}
+                >
+                  <span className="text-[12px] font-bold tabular-nums" style={{ color: lider ? "#00FF87" : "rgba(255,255,255,0.5)" }}>{idx + 1}º</span>
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: t.cor }} />
+                    <span className="truncate text-[12px] font-bold text-white">{t.nome}</span>
+                  </span>
+                  <span className="text-center text-[12px] font-semibold text-white/80 tabular-nums">{t.v}</span>
+                  <span className="text-center text-[12px] font-semibold text-white/80 tabular-nums">{t.e}</span>
+                  <span className="text-center text-[12px] font-semibold text-white/80 tabular-nums">{t.d}</span>
+                  <span className="text-center text-[12px] font-semibold tabular-nums" style={{ color: saldo > 0 ? "#00FF87" : saldo < 0 ? "#FF4D4D" : "rgba(255,255,255,0.6)" }}>
+                    {saldo > 0 ? `+${saldo}` : saldo}
+                  </span>
+                  <span className="text-center text-[12px] font-semibold text-white/80 tabular-nums">{t.gp}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* BLOCO 3 — LANCES RECENTES (agrupados por partida) */}
       <div className="border-t border-[#1F1F1F] bg-[#0D0D0D] px-3 py-2.5">
         <div className="mb-2 flex items-center justify-between">
@@ -578,9 +636,16 @@ function LancesPage() {
                 const tB = times.find((t) => t.id === p.time_b_id);
                 const emAndamento = p.status === "em_andamento";
                 const statusLabel = p.status === "encerrada" ? "ENCERRADA" : p.status === "aguardando" ? "AGUARDANDO" : "AO VIVO";
+                // a partida atual sempre começa aberta; as anteriores começam fechadas —
+                // mas o usuário pode clicar pra abrir/fechar qualquer uma
+                const abertaPorPadrao = p.id === partida?.id;
+                const aberta = acordiaoOverride[p.id] !== undefined ? acordiaoOverride[p.id] : abertaPorPadrao;
                 return (
                   <div key={p.id} className="rounded-xl overflow-hidden border border-[#1F1F1F]">
-                    <div className="flex items-center justify-between gap-2 bg-[#111111] px-3 py-2 rounded-t-xl">
+                    <button
+                      onClick={() => setAcordiaoOverride((prev) => ({ ...prev, [p.id]: !aberta }))}
+                      className="flex w-full items-center justify-between gap-2 bg-[#111111] px-3 py-2 rounded-t-xl text-left"
+                    >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 shrink-0">{ordinal(p.numero_partida)} PARTIDA</span>
                         <span className="text-[12px] font-bold text-white truncate">
@@ -589,14 +654,18 @@ function LancesPage() {
                           <span style={{ color: tB?.cor }}>{tB?.nome || "—"}</span>
                         </span>
                       </div>
-                      {emAndamento ? (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider animate-pulse" style={{ background: "rgba(255,77,77,0.15)", color: "#FF4D4D" }}>
-                          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#FF4D4D" }} />AO VIVO
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-[#2A2A2A] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/50">{statusLabel}</span>
-                      )}
-                    </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {emAndamento ? (
+                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider animate-pulse" style={{ background: "rgba(255,77,77,0.15)", color: "#FF4D4D" }}>
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#FF4D4D" }} />AO VIVO
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-[#2A2A2A] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/50">{statusLabel}</span>
+                        )}
+                        <ChevronDown className={`h-4 w-4 text-white/40 transition-transform ${aberta ? "rotate-180" : ""}`} />
+                      </div>
+                    </button>
+                    {!aberta ? null : (
                     <div className="bg-[#1A1A1A]">
                       {lancesP.map((l, idx) => {
                         const info = TIPO_LABEL_COR[l.tipo] || { label: l.tipo, color: "#9CA3AF" };
@@ -635,6 +704,7 @@ function LancesPage() {
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 );
               })}
