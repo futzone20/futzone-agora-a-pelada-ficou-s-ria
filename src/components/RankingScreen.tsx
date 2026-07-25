@@ -1,0 +1,116 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { calcularRankingPelada, type LinhaRankingPelada } from "@/lib/rankingPelada";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trophy } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
+
+type Grupo = { id: string; nome: string };
+type Pelada = { id: string; nome_pelada: string; data: string };
+
+const MEDALHAS = ["🥇", "🥈", "🥉"];
+
+export function RankingScreen() {
+  const { user } = useAuth();
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
+  const [grupoSel, setGrupoSel] = useState("");
+  const [peladas, setPeladas] = useState<Pelada[]>([]);
+  const [peladaSel, setPeladaSel] = useState("");
+  const [linhas, setLinhas] = useState<LinhaRankingPelada[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingRanking, setLoadingRanking] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      const { data: gms } = await supabase.from("grupo_membros").select("grupo_id").eq("user_id", user.id).eq("status", "ativo");
+      const gruposIds = Array.from(new Set((gms || []).map((g: any) => g.grupo_id as string)));
+      if (!gruposIds.length) { setLoading(false); return; }
+      const { data: gs } = await supabase.from("grupos").select("id, nome").in("id", gruposIds);
+      setGrupos((gs as any[]) || []);
+      setGrupoSel(gruposIds[0]);
+      setLoading(false);
+    })();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!grupoSel) return;
+    void (async () => {
+      const { data: ps } = await supabase.from("peladas").select("id, nome_pelada, data")
+        .eq("grupo_id", grupoSel).eq("status", "encerrada").order("data", { ascending: false }).limit(30);
+      const lista = (ps as any[]) || [];
+      setPeladas(lista);
+      setPeladaSel(lista[0]?.id || "");
+    })();
+  }, [grupoSel]);
+
+  useEffect(() => {
+    if (!peladaSel) { setLinhas([]); return; }
+    setLoadingRanking(true);
+    void calcularRankingPelada(peladaSel).then((r) => { setLinhas(r); setLoadingRanking(false); });
+  }, [peladaSel]);
+
+  if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
+
+  if (!grupos.length) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /><h2 className="text-xl font-bold">Ranking</h2></div>
+        <EmptyState icon={Trophy} title="Nenhum grupo ainda" description="Entre em um grupo e jogue uma pelada pra aparecer o ranking aqui." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /><h2 className="text-xl font-bold">Ranking</h2></div>
+      <p className="text-xs text-muted-foreground">
+        Ranking de uma pelada específica: soma os lances da partida (gol, passe, defesa...) com a nota que os colegas te deram na avaliação — nota baixa nunca tira ponto, só nota 4 e 5 somam.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2">
+        {grupos.length > 1 ? (
+          <Select value={grupoSel} onValueChange={setGrupoSel}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{grupos.map((g) => <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>)}</SelectContent>
+          </Select>
+        ) : <div />}
+
+        {peladas.length > 0 && (
+          <Select value={peladaSel} onValueChange={setPeladaSel}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {peladas.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.nome_pelada} · {p.data.split("-").reverse().join("/")}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {loadingRanking ? (
+        <div className="text-sm text-muted-foreground">Calculando ranking...</div>
+      ) : !peladas.length ? (
+        <EmptyState icon={Trophy} title="Nenhuma pelada encerrada ainda" description="Assim que a primeira pelada desse grupo terminar, o ranking aparece aqui." />
+      ) : linhas.length === 0 ? (
+        <EmptyState icon={Trophy} title="Sem dados nessa pelada" description="Ninguém pontuou ainda — pode ser que os lances ou avaliações não tenham sido registrados." />
+      ) : (
+        <div className="space-y-2">
+          {linhas.map((l, i) => (
+            <div key={l.user_id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${l.user_id === user?.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
+              <span className="w-7 shrink-0 text-center text-base font-bold">{MEDALHAS[i] || <span className="text-sm text-muted-foreground">{i + 1}</span>}</span>
+              <Avatar className="h-8 w-8 shrink-0">
+                {l.foto_url ? <AvatarImage src={l.foto_url} /> : null}
+                <AvatarFallback className="bg-secondary text-xs">{l.nome[0]}</AvatarFallback>
+              </Avatar>
+              <span className="flex-1 truncate text-sm font-bold">{l.nome}</span>
+              <span className={`text-sm font-bold ${l.pontos >= 0 ? "text-primary" : "text-destructive"}`}>{l.pontos} <span className="text-[10px] font-normal text-muted-foreground">pts</span></span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
