@@ -512,6 +512,13 @@ function PostBody({ tipo, c }: { tipo: string; c: any }) {
         </div>
       );
     }
+    case "campeao_temporada":
+      return (
+        <div>
+          <div className="text-lg font-bold">🏆 {c.nome} foi o campeão da temporada!</div>
+          <div className="text-xs text-muted-foreground">Temporada {c.temporada_numero} · {c.pontos} pontos no ranking</div>
+        </div>
+      );
     case "post_jogador":
       return <p className="whitespace-pre-wrap text-base">{renderTextoComMencoes(c.texto || "")}</p>;
     case "patrocinio":
