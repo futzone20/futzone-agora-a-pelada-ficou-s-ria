@@ -4,7 +4,10 @@ import { useAuth } from "@/lib/auth";
 import { calcularRankingPelada, type LinhaRankingPelada } from "@/lib/rankingPelada";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { CompartilharPodio } from "@/components/CompartilharPodio";
+import { Trophy, Info, Share2 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 
 type Grupo = { id: string; nome: string };
@@ -21,6 +24,7 @@ export function RankingScreen() {
   const [linhas, setLinhas] = useState<LinhaRankingPelada[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingRanking, setLoadingRanking] = useState(false);
+  const [compartilharOpen, setCompartilharOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -65,10 +69,19 @@ export function RankingScreen() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /><h2 className="text-xl font-bold">Ranking</h2></div>
-      <p className="text-xs text-muted-foreground">
-        Ranking de uma pelada específica: soma os lances da partida (gol, passe, defesa...) com a nota que os colegas te deram na avaliação — nota baixa nunca tira ponto, só nota 4 e 5 somam.
-      </p>
+      <div className="flex items-center gap-2">
+        <Trophy className="h-5 w-5 text-primary" /><h2 className="text-xl font-bold">Ranking</h2>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="ml-auto flex h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground">
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-xs text-xs text-muted-foreground">
+            Ranking de uma pelada específica: soma os lances da partida (gol, passe, defesa...) com a nota que os colegas te deram na avaliação — nota baixa nunca tira ponto, só nota 4 e 5 somam.
+          </PopoverContent>
+        </Popover>
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         {grupos.length > 1 ? (
@@ -99,6 +112,11 @@ export function RankingScreen() {
       ) : (
         <>
           {linhas.length >= 3 && <Podio linhas={linhas} meuId={user?.id} />}
+          {linhas.length >= 3 && linhas.slice(0, 3).some((l) => l.user_id === user?.id) && (
+            <Button variant="outline" className="w-full" onClick={() => setCompartilharOpen(true)}>
+              <Share2 className="mr-2 h-4 w-4" /> Compartilhar meu pódio
+            </Button>
+          )}
           <div className="space-y-2">
             {linhas.slice(3).map((l, i) => (
               <div key={l.user_id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${l.user_id === user?.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
@@ -125,6 +143,15 @@ export function RankingScreen() {
           </div>
         </>
       )}
+
+      <CompartilharPodio
+        open={compartilharOpen}
+        onOpenChange={setCompartilharOpen}
+        linhas={linhas}
+        peladaNome={peladas.find((p) => p.id === peladaSel)?.nome_pelada || ""}
+        data={peladas.find((p) => p.id === peladaSel)?.data || new Date().toISOString().slice(0, 10)}
+        meuId={user?.id}
+      />
     </div>
   );
 }
@@ -132,17 +159,22 @@ export function RankingScreen() {
 function Podio({ linhas, meuId }: { linhas: LinhaRankingPelada[]; meuId: string | undefined }) {
   const [primeiro, segundo, terceiro] = linhas;
   const alturas = { 1: "h-24", 2: "h-16", 3: "h-12" } as const;
+  const cores = {
+    1: { texto: "text-primary", borda: "border-primary", fundo: "bg-primary/20" },
+    2: { texto: "text-slate-300", borda: "border-slate-300", fundo: "bg-slate-300/20" },
+    3: { texto: "text-orange-400", borda: "border-orange-400", fundo: "bg-orange-400/20" },
+  } as const;
 
   const Bloco = ({ l, posicao }: { l: LinhaRankingPelada; posicao: 1 | 2 | 3 }) => (
     <div className="flex flex-1 flex-col items-center">
-      <Avatar className={`mb-1.5 shrink-0 border-2 ${posicao === 1 ? "h-16 w-16 border-primary" : "h-12 w-12 border-border"}`}>
+      <Avatar className={`mb-1.5 shrink-0 border-2 ${posicao === 1 ? "h-16 w-16" : "h-12 w-12"} ${cores[posicao].borda}`}>
         {l.foto_url ? <AvatarImage src={l.foto_url} /> : null}
         <AvatarFallback className="bg-secondary text-sm">{l.nome[0]}</AvatarFallback>
       </Avatar>
       <span className="max-w-full truncate text-center text-xs font-bold">{l.nome}{l.user_id === meuId ? " (você)" : ""}</span>
-      <span className="text-[11px] font-bold text-primary">{l.pontos} pts</span>
-      <div className={`mt-1.5 flex w-full items-start justify-center rounded-t-lg ${alturas[posicao]} ${posicao === 1 ? "bg-primary/20 border border-primary" : "bg-secondary border border-border"}`}>
-        <span className={`mt-1.5 text-lg font-black ${posicao === 1 ? "text-primary" : "text-muted-foreground"}`}>{posicao}º</span>
+      <span className={`text-[11px] font-bold ${cores[posicao].texto}`}>{l.pontos} pts</span>
+      <div className={`mt-1.5 flex w-full items-start justify-center rounded-t-lg border ${alturas[posicao]} ${cores[posicao].fundo} ${cores[posicao].borda}`}>
+        <span className={`mt-1.5 text-lg font-black ${cores[posicao].texto}`}>{posicao}º</span>
       </div>
     </div>
   );
