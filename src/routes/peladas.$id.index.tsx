@@ -8,7 +8,9 @@ import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
 import { GerenciarPresencasModal } from "@/components/GerenciarPresencasModal";
-import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown, Copy, MessageCircle } from "lucide-react";
+import { EscolherAuxiliaresModal } from "@/components/EscolherAuxiliaresModal";
+import { ConviteAuxiliarCard } from "@/components/ConviteAuxiliarCard";
+import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, Crown, Copy, MessageCircle, Target } from "lucide-react";
 import { calcularTabela } from "@/lib/placar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +53,7 @@ function PeladaDetail() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [presencasOpen, setPresencasOpen] = useState(false);
+  const [auxiliaresOpen, setAuxiliaresOpen] = useState(false);
   const [sorteioOpen, setSorteioOpen] = useState(false);
   const [partidaAtual, setPartidaAtual] = useState<any>(null);
   const [tempoRestante, setTempoRestante] = useState<number>(0);
@@ -549,6 +552,8 @@ function PeladaDetail() {
       </div>
 
       <div className="mt-4 space-y-4 px-4">
+        <ConviteAuxiliarCard peladaId={id} onChange={load} />
+
         {times.length === 0 && pelada.status !== "encerrada" && (
           <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
             <div>
@@ -828,6 +833,12 @@ function PeladaDetail() {
                     <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Refazer<br />sorteio</span>
                   </button>
                 )}
+                {pelada.sorteio_feito && (
+                  <button onClick={() => setAuxiliaresOpen(true)} className="col-span-2 flex flex-col items-center gap-1.5 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 text-[#00FF87]">
+                    <Target className="h-5 w-5" />
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-white text-center leading-tight">Escolher Auxiliares</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -958,6 +969,15 @@ function PeladaDetail() {
         peladaId={id}
         grupoId={pelada.grupo_id}
         capacidade={capacidade}
+      />
+
+      <EscolherAuxiliaresModal
+        open={auxiliaresOpen}
+        onOpenChange={setAuxiliaresOpen}
+        peladaId={id}
+        grupoId={pelada.grupo_id}
+        confirmadosIds={confirmados.map((c) => c.user_id)}
+        numeroTimes={pelada.numero_times}
       />
 
       <SorteioModal
