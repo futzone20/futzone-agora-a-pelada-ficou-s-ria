@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ export function PerfilCompleto() {
   const [indicacoes, setIndicacoes] = useState<any[]>([]);
   const [whatsapp, setWhatsapp] = useState<{ conectado: boolean; numero: string | null }>({ conectado: false, numero: null });
   const [saving, setSaving] = useState(false);
+  const [diaXpSelecionado, setDiaXpSelecionado] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!user) return;
@@ -74,7 +76,7 @@ export function PerfilCompleto() {
       setWhatsapp({ conectado: !!(prof as any)?.whatsapp_conectado, numero: (prof as any)?.whatsapp_numero || null });
       const { data: of } = await supabase.from("ofensivas").select("*").eq("user_id", user.id).maybeSingle();
       setOfensiva(of);
-      const { data: h } = await supabase.from("pontos_historico").select("*").eq("user_id", user.id).order("criado_em", { ascending: false }).limit(10);
+      const { data: h } = await supabase.from("pontos_historico").select("*").eq("user_id", user.id).order("criado_em", { ascending: false });
       setHistorico(h || []);
       const { data: ts } = await supabase.from("temporadas_snapshot")
         .select("*, temporadas!inner(numero,data_inicio,data_fim)").eq("user_id", user.id).order("criado_em");
@@ -113,6 +115,11 @@ export function PerfilCompleto() {
   const proxMarco = marcos.find((m) => m > seq) || seq;
   const tituloRole = user?.role === "capitao" ? "👑 Capitão" : user?.role === "dono" ? "🏟️ Dono de Quadra" : user?.role === "parceiro" ? "🤝 Parceiro" : "🎮 Jogador";
   const ultimoPonto = historico[0];
+  const chaveDia = (d: Date | string) => (typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10));
+  const diasComXp = new Set(historico.map((h) => chaveDia(h.criado_em)));
+  const diaSelecionadoChave = diaXpSelecionado ? chaveDia(diaXpSelecionado) : null;
+  const historicoDoDia = diaSelecionadoChave ? historico.filter((h) => chaveDia(h.criado_em) === diaSelecionadoChave) : [];
+  const datasComXp = Array.from(diasComXp).map((k) => new Date(k + "T12:00:00"));
 
   // ===================== SUB-TELAS =====================
   if (secaoAtiva) {
@@ -215,22 +222,49 @@ export function PerfilCompleto() {
 
         {secaoAtiva === "pontos" && (
           <>
-            <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">⭐ Meus XPs</h3>
               <div className="text-3xl font-extrabold text-primary text-center">{pontos} <span className="text-base font-bold text-muted-foreground">XP</span></div>
-              <div className="space-y-1.5 mt-2">
-                {historico.length === 0 ? <p className="text-xs text-muted-foreground text-center">Sem histórico ainda.</p> :
-                  historico.map((h) => (
-                    <div key={h.id} className="rounded bg-secondary/30 px-2.5 py-2 text-xs">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="flex-1">{fraseXp(h)}</span>
-                        <span className={`shrink-0 font-bold ${h.valor_pontos >= 0 ? "text-green-500" : "text-red-500"}`}>{h.valor_pontos > 0 ? "+" : ""}{h.valor_pontos} XP</span>
+
+              {historico.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center">Sem histórico ainda.</p>
+              ) : (
+                <>
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={diaXpSelecionado}
+                      onSelect={(d) => setDiaXpSelecionado(d && diaSelecionadoChave === chaveDia(d) ? undefined : d)}
+                      modifiers={{ temXp: datasComXp }}
+                      modifiersClassNames={{ temXp: "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary" }}
+                      className="rounded-xl border border-border p-0"
+                    />
+                  </div>
+
+                  {diaSelecionadoChave ? (
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-bold text-muted-foreground">
+                        {diaXpSelecionado?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
                       </div>
-                      <div className="mt-0.5 text-[10px] text-muted-foreground">{new Date(h.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} às {new Date(h.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</div>
+                      {historicoDoDia.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Nenhum XP nesse dia.</p>
+                      ) : (
+                        historicoDoDia.map((h) => (
+                          <div key={h.id} className="rounded bg-secondary/30 px-2.5 py-2 text-xs">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="flex-1">{fraseXp(h)}</span>
+                              <span className={`shrink-0 font-bold ${h.valor_pontos >= 0 ? "text-green-500" : "text-red-500"}`}>{h.valor_pontos > 0 ? "+" : ""}{h.valor_pontos} XP</span>
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-muted-foreground">{new Date(h.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</div>
+                          </div>
+                        ))
+                      )}
                     </div>
-                  ))
-                }
-              </div>
+                  ) : (
+                    <p className="text-center text-xs text-muted-foreground">Clique num dia com bolinha verde pra ver o que você ganhou naquele dia.</p>
+                  )}
+                </>
+              )}
             </div>
             {temporadas.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
