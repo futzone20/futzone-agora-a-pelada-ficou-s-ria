@@ -118,12 +118,13 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
                       case 'comentario_feed': return { char: '💬', color: 'bg-[#1A2D4A] text-white' };
                       case 'reacao_feed': return { char: '👍', color: 'bg-[#1A2D4A] text-white' };
                       case 'mencao_feed': return { char: '📣', color: 'bg-[#4A3500] text-white' };
+                      case 'convite_auxiliar': return { char: '🎯', color: 'bg-[#1A2D4A] text-white' };
                       default: return { char: '🔔', color: 'bg-[#2A2A2A] text-white' };
                     }
                   };
                   const iconData = getNotifIcon(n.tipo);
-                  const NotifWrapper = n.link && n.tipo !== "resultado_pelada" ? Link : "div";
-                  const wrapperProps = n.link && n.tipo !== "resultado_pelada"
+                  const NotifWrapper = n.link && n.tipo !== "resultado_pelada" && n.tipo !== "convite_auxiliar" ? Link : "div";
+                  const wrapperProps = n.link && n.tipo !== "resultado_pelada" && n.tipo !== "convite_auxiliar"
                     ? { to: n.link, onClick: () => setOpenNotif(false) }
                     : {};
                   return (
@@ -148,6 +149,15 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
                             className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#00FF87]/10 px-3 py-1 text-[10px] font-black uppercase tracking-tight text-[#00FF87] hover:bg-[#00FF87]/20"
                           >
                             🏆 Ver Card da Vitória
+                          </Link>
+                        )}
+                        {n.tipo === "convite_auxiliar" && n.link && (
+                          <Link
+                            to={n.link}
+                            onClick={() => setOpenNotif(false)}
+                            className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#00FF87]/10 px-3 py-1 text-[10px] font-black uppercase tracking-tight text-[#00FF87] hover:bg-[#00FF87]/20"
+                          >
+                            🎯 Aceitar ou recusar
                           </Link>
                         )}
                       </div>
