@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
 import { ImagePlus, Download, Share2, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
@@ -141,8 +142,9 @@ export function CompartilharPodio({
                 )}
               </div>
 
-              <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", fontSize: 10, letterSpacing: 2, color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>
-                MR<span style={{ color: "#00FF87" }}>FUT</span>
+              <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, opacity: 0.85 }}>
+                <Logo style={{ height: 16, width: "auto" }} />
+                <span style={{ fontSize: 8, letterSpacing: 1, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>www.mrfut.com.br</span>
               </div>
             </div>
           </div>
