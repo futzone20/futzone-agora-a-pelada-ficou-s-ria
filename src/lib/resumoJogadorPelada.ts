@@ -9,6 +9,9 @@ export type ResumoJogadorPelada = {
   passes: number;
   defesas: number;
   frangos: number;
+  /** Pontuação de ranking dessa pelada (mesma fórmula usada na tela de Ranking e na "Minha
+   *  Carreira") — sem bônus de capitão, e a avaliação nunca desconta, só soma a partir de 4. */
+  pontosRanking: number;
 };
 
 /**
@@ -65,6 +68,19 @@ export async function calcularResumoJogadorPelada(peladaId: string, userId: stri
   const notasAvals = ((avals as any[]) || []).map((a) => a.nota_geral).filter((n) => typeof n === "number");
   const notaAvaliacoes = notasAvals.length ? notasAvals.reduce((a, b) => a + b, 0) / notasAvals.length : null;
 
+  // Pontuação de ranking: mesma fórmula da tela de Ranking (sem clamp, sem bônus de capitão,
+  // avaliação nunca desconta — só soma a partir da nota 4).
+  const pontosAvaliacao = notasAvals.reduce((acc, n) => acc + (n === 5 ? 20 : n === 4 ? 10 : 0), 0);
+  const pontosLances =
+    (contagens.gol || 0) * 7 +
+    (contagens.passe_decisivo || 0) * 5 +
+    (contagens.defesa || 0) * 6 +
+    (contagens.entrada_forte || 0) * 2 -
+    (contagens.frango || 0) * 5 -
+    (contagens.falta || 0) * 3 -
+    (contagens.cartao_amarelo || 0) * 8 -
+    (contagens.cartao_vermelho || 0) * 15;
+
   return {
     minutosJogados: Math.round(minutos),
     notaLances: Math.round(nota * 10) / 10,
@@ -74,5 +90,6 @@ export async function calcularResumoJogadorPelada(peladaId: string, userId: stri
     passes: contagens.passe_decisivo || 0,
     defesas: contagens.defesa || 0,
     frangos: contagens.frango || 0,
+    pontosRanking: pontosLances + pontosAvaliacao,
   };
 }
