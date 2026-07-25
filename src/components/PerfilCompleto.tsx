@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { CentralMensagensCard } from "@/components/CentralMensagensCard";
 import {
   Copy, ArrowLeft, ChevronRight, User, Radar as RadarIcon, Flame, Star,
-  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays,
+  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays, Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,7 @@ const SKILL_LABELS: Record<typeof SKILL_KEYS[number], string> = {
   chute: "💥 Chute", resistencia: "🫁 Resistência", posicionamento: "🧠 Posicionamento",
 };
 type SkillKey = typeof SKILL_KEYS[number];
-type Secao = "dados" | "skills" | "ofensiva" | "pontos" | "whatsapp" | "indicar" | "conta" | "historico" | null;
+type Secao = "dados" | "skills" | "ofensiva" | "pontos" | "whatsapp" | "indicar" | "conta" | "historico" | "carteira" | null;
 
 const skillColor = (v: number) => v >= 4 ? "bg-green-500" : v >= 2.5 ? "bg-yellow-500" : "bg-red-500";
 const nivelLabel = (m: number) => m >= 4.5 ? "Elite" : m >= 4 ? "Acima da média" : m >= 3 ? "Bom" : m >= 2 ? "Em evolução" : "Iniciante";
@@ -256,6 +256,8 @@ export function PerfilCompleto() {
         {secaoAtiva === "conta" && <ContaPreferenciasBox signOut={signOut} />}
 
         {secaoAtiva === "historico" && <HistoricoPeladasBox userId={user?.id} />}
+
+        {secaoAtiva === "carteira" && <MinhaCarteiraBox userId={user?.id} />}
       </div>
     );
   }
@@ -352,6 +354,11 @@ export function PerfilCompleto() {
       <MenuRow
         icon={CalendarDays} titulo="Minha Carreira" subtitulo="Sua evolução pelada após pelada"
         onClick={() => setSecaoAtiva("historico")}
+      />
+      <MenuRow
+        icon={Coins} titulo="Minha Carteira" subtitulo="Mr.Coins"
+        preview={<CarteiraPreview userId={user?.id} />}
+        onClick={() => setSecaoAtiva("carteira")}
       />
       <MenuRow
         icon={Settings} titulo="Conta e preferências" subtitulo="Segurança, privacidade e configurações"
@@ -526,6 +533,122 @@ function HistoricoPeladasBox({ userId }: { userId: string | undefined }) {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type LoteMrCoins = {
+  id: string; mes_referencia: string; xp_do_mes: number; moedas: number;
+  status: "pendente" | "resgatado" | "perdido" | "expirado";
+  prazo_resgate: string; resgatado_em: string | null; expira_em: string;
+};
+
+const MESES_ABREV = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function labelMes(mesRef: string) {
+  const [ano, mes] = mesRef.split("-");
+  return `${MESES_ABREV[+mes - 1]}/${ano.slice(2)}`;
+}
+
+function saldoValido(lotes: LoteMrCoins[]) {
+  return lotes.filter((l) => l.status === "resgatado" && l.expira_em >= new Date().toISOString().slice(0, 10))
+    .reduce((acc, l) => acc + l.moedas, 0);
+}
+
+function CarteiraPreview({ userId }: { userId: string | undefined }) {
+  const [lotes, setLotes] = useState<LoteMrCoins[]>([]);
+  useEffect(() => {
+    if (!userId) return;
+    void (async () => {
+      const { data } = await (supabase as any).from("mrcoins_lotes").select("*").eq("user_id", userId);
+      setLotes((data as LoteMrCoins[]) || []);
+    })();
+  }, [userId]);
+  const pendente = lotes.find((l) => l.status === "pendente");
+  return (
+    <div className="text-right">
+      <div className="flex items-center justify-end gap-1 text-sm font-bold text-primary">🪙 {saldoValido(lotes)}</div>
+      {pendente ? <div className="text-[10px] font-bold text-yellow-500">{pendente.moedas} pra resgatar!</div> : <div className="text-[10px] text-muted-foreground">Mr.Coins</div>}
+    </div>
+  );
+}
+
+function MinhaCarteiraBox({ userId }: { userId: string | undefined }) {
+  const [lotes, setLotes] = useState<LoteMrCoins[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [resgatando, setResgatando] = useState<string | null>(null);
+
+  const load = async () => {
+    if (!userId) return;
+    const { data } = await (supabase as any).from("mrcoins_lotes").select("*").eq("user_id", userId).order("mes_referencia", { ascending: false });
+    setLotes((data as LoteMrCoins[]) || []);
+    setLoading(false);
+  };
+  useEffect(() => { void load(); }, [userId]);
+
+  const resgatar = async (lote: LoteMrCoins) => {
+    setResgatando(lote.id);
+    const { error } = await (supabase as any).rpc("resgatar_mrcoins", { _lote_id: lote.id });
+    setResgatando(null);
+    if (error) return toast.error(error.message);
+    toast.success(`${lote.moedas} Mr.Coins resgatados! 🪙`);
+    void load();
+  };
+
+  const pendentes = lotes.filter((l) => l.status === "pendente");
+  const saldo = saldoValido(lotes);
+
+  const statusLabel: Record<LoteMrCoins["status"], { texto: string; cor: string }> = {
+    pendente: { texto: "Aguardando resgate", cor: "text-yellow-500" },
+    resgatado: { texto: "Resgatado", cor: "text-primary" },
+    perdido: { texto: "Perdido (não resgatou)", cor: "text-destructive" },
+    expirado: { texto: "Expirado (12 meses)", cor: "text-muted-foreground" },
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-5 text-center">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">Saldo válido</div>
+        <div className="mt-1 flex items-center justify-center gap-2 text-4xl font-black text-primary">🪙 {saldo}</div>
+        <p className="mt-2 text-[11px] text-muted-foreground">Cada moeda vale 12 meses a partir do mês em que foi resgatada.</p>
+      </div>
+
+      {pendentes.map((lote) => {
+        const prazoMs = new Date(lote.prazo_resgate).getTime() - Date.now();
+        const diasRestantes = Math.max(0, Math.ceil(prazoMs / (1000 * 60 * 60 * 24)));
+        return (
+          <div key={lote.id} className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-4 space-y-2">
+            <div className="font-bold text-yellow-500">🪙 {lote.moedas} Mr.Coins de {labelMes(lote.mes_referencia)}</div>
+            <p className="text-xs text-muted-foreground">
+              Referente a {lote.xp_do_mes} XP daquele mês. {diasRestantes > 0 ? `Resgate em até ${diasRestantes} dia(s) ou perde.` : "Prazo acabando!"}
+            </p>
+            <Button size="sm" onClick={() => resgatar(lote)} disabled={resgatando === lote.id} className="w-full bg-yellow-500 font-bold text-black hover:bg-yellow-500/90">
+              {resgatando === lote.id ? "Resgatando..." : "Resgatar agora"}
+            </Button>
+          </div>
+        );
+      })}
+
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Mr.Coins</h3>
+        {loading ? (
+          <p className="text-xs text-muted-foreground">Carregando...</p>
+        ) : lotes.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Ainda não teve nenhum fechamento de mês — assim que esse mês fechar, aparece aqui.</p>
+        ) : (
+          <div className="space-y-1">
+            {lotes.map((l) => (
+              <div key={l.id} className="flex items-center justify-between rounded-lg bg-secondary/30 px-3 py-2 text-xs">
+                <div>
+                  <div className="font-bold">{labelMes(l.mes_referencia)} · {l.xp_do_mes} XP</div>
+                  <div className={statusLabel[l.status].cor}>{statusLabel[l.status].texto}</div>
+                  {l.status === "resgatado" && <div className="text-muted-foreground">Válido até {l.expira_em.split("-").reverse().join("/")}</div>}
+                </div>
+                <span className="font-bold text-primary">🪙 {l.moedas}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
