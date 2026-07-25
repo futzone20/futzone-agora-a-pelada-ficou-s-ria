@@ -22,7 +22,7 @@ async function resolveLogoUrl(): Promise<string | null> {
   return pending;
 }
 
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
   const [url, setUrl] = useState<string | null>(cachedLogoUrl ?? null);
 
   useEffect(() => {
@@ -33,11 +33,11 @@ export function Logo({ className = "" }: { className?: string }) {
 
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt="MrFut" className={className} style={{ height: "1.4em", width: "auto", objectFit: "contain", display: "inline-block" }} />;
+    return <img src={url} alt="MrFut" className={className} crossOrigin="anonymous" style={{ height: "1.4em", width: "auto", objectFit: "contain", display: "inline-block", ...style }} />;
   }
 
   return (
-    <span className={`inline-flex items-center gap-2 font-extrabold tracking-tight ${className}`}>
+    <span className={`inline-flex items-center gap-2 font-extrabold tracking-tight ${className}`} style={style}>
       <Circle className="h-5 w-5 text-primary" strokeWidth={2.5} />
       <span>
         MR<span className="text-primary">FUT</span>
