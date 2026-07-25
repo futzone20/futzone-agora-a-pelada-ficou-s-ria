@@ -67,13 +67,21 @@ function Avaliar() {
       const { data: tj } = await supabase.from("time_jogadores").select("user_id,time_id").eq("pelada_id", id);
       const uids = Array.from(new Set((tj || []).map((x: any) => x.user_id))).filter((u) => u !== user.id);
       const timeIds = Array.from(new Set((tj || []).map((x: any) => x.time_id)));
-      const [{ data: profs }, { data: times }, { data: lances }, { data: existentes }, { data: existentesSkill }] = await Promise.all([
+      const [{ data: profs }, { data: times }, { data: lances }, { data: existentes }, { data: existentesSkill }, { data: mvpExistente }, { data: resenhaExistente }] = await Promise.all([
         supabase.from("profiles").select("user_id,nome").in("user_id", uids.length ? uids : ["00000000-0000-0000-0000-000000000000"]),
         supabase.from("times").select("id,nome").in("id", timeIds.length ? timeIds : ["00000000-0000-0000-0000-000000000000"]),
         supabase.from("lances").select("user_id,tipo").eq("pelada_id", id),
         supabase.from("avaliacoes_pos_pelada").select("avaliado_id,nota_geral,nota_comportamento,gols_confirmados,passes_confirmados,defesas_confirmadas").eq("pelada_id", id).eq("avaliador_id", user.id),
         (supabase as any).from("avaliacoes_skill_membro").select("avaliado_id,nota_desempenho_geral").eq("pelada_id", id).eq("avaliador_id", user.id).eq("tipo", "pos_pelada"),
+        supabase.from("mvp_votos").select("votado_id").eq("pelada_id", id).eq("votante_id", user.id).maybeSingle(),
+        (supabase as any).from("resenha_votos").select("categoria,votado_id").eq("pelada_id", id).eq("votante_id", user.id),
       ]);
+      if (mvpExistente) setMvp((mvpExistente as any).votado_id);
+      if (resenhaExistente?.length) {
+        const rMap: Record<string, string> = {};
+        (resenhaExistente as any[]).forEach((r) => { rMap[r.categoria] = r.votado_id; });
+        setVotosResenha(rMap);
+      }
       const pMap: Record<string, string> = {};
       (profs || []).forEach((p: any) => { pMap[p.user_id] = p.nome; });
       const tMap: Record<string, string> = {};
@@ -188,14 +196,18 @@ function Avaliar() {
     if (!user) return;
     setSaving(true);
     if (mvp) {
-      const { error: e2 } = await supabase.from("mvp_votos").insert({ pelada_id: id, votante_id: user.id, votado_id: mvp } as never);
+      const { error: e2 } = await supabase
+        .from("mvp_votos")
+        .upsert({ pelada_id: id, votante_id: user.id, votado_id: mvp } as never, { onConflict: "pelada_id,votante_id" });
       if (e2) toast.error(e2.message);
     }
     const votosRows = Object.entries(votosResenha)
       .filter(([, votado_id]) => !!votado_id)
       .map(([categoria, votado_id]) => ({ pelada_id: id, categoria, votante_id: user.id, votado_id }));
     if (votosRows.length) {
-      const { error: e3 } = await (supabase as any).from("resenha_votos").insert(votosRows);
+      const { error: e3 } = await (supabase as any)
+        .from("resenha_votos")
+        .upsert(votosRows, { onConflict: "pelada_id,categoria,votante_id" });
       if (e3) toast.error(e3.message);
     }
     toast.success("Votos enviados!");
