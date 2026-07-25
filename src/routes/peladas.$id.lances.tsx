@@ -110,7 +110,10 @@ function LancesPage() {
         .maybeSingle();
       setIsCapitao(membro?.papel === "capitao");
     }
-    const uids = (tj || []).map((x: any) => x.user_id);
+    const uids = Array.from(new Set([
+      ...(tj || []).map((x: any) => x.user_id),
+      ...(lsAll || []).map((x: any) => x.marcado_por).filter(Boolean),
+    ]));
     if (uids.length) {
       const { data: profs } = await supabase.from("profiles").select("user_id, nome").in("user_id", uids);
       const m: Record<string, any> = {};
@@ -577,6 +580,11 @@ function LancesPage() {
                                   <span className="text-white/50"> — </span>
                                   <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
                                 </>
+                              )}
+                              {l.marcado_por && (
+                                <div className="mt-0.5 text-[10px] text-white/40">
+                                  marcado por {profiles[l.marcado_por]?.nome || "alguém"}
+                                </div>
                               )}
                             </div>
                             <span className="rounded-full bg-[#0D0D0D] px-1.5 py-0.5 text-[10px] font-bold text-white/60 tabular-nums shrink-0">{minutoLance(l, p)}</span>
