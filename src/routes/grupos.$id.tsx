@@ -149,7 +149,7 @@ function GrupoPage() {
           <p className="text-sm text-muted-foreground">Código: <span className="text-foreground font-mono">{grupo.codigo_convite}</span></p>
         </div>
 
-        {secaoAtiva === "membros" && <MembrosTab grupo={grupo} membros={membros} pendentes={pendentes} isCapitao={isCapitao} onChange={load} />}
+        {secaoAtiva === "membros" && <MembrosTab grupo={grupo} membros={membros} pendentes={pendentes} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} onChange={load} />}
         {secaoAtiva === "peladas" && <PeladasTab grupoId={id} peladas={peladas} isCapitao={isCapitao} onChange={load} />}
         {secaoAtiva === "regras" && <RegrasTab grupoId={id} isCapitao={isCapitao} souCapitaoExato={souCapitaoExato} />}
         {secaoAtiva === "vaquinhas" && <VaquinhasTab grupo={grupo} membros={membros} isCapitao={isCapitao} />}
@@ -245,7 +245,7 @@ function tituloFor(papel: string) {
   return { label: "Jogador", emoji: "🎮" };
 }
 
-function MembrosTab({ grupo, membros, pendentes, isCapitao, onChange }: { grupo: any; membros: Membro[]; pendentes: Membro[]; isCapitao: boolean; onChange: () => void }) {
+function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onChange }: { grupo: any; membros: Membro[]; pendentes: Membro[]; isCapitao: boolean; souCapitaoExato: boolean; onChange: () => void }) {
   const { user } = useAuth();
   const confirm = useConfirm();
   const [convidarOpen, setConvidarOpen] = useState(false);
@@ -264,7 +264,7 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, onChange }: { grupo:
     })();
   }, [user?.id, grupo.id, membros.length]);
 
-  const setPapel = async (m: Membro, papel: "jogador" | "auxiliar") => {
+  const setPapel = async (m: Membro, papel: "jogador" | "auxiliar" | "capitao") => {
     const { error } = await supabase.from("grupo_membros").update({ papel } as never).eq("id", m.id);
     if (error) return toast.error(error.message);
     toast.success("Atualizado"); onChange();
@@ -348,6 +348,20 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, onChange }: { grupo:
                     <Button size="sm" variant="ghost" onClick={() => setPapel(m, m.papel === "auxiliar" ? "jogador" : "auxiliar")} title={m.papel === "auxiliar" ? "Remover auxiliar" : "Tornar auxiliar"}>
                       <UserCog className="h-4 w-4" />
                     </Button>
+                    {souCapitaoExato && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          if (await confirm({ title: "Promover a capitão?", description: `${m.profile?.nome || "Esse membro"} vai poder administrar o grupo igual você — liberar listas, editar regras, aprovar sorteios, tudo.`, confirmLabel: "Promover" })) {
+                            void setPapel(m, "capitao");
+                          }
+                        }}
+                        title="Tornar capitão"
+                      >
+                        <Crown className="h-4 w-4 text-primary" />
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" onClick={() => remover(m)} title="Remover">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
