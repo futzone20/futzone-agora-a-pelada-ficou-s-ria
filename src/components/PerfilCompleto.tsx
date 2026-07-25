@@ -350,7 +350,7 @@ export function PerfilCompleto() {
         onClick={() => setSecaoAtiva("indicar")}
       />
       <MenuRow
-        icon={CalendarDays} titulo="Histórico de peladas" subtitulo="Minutos jogados e avaliações por partida"
+        icon={CalendarDays} titulo="Minha Carreira" subtitulo="Sua evolução pelada após pelada"
         onClick={() => setSecaoAtiva("historico")}
       />
       <MenuRow
@@ -437,70 +437,98 @@ function HistoricoPeladasBox({ userId }: { userId: string | undefined }) {
       const { data: gs } = grupoIds.length ? await supabase.from("grupos").select("id, nome").in("id", grupoIds) : { data: [] as any[] };
       const gMap: Record<string, string> = {};
       (gs || []).forEach((g: any) => { gMap[g.id] = g.nome; });
-      setPeladas((ps || []).map((p: any) => ({ id: p.id, nome_pelada: p.nome_pelada, data: p.data, grupo_nome: gMap[p.grupo_id] || "Grupo" })));
+      const lista = (ps || []).map((p: any) => ({ id: p.id, nome_pelada: p.nome_pelada, data: p.data, grupo_nome: gMap[p.grupo_id] || "Grupo" }));
+      setPeladas(lista);
       setLoading(false);
+
+      // Pré-calcula o resumo de todas as peladas (não só ao clicar), pra poder desenhar o
+      // gráfico de evolução da carreira logo de cara.
+      const todosResumos = await Promise.all(lista.map((p) => calcularResumoJogadorPelada(p.id, userId)));
+      const mapa: Record<string, ResumoJogadorPelada | null> = {};
+      lista.forEach((p, i) => { mapa[p.id] = todosResumos[i]; });
+      setResumos(mapa);
     })();
   }, [userId]);
 
-  const abrir = async (peladaId: string) => {
-    if (aberta === peladaId) { setAberta(null); return; }
-    setAberta(peladaId);
-    if (!resumos[peladaId] && userId) {
-      const r = await calcularResumoJogadorPelada(peladaId, userId);
-      setResumos((prev) => ({ ...prev, [peladaId]: r }));
-    }
-  };
+  const abrir = (peladaId: string) => setAberta(aberta === peladaId ? null : peladaId);
+
+  const dadosGrafico = [...peladas].reverse().map((p) => ({
+    nome: p.data.split("-").reverse().slice(0, 2).join("/"),
+    pontos: resumos[p.id]?.pontosRanking ?? 0,
+  }));
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Histórico de Peladas</h3>
-      <p className="text-xs text-muted-foreground">Clique numa pelada pra ver seus minutos jogados e as notas que você recebeu.</p>
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Minha Carreira</h3>
+        <p className="text-xs text-muted-foreground">Sua evolução de pontuação (a mesma do Ranking) pelada após pelada. Só você vê isso.</p>
+        {peladas.length >= 2 && (
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dadosGrafico}>
+                <XAxis dataKey="nome" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="pontos" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Carregando...</p>
-      ) : peladas.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Você ainda não jogou nenhuma pelada.</p>
-      ) : (
-        <div className="space-y-2">
-          {peladas.map((p) => {
-            const r = resumos[p.id];
-            const estaAberta = aberta === p.id;
-            return (
-              <div key={p.id} className="rounded-xl border border-border bg-secondary/20 overflow-hidden">
-                <button onClick={() => abrir(p.id)} className="flex w-full items-center justify-between p-3 text-left">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-bold">{p.nome_pelada}</div>
-                    <div className="text-xs text-muted-foreground">{p.grupo_nome} · {p.data.split("-").reverse().join("/")}</div>
-                  </div>
-                  <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${estaAberta ? "rotate-90" : ""}`} />
-                </button>
-                {estaAberta && (
-                  <div className="border-t border-border p-3">
-                    {!r ? (
-                      <p className="text-xs text-muted-foreground">Carregando resumo...</p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="rounded-lg bg-secondary/40 p-2">
-                          <div className="flex items-center justify-center gap-1 text-sm font-bold"><Clock className="h-3.5 w-3.5 text-primary" /> {r.minutosJogados}</div>
-                          <div className="text-[10px] text-muted-foreground">minutos jogados</div>
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Peladas jogadas</h3>
+        <p className="text-xs text-muted-foreground">Clique numa pelada pra ver seus minutos jogados e as notas que você recebeu.</p>
+
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        ) : peladas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Você ainda não jogou nenhuma pelada.</p>
+        ) : (
+          <div className="space-y-2">
+            {peladas.map((p) => {
+              const r = resumos[p.id];
+              const estaAberta = aberta === p.id;
+              return (
+                <div key={p.id} className="rounded-xl border border-border bg-secondary/20 overflow-hidden">
+                  <button onClick={() => abrir(p.id)} className="flex w-full items-center justify-between p-3 text-left">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-bold">{p.nome_pelada}</div>
+                      <div className="text-xs text-muted-foreground">{p.grupo_nome} · {p.data.split("-").reverse().join("/")}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {r && <span className="text-xs font-bold text-primary">{r.pontosRanking} pts</span>}
+                      <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${estaAberta ? "rotate-90" : ""}`} />
+                    </div>
+                  </button>
+                  {estaAberta && (
+                    <div className="border-t border-border p-3">
+                      {!r ? (
+                        <p className="text-xs text-muted-foreground">Carregando resumo...</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="rounded-lg bg-secondary/40 p-2">
+                            <div className="flex items-center justify-center gap-1 text-sm font-bold"><Clock className="h-3.5 w-3.5 text-primary" /> {r.minutosJogados}</div>
+                            <div className="text-[10px] text-muted-foreground">minutos jogados</div>
+                          </div>
+                          <div className="rounded-lg bg-secondary/40 p-2">
+                            <div className="text-sm font-bold">⭐ {r.notaLances.toFixed(1)}</div>
+                            <div className="text-[10px] text-muted-foreground">nota (lances)</div>
+                          </div>
+                          <div className="rounded-lg bg-secondary/40 p-2">
+                            <div className="text-sm font-bold">{r.notaAvaliacoes != null ? `⭐ ${r.notaAvaliacoes.toFixed(1)}` : "—"}</div>
+                            <div className="text-[10px] text-muted-foreground">{r.totalAvaliacoes > 0 ? `avaliação (${r.totalAvaliacoes})` : "sem avaliação"}</div>
+                          </div>
                         </div>
-                        <div className="rounded-lg bg-secondary/40 p-2">
-                          <div className="text-sm font-bold">⭐ {r.notaLances.toFixed(1)}</div>
-                          <div className="text-[10px] text-muted-foreground">nota (lances)</div>
-                        </div>
-                        <div className="rounded-lg bg-secondary/40 p-2">
-                          <div className="text-sm font-bold">{r.notaAvaliacoes != null ? `⭐ ${r.notaAvaliacoes.toFixed(1)}` : "—"}</div>
-                          <div className="text-[10px] text-muted-foreground">{r.totalAvaliacoes > 0 ? `avaliação (${r.totalAvaliacoes})` : "sem avaliação"}</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
