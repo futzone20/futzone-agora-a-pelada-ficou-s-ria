@@ -110,7 +110,7 @@ export function CompartilharPodio({
             <div
               ref={cardRef}
               style={{
-                width: 270, height: 540, position: "relative", fontFamily: "system-ui, sans-serif",
+                width: 304, height: 540, position: "relative", fontFamily: "system-ui, sans-serif",
                 backgroundColor: "#0D0D0D", overflow: "hidden",
               }}
             >
@@ -126,7 +126,7 @@ export function CompartilharPodio({
                 <div style={{ fontSize: 12, color: "#00FF87", fontWeight: 700, marginTop: 2 }}>{peladaNome} · {dataFormatada}</div>
               </div>
 
-              <div style={{ position: "absolute", left: 0, right: 0, bottom: 64, padding: "0 14px" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, bottom: 64, padding: "0 22px" }}>
                 {estilo === "colorido" ? (
                   <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
                     <BlocoColorido l={segundo} posicao={2} meuId={meuId} />
