@@ -12,7 +12,7 @@ import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, User, Shuffle, U
 import { calcularTabela } from "@/lib/placar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { useAuth, rolePath } from "@/lib/auth";
 import { getNavItems } from "@/lib/navItems";
 import { mediaSkill, mediaTime, corTextoLegivel, type Jogador } from "@/lib/sorteio";
 import { escolherTimesIniciais } from "@/lib/rodizio";
@@ -388,6 +388,35 @@ function PeladaDetail() {
     if (error) return toast.error(error.message);
     toast.success("Presença cancelada");
     void load();
+  };
+
+  const cancelarPelada = async () => {
+    if (!pelada || !isCapitao || acting) return;
+    const ok = await confirm({
+      title: "Cancelar essa pelada?",
+      description: "Isso encerra a pelada de vez (não teve jogo). Todo mundo que confirmou presença vai ser avisado. Essa ação não pode ser desfeita.",
+      variant: "destructive",
+      confirmLabel: "Cancelar pelada",
+    });
+    if (!ok) return;
+    setActing(true);
+    const { error } = await supabase.from("peladas").update({ status: "cancelada" } as never).eq("id", id);
+    if (error) { toast.error(error.message); setActing(false); return; }
+
+    const { data: confs } = await supabase.from("pelada_confirmacoes").select("user_id").eq("pelada_id", id).eq("status", "confirmado");
+    const notifs = ((confs as any[]) || [])
+      .filter((c) => c.user_id !== user?.id)
+      .map((c) => ({
+        user_id: c.user_id,
+        titulo: "⚠️ Pelada cancelada",
+        mensagem: `A pelada "${pelada.nome_pelada}" foi cancelada pelo capitão.`,
+        link: "/jogador/peladas",
+      }));
+    if (notifs.length) await supabase.from("notificacoes").insert(notifs as never);
+
+    toast.success("Pelada cancelada.");
+    setActing(false);
+    navigate({ to: `${rolePath(user?.role || "jogador")}/peladas` as any });
   };
 
   const liberarLista = async () => {
@@ -802,6 +831,16 @@ function PeladaDetail() {
               </div>
             )}
           </div>
+        )}
+
+        {isCapitao && pelada.status !== "encerrada" && pelada.status !== "cancelada" && (
+          <button
+            onClick={cancelarPelada}
+            disabled={acting}
+            className="w-full rounded-xl border border-destructive/40 py-2.5 text-sm font-bold text-destructive/80 transition hover:bg-destructive/10"
+          >
+            Cancelar essa pelada
+          </button>
         )}
 
         {pelada.status === "em_andamento" && (
