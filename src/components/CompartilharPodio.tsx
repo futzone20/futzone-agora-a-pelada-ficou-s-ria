@@ -110,7 +110,7 @@ export function CompartilharPodio({
             <div
               ref={cardRef}
               style={{
-                width: 270, height: 480, position: "relative", fontFamily: "system-ui, sans-serif",
+                width: 270, height: 540, position: "relative", fontFamily: "system-ui, sans-serif",
                 backgroundColor: "#0D0D0D", overflow: "hidden",
               }}
             >
@@ -126,7 +126,7 @@ export function CompartilharPodio({
                 <div style={{ fontSize: 12, color: "#00FF87", fontWeight: 700, marginTop: 2 }}>{peladaNome} · {dataFormatada}</div>
               </div>
 
-              <div style={{ position: "absolute", left: 0, right: 0, bottom: 34, padding: "0 14px" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, bottom: 64, padding: "0 14px" }}>
                 {estilo === "colorido" ? (
                   <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
                     <BlocoColorido l={segundo} posicao={2} meuId={meuId} />
@@ -142,7 +142,7 @@ export function CompartilharPodio({
                 )}
               </div>
 
-              <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, opacity: 0.85 }}>
+              <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, opacity: 0.85 }}>
                 <Logo style={{ height: 16, width: "auto" }} />
                 <span style={{ fontSize: 8, letterSpacing: 1, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>www.mrfut.com.br</span>
               </div>
