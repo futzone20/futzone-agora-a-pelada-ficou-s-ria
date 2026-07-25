@@ -216,14 +216,17 @@ export function PerfilCompleto() {
         {secaoAtiva === "pontos" && (
           <>
             <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">⭐ Meus Pontos</h3>
-              <div className="text-3xl font-extrabold text-primary text-center">{pontos}</div>
-              <div className="space-y-1 mt-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">⭐ Meus XPs</h3>
+              <div className="text-3xl font-extrabold text-primary text-center">{pontos} <span className="text-base font-bold text-muted-foreground">XP</span></div>
+              <div className="space-y-1.5 mt-2">
                 {historico.length === 0 ? <p className="text-xs text-muted-foreground text-center">Sem histórico ainda.</p> :
                   historico.map((h) => (
-                    <div key={h.id} className="flex items-center justify-between rounded bg-secondary/30 px-2 py-1.5 text-xs">
-                      <span className="flex-1">{h.descricao_legivel || h.acao}</span>
-                      <span className={h.valor_pontos >= 0 ? "font-bold text-green-500" : "font-bold text-red-500"}>{h.valor_pontos > 0 ? "+" : ""}{h.valor_pontos}</span>
+                    <div key={h.id} className="rounded bg-secondary/30 px-2.5 py-2 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="flex-1">{fraseXp(h)}</span>
+                        <span className={`shrink-0 font-bold ${h.valor_pontos >= 0 ? "text-green-500" : "text-red-500"}`}>{h.valor_pontos > 0 ? "+" : ""}{h.valor_pontos} XP</span>
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-muted-foreground">{new Date(h.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} às {new Date(h.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</div>
                     </div>
                   ))
                 }
@@ -327,7 +330,7 @@ export function PerfilCompleto() {
         onClick={() => setSecaoAtiva("ofensiva")}
       />
       <MenuRow
-        icon={Star} titulo="Meus pontos" subtitulo="Histórico de pontos e conquistas"
+        icon={Star} titulo="Meus XPs" subtitulo="Histórico de XP e conquistas"
         preview={
           <div className="text-right">
             <div className="text-sm font-bold text-primary">⭐ {pontos}{ultimoPonto && ultimoPonto.valor_pontos > 0 ? ` +${ultimoPonto.valor_pontos}` : ""}</div>
@@ -424,6 +427,35 @@ function ContaPreferenciasBox({ signOut }: { signOut: () => Promise<void> }) {
       </div>
     </div>
   );
+}
+
+function fraseXp(h: any): string {
+  const d = h.detalhes || {};
+  const naPelada = d.pelada_nome ? ` na pelada "${d.pelada_nome}"` : "";
+  switch (h.acao) {
+    case "confirmou_presenca": return `XP por confirmar presença${naPelada}`;
+    case "cancelou_tarde": return `XP descontado por cancelar em cima da hora${naPelada}`;
+    case "jogou_pelada": return `XP por jogar${naPelada}`;
+    case "marcou_gol": return `XP por fazer um gol${naPelada}`;
+    case "deu_passe_decisivo": return `XP por dar um passe decisivo${naPelada}`;
+    case "fez_defesa": return `XP por fazer uma defesa${naPelada}`;
+    case "foi_auxiliar": return `XP por ser auxiliar${naPelada}`;
+    case "foi_mvp": return `XP por ser eleito MVP${naPelada}`;
+    case "avaliou_novo_membro": return `XP por avaliar as skills de ${d.avaliado_nome || "um novo membro"}${d.grupo_nome ? ` no grupo ${d.grupo_nome}` : ""}`;
+    case "avaliou_pos_pelada": return `XP por avaliar ${d.avaliado_nome || "um jogador"}${d.pelada_nome ? ` ao final da pelada "${d.pelada_nome}"` : ""}`;
+    case "avaliou_jogadores": return `XP por avaliar ${d.avaliado_nome || "os jogadores"}${naPelada}`;
+    case "avaliou_todos_bonus": return `XP bônus por avaliar TODOS os jogadores${naPelada}`;
+    case "avaliou_todos_grupo_bonus": return "XP bônus por avaliar todos os membros do grupo";
+    case "indicou_jogador_cadastrou": return `XP por ${d.indicado_nome || "alguém"} ter entrado com o seu link de indicação`;
+    case "indicou_jogador_jogou": return `XP por ${d.indicado_nome || "seu indicado"} ter jogado a primeira pelada`;
+    case "convite_grupo_novo_membro": return `XP por ${d.novo_membro_nome || "alguém"} ter entrado direto no seu grupo${d.grupo_nome ? ` "${d.grupo_nome}"` : ""} pelo convite`;
+    case "desafio_completo": return `XP por completar o desafio${d.desafio_nome ? ` "${d.desafio_nome}"` : ""}`;
+    case "ofensiva_5": return "XP por manter 5 peladas seguidas 🔥";
+    case "ofensiva_10": return "XP por manter 10 peladas seguidas 🔥";
+    case "ofensiva_20": return "XP por manter 20 peladas seguidas 🔥";
+    case "ofensiva_50": return "XP por manter 50 peladas seguidas 🔥";
+    default: return h.descricao_legivel || h.acao;
+  }
 }
 
 function HistoricoPeladasBox({ userId }: { userId: string | undefined }) {
