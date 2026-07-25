@@ -124,14 +124,52 @@ function LancesPage() {
 
   useEffect(() => { void load(); }, [id]);
 
+  // Realtime: qualquer mudança em lances/partidas/auxiliares dessa pelada recarrega a tela.
+  // Reconecta sozinho se o canal cair (comum no celular quando o app volta do segundo plano)
+  // e tem um polling de segurança como plano B, caso o websocket falhe silenciosamente.
   useEffect(() => {
-    const ch = supabase.channel(`lances-rt-${id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    let cancelado = false;
+    let ch: ReturnType<typeof supabase.channel> | null = null;
+    let reconectarTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const conectar = () => {
+      if (cancelado) return;
+      ch = supabase
+        .channel(`lances-rt-${id}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "lances", filter: `pelada_id=eq.${id}` }, () => void load())
+        .on("postgres_changes", { event: "*", schema: "public", table: "partidas", filter: `pelada_id=eq.${id}` }, () => void load())
+        .on("postgres_changes", { event: "*", schema: "public", table: "auxiliares_partida", filter: `pelada_id=eq.${id}` }, () => void load())
+        .on("postgres_changes", { event: "*", schema: "public", table: "pelada_auxiliares", filter: `pelada_id=eq.${id}` }, () => void load())
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "peladas", filter: `id=eq.${id}` }, () => void load())
+        .subscribe((status) => {
+          if (cancelado) return;
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            // conexão caiu — recarrega o estado atual e tenta se reconectar em 2s
+            void load();
+            if (ch) supabase.removeChannel(ch);
+            reconectarTimeout = setTimeout(conectar, 2000);
+          }
+        });
+    };
+    conectar();
+
+    // ao voltar do segundo plano (troca de app, tela bloqueada etc.), força atualização
+    const onVisibility = () => { if (document.visibilityState === "visible") void load(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onVisibility);
+
+    // plano B: mesmo com o realtime ativo, garante que a tela nunca fique presa
+    // por mais de alguns segundos caso algum evento se perca
+    const poll = setInterval(() => void load(), 6000);
+
+    return () => {
+      cancelado = true;
+      if (reconectarTimeout) clearTimeout(reconectarTimeout);
+      if (ch) supabase.removeChannel(ch);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onVisibility);
+      clearInterval(poll);
+    };
   }, [id]);
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
