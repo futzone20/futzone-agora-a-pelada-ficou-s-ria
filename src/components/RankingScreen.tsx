@@ -97,20 +97,61 @@ export function RankingScreen() {
       ) : linhas.length === 0 ? (
         <EmptyState icon={Trophy} title="Sem dados nessa pelada" description="Ninguém pontuou ainda — pode ser que os lances ou avaliações não tenham sido registrados." />
       ) : (
-        <div className="space-y-2">
-          {linhas.map((l, i) => (
-            <div key={l.user_id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${l.user_id === user?.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
-              <span className="w-7 shrink-0 text-center text-base font-bold">{MEDALHAS[i] || <span className="text-sm text-muted-foreground">{i + 1}</span>}</span>
-              <Avatar className="h-8 w-8 shrink-0">
-                {l.foto_url ? <AvatarImage src={l.foto_url} /> : null}
-                <AvatarFallback className="bg-secondary text-xs">{l.nome[0]}</AvatarFallback>
-              </Avatar>
-              <span className="flex-1 truncate text-sm font-bold">{l.nome}</span>
-              <span className={`text-sm font-bold ${l.pontos >= 0 ? "text-primary" : "text-destructive"}`}>{l.pontos} <span className="text-[10px] font-normal text-muted-foreground">pts</span></span>
-            </div>
-          ))}
-        </div>
+        <>
+          {linhas.length >= 3 && <Podio linhas={linhas} meuId={user?.id} />}
+          <div className="space-y-2">
+            {linhas.slice(3).map((l, i) => (
+              <div key={l.user_id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${l.user_id === user?.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
+                <span className="w-7 shrink-0 text-center text-sm font-bold text-muted-foreground">{i + 4}</span>
+                <Avatar className="h-8 w-8 shrink-0">
+                  {l.foto_url ? <AvatarImage src={l.foto_url} /> : null}
+                  <AvatarFallback className="bg-secondary text-xs">{l.nome[0]}</AvatarFallback>
+                </Avatar>
+                <span className="flex-1 truncate text-sm font-bold">{l.nome}</span>
+                <span className={`text-sm font-bold ${l.pontos >= 0 ? "text-primary" : "text-destructive"}`}>{l.pontos} <span className="text-[10px] font-normal text-muted-foreground">pts</span></span>
+              </div>
+            ))}
+            {linhas.length < 3 && linhas.map((l, i) => (
+              <div key={l.user_id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${l.user_id === user?.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
+                <span className="w-7 shrink-0 text-center text-base font-bold">{MEDALHAS[i]}</span>
+                <Avatar className="h-8 w-8 shrink-0">
+                  {l.foto_url ? <AvatarImage src={l.foto_url} /> : null}
+                  <AvatarFallback className="bg-secondary text-xs">{l.nome[0]}</AvatarFallback>
+                </Avatar>
+                <span className="flex-1 truncate text-sm font-bold">{l.nome}</span>
+                <span className={`text-sm font-bold ${l.pontos >= 0 ? "text-primary" : "text-destructive"}`}>{l.pontos} <span className="text-[10px] font-normal text-muted-foreground">pts</span></span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
+    </div>
+  );
+}
+
+function Podio({ linhas, meuId }: { linhas: LinhaRankingPelada[]; meuId: string | undefined }) {
+  const [primeiro, segundo, terceiro] = linhas;
+  const alturas = { 1: "h-24", 2: "h-16", 3: "h-12" } as const;
+
+  const Bloco = ({ l, posicao }: { l: LinhaRankingPelada; posicao: 1 | 2 | 3 }) => (
+    <div className="flex flex-1 flex-col items-center">
+      <Avatar className={`mb-1.5 shrink-0 border-2 ${posicao === 1 ? "h-16 w-16 border-primary" : "h-12 w-12 border-border"}`}>
+        {l.foto_url ? <AvatarImage src={l.foto_url} /> : null}
+        <AvatarFallback className="bg-secondary text-sm">{l.nome[0]}</AvatarFallback>
+      </Avatar>
+      <span className="max-w-full truncate text-center text-xs font-bold">{l.nome}{l.user_id === meuId ? " (você)" : ""}</span>
+      <span className="text-[11px] font-bold text-primary">{l.pontos} pts</span>
+      <div className={`mt-1.5 flex w-full items-start justify-center rounded-t-lg ${alturas[posicao]} ${posicao === 1 ? "bg-primary/20 border border-primary" : "bg-secondary border border-border"}`}>
+        <span className={`mt-1.5 text-lg font-black ${posicao === 1 ? "text-primary" : "text-muted-foreground"}`}>{posicao}º</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex items-end justify-center gap-2 rounded-2xl border border-border bg-card p-4 pb-3">
+      <Bloco l={segundo} posicao={2} />
+      <Bloco l={primeiro} posicao={1} />
+      <Bloco l={terceiro} posicao={3} />
     </div>
   );
 }
