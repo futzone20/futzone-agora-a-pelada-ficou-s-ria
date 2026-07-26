@@ -20,6 +20,8 @@ export interface FZUser {
   foto_url?: string | null;
   cidade?: string | null;
   estado?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   peso?: number | null;
   altura?: number | null;
   bio?: string | null;
@@ -53,7 +55,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 async function loadProfile(userId: string): Promise<FZUser | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("user_id, nome, email, whatsapp, data_nascimento, role, quer_ser_goleiro, posicao_preferida, foto_url, cidade, estado, peso, altura, bio, handle")
+    .select("user_id, nome, email, whatsapp, data_nascimento, role, quer_ser_goleiro, posicao_preferida, foto_url, cidade, estado, latitude, longitude, peso, altura, bio, handle")
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) return null;
@@ -70,6 +72,8 @@ async function loadProfile(userId: string): Promise<FZUser | null> {
     foto_url: d.foto_url,
     cidade: d.cidade,
     estado: d.estado,
+    latitude: d.latitude,
+    longitude: d.longitude,
     handle: d.handle,
     peso: d.peso,
     altura: d.altura,
@@ -172,6 +176,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (patch.foto_url !== undefined) dbPatch.foto_url = patch.foto_url;
     if (patch.cidade !== undefined) dbPatch.cidade = patch.cidade;
     if (patch.estado !== undefined) dbPatch.estado = patch.estado;
+    if (patch.latitude !== undefined) dbPatch.latitude = patch.latitude;
+    if (patch.longitude !== undefined) dbPatch.longitude = patch.longitude;
     if (patch.peso !== undefined) dbPatch.peso = patch.peso;
     if (patch.altura !== undefined) dbPatch.altura = patch.altura;
     if (patch.bio !== undefined) dbPatch.bio = patch.bio;
