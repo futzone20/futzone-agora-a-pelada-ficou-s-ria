@@ -19,7 +19,7 @@ const SKILLS_LABELS: { key: string; label: string; emoji: string }[] = [
 ];
 
 function GoleiroPerfilPublico() {
-  const { userId } = Route.useParams();
+  const { userId: identificador } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [dados, setDados] = useState<any>(null);
@@ -28,12 +28,20 @@ function GoleiroPerfilPublico() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await (supabase as any).rpc("goleiro_perfil_publico", { _user_id: userId });
+      let userIdReal = identificador;
+      // Link no formato /goleiros/perfil/@handle — resolve o @handle pro user_id de verdade.
+      if (identificador.startsWith("@")) {
+        const { data: prof, error: errProf } = await (supabase as any)
+          .from("profiles").select("user_id").eq("handle", identificador.slice(1)).maybeSingle();
+        if (errProf || !prof) { setErro(true); setLoading(false); return; }
+        userIdReal = (prof as any).user_id;
+      }
+      const { data, error } = await (supabase as any).rpc("goleiro_perfil_publico", { _user_id: userIdReal });
       if (error || !data?.perfil) { setErro(true); setLoading(false); return; }
       setDados(data);
       setLoading(false);
     })();
-  }, [userId]);
+  }, [identificador]);
 
   const Voltar = () => (
     <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-sm text-muted-foreground">
