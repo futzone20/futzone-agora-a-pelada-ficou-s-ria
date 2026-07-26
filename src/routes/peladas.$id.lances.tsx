@@ -237,6 +237,13 @@ function LancesPage() {
     return goleiros.length > 0 ? goleiros : todos;
   };
 
+  // pra prefixar 🧤 antes do nome de quem é goleiro, em qualquer lista de jogadores
+  const goleirosIds = useMemo(
+    () => new Set(timeJogadores.filter((x: any) => x.eh_goleiro).map((x: any) => x.user_id)),
+    [timeJogadores]
+  );
+  const nomeComLuva = (uid: string, nome: string) => (goleirosIds.has(uid) ? `🧤 ${nome}` : nome);
+
   const classificacao = useMemo(() => {
     const tab = calcularTabela(partidasAll, times);
     return Object.values(tab).sort((a, b) => {
@@ -671,6 +678,7 @@ function LancesPage() {
                         const info = TIPO_LABEL_COR[l.tipo] || { label: l.tipo, color: "#9CA3AF" };
                         const icon = TIPOS.find((t) => t.v === l.tipo)?.icon || "•";
                         const nome = profiles[l.user_id]?.nome || "Jogador";
+                        const nomeExibido = nomeComLuva(l.user_id, nome);
                         return (
                           <div key={l.id} className={`flex items-center gap-2 px-3 py-2 ${idx > 0 ? "border-t border-[#2A2A2A]" : ""}`}>
                             <div className="grid h-7 w-7 place-items-center rounded-full shrink-0" style={{ background: `${info.color}22` }}>
@@ -678,10 +686,10 @@ function LancesPage() {
                             </div>
                             <div className="flex-1 min-w-0 text-[12px] leading-tight">
                               {l.tipo === "outro" ? (
-                                <span className="font-semibold text-white/90">{textoReclamacao(nome, contarReclamacoes(l.user_id, l.id))}</span>
+                                <span className="font-semibold text-white/90">{textoReclamacao(nomeExibido, contarReclamacoes(l.user_id, l.id))}</span>
                               ) : (
                                 <>
-                                  <span className="font-bold text-white">{nome}</span>
+                                  <span className="font-bold text-white">{nomeExibido}</span>
                                   <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
                                   <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
                                   <span className="text-white/50"> — </span>
@@ -774,7 +782,7 @@ function LancesPage() {
                   onClick={() => marcar(j.user_id)}
                   className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
                 >
-                  <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
+                  <span className="truncate text-sm">{nomeComLuva(j.user_id, profiles[j.user_id]?.nome || "Jogador")}</span>
                 </button>
               ))}
             </div>
@@ -850,7 +858,7 @@ function LancesPage() {
                   onClick={() => marcarArtilheiro(j.user_id)}
                   className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
                 >
-                  <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
+                  <span className="truncate text-sm">{nomeComLuva(j.user_id, profiles[j.user_id]?.nome || "Jogador")}</span>
                 </button>
               ))}
             </div>
