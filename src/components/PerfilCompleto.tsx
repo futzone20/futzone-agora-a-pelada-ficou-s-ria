@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { CentralMensagensCard } from "@/components/CentralMensagensCard";
 import {
   Copy, ArrowLeft, ChevronRight, User, Radar as RadarIcon, Flame, Star,
-  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays, Coins, Shield,
+  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays, Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -396,20 +396,14 @@ export function PerfilCompleto() {
       />
       {user?.goleiro && (
         <MenuRow
-          icon={Shield} titulo="Meu perfil de goleiro" subtitulo="Veja como sua carreira aparece publicamente"
-          onClick={() => user?.id && navigate({ to: "/goleiros/perfil/$userId", params: { userId: user.id } })}
+          icon={Shirt} titulo="Virar goleiro profissional" subtitulo="Apareça no catálogo pra capitães te chamarem"
+          onClick={() => navigate({ to: "/goleiros/meu-perfil" })}
         />
       )}
       {user?.goleiro && (
         <MenuRow
           icon={MessageCircle} titulo="Convites de peladas" subtitulo="Capitães te chamando pra jogar"
           onClick={() => navigate({ to: "/jogador/convites-goleiro" })}
-        />
-      )}
-      {user?.goleiro && (
-        <MenuRow
-          icon={Shirt} titulo="Virar goleiro profissional" subtitulo="Apareça no catálogo pra capitães te chamarem"
-          onClick={() => navigate({ to: "/goleiros/meu-perfil" })}
         />
       )}
       <MenuRow
