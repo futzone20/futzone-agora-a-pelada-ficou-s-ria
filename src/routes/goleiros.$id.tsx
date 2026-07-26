@@ -1,4 +1,4 @@
-import { createFileRoute, useParams, Link } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Star } from "lucide-react";
+import { Star, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/goleiros/$id")({ component: GoleiroPage });
@@ -20,16 +20,20 @@ const DIAS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 function GoleiroPage() {
   const { id } = useParams({ from: "/goleiros/$id" });
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [g, setG] = useState<any>(null);
   const [disp, setDisp] = useState<any[]>([]);
   const [skillsGoleiro, setSkillsGoleiro] = useState<any>(null);
   const [peladas, setPeladas] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(false);
   const [form, setForm] = useState<any>({ pelada_id:"", data:"", horario_inicio:"", horario_fim:"", arena_nome:"", valor_combinado:"", mensagem:"" });
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, handle)").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, handle)").eq("id", id).maybeSingle();
+      if (error || !data) { setErro(true); setLoading(false); return; }
       setG(data);
       const { data: d } = await supabase.from("goleiros_disponibilidade").select("*").eq("goleiro_id", id).order("dia_semana");
       setDisp(d ?? []);
@@ -39,6 +43,7 @@ function GoleiroPage() {
         const { data: sk } = await (supabase as any).from("skills_goleiro").select("*").eq("user_id", (data as any).user_id).maybeSingle();
         setSkillsGoleiro(sk);
       }
+      setLoading(false);
     })();
   }, [id]);
 
@@ -66,7 +71,21 @@ function GoleiroPage() {
     if (error) toast.error(error.message); else { toast.success("Convite enviado!"); setOpen(false); }
   };
 
-  if (!g) return <div className="p-8 text-center">Carregando...</div>;
+  const Voltar = () => (
+    <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+      <ArrowLeft className="h-4 w-4" /> Voltar
+    </button>
+  );
+
+  if (loading) return <div className="p-4 max-w-2xl mx-auto space-y-4"><Voltar /><p className="text-center text-sm text-muted-foreground py-8">Carregando...</p></div>;
+  if (erro || !g) return (
+    <div className="p-4 max-w-2xl mx-auto space-y-4">
+      <Voltar />
+      <p className="text-center text-sm text-muted-foreground py-8">
+        Não achamos esse perfil de goleiro — pode ter sido desativado do catálogo.
+      </p>
+    </div>
+  );
   const media = skillsGoleiro
     ? (skillsGoleiro.reflexo + skillsGoleiro.seguranca + skillsGoleiro.jogo_aereo + skillsGoleiro.saida_pes + skillsGoleiro.posicionamento + skillsGoleiro.comando_area) / 6
     : 3;
@@ -74,6 +93,7 @@ function GoleiroPage() {
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-3">
+      <Voltar />
       <Card className="p-4 flex gap-4 items-center">
         <div className="w-20 h-20 rounded-full bg-muted overflow-hidden">{g.profiles?.foto_url && <img src={g.profiles.foto_url} className="w-full h-full object-cover"/>}</div>
         <div className="flex-1">
