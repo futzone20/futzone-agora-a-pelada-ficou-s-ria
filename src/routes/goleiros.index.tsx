@@ -56,9 +56,24 @@ function GoleirosCat() {
 
   useEffect(() => {
     (async () => {
-      const { data: g } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, whatsapp, handle, latitude, longitude)").eq("ativo_catalogo", true);
+      const { data: g, error: errG } = await supabase.from("goleiros_perfil").select("*").eq("ativo_catalogo", true);
+      if (errG) {
+        toast.error(`Erro ao buscar goleiros: ${errG.message}`);
+        setGoleiros([]);
+        return;
+      }
       const ids = (g ?? []).map((x:any)=>x.id);
       const userIds = (g ?? []).map((x:any)=>x.user_id);
+
+      let profMap: Record<string, any> = {};
+      if (userIds.length) {
+        const { data: profs, error: errP } = await supabase.from("profiles")
+          .select("user_id, nome, cidade, estado, foto_url, whatsapp, handle, latitude, longitude")
+          .in("user_id", userIds);
+        if (errP) toast.error(`Erro ao buscar perfis: ${errP.message}`);
+        (profs ?? []).forEach((p: any) => { profMap[p.user_id] = p; });
+      }
+
       // Nota unificada: vem das skills reais de goleiro (construídas a partir das
       // avaliações de pelada de verdade), não mais de um catálogo separado.
       let skillsMap: Record<string, { nivel: number; n: number }> = {};
@@ -75,12 +90,14 @@ function GoleirosCat() {
         (bs ?? []).forEach((b:any)=>{ bloq[b.goleiro_id] = true; });
       }
       let arr = (g ?? []).map((x:any)=>{
-        const lat = x.profiles?.latitude, lng = x.profiles?.longitude;
+        const prof = profMap[x.user_id];
+        const lat = prof?.latitude, lng = prof?.longitude;
         const distancia = minhaLoc && lat != null && lng != null
           ? distanciaKm(minhaLoc, { latitude: lat, longitude: lng })
           : null;
         return {
           ...x,
+          profiles: prof,
           _media: skillsMap[x.user_id]?.nivel ?? 3,
           _n: skillsMap[x.user_id]?.n ?? 0,
           _ocupado: !!bloq[x.id],
