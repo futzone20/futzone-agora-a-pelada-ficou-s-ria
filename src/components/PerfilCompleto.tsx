@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { calcularResumoJogadorPelada, type ResumoJogadorPelada } from "@/lib/resumoJogadorPelada";
+import { obterLocalizacaoCompleta } from "@/lib/geolocalizacao";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 
 const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -45,7 +46,9 @@ export function PerfilCompleto() {
   const [form, setForm] = useState({
     nome: "", whatsapp: "", nascimento: "", cidade: "", estado: "",
     peso: "", altura: "", posicao: "linha", bio: "",
+    latitude: null as number | null, longitude: null as number | null,
   });
+  const [buscandoLocalizacao, setBuscandoLocalizacao] = useState(false);
   const [skills, setSkills] = useState<Record<SkillKey, number>>({ velocidade:3,drible:3,passe:3,chute:3,resistencia:3,posicionamento:3 });
   const [skillsMeta, setSkillsMeta] = useState({ total: 0, peso: 1 });
   const [pontos, setPontos] = useState(0);
@@ -56,6 +59,7 @@ export function PerfilCompleto() {
   const [whatsapp, setWhatsapp] = useState<{ conectado: boolean; numero: string | null }>({ conectado: false, numero: null });
   const [saving, setSaving] = useState(false);
   const [diaXpSelecionado, setDiaXpSelecionado] = useState<Date | undefined>(undefined);
+  const [temPerfilGoleiro, setTemPerfilGoleiro] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -64,6 +68,7 @@ export function PerfilCompleto() {
       cidade: user.cidade || "", estado: user.estado || "",
       peso: user.peso?.toString() || "", altura: user.altura?.toString() || "",
       posicao: user.posicao || "linha", bio: user.bio || "",
+      latitude: user.latitude ?? null, longitude: user.longitude ?? null,
     });
     void (async () => {
       const { data: sk } = await supabase.from("skills")
@@ -85,6 +90,10 @@ export function PerfilCompleto() {
       setTemporadas(ts || []);
       const { data: inds } = await supabase.from("convites_indicacao").select("*").eq("indicador_id", user.id);
       setIndicacoes(inds || []);
+      if (user.goleiro) {
+        const { data: gp } = await (supabase as any).from("goleiros_perfil").select("id").eq("user_id", user.id).maybeSingle();
+        setTemPerfilGoleiro(!!gp);
+      }
     })();
   }, [user?.id]);
 
@@ -98,6 +107,8 @@ export function PerfilCompleto() {
         nascimento: form.nascimento || "",
         cidade: form.cidade || null,
         estado: form.estado || null,
+        latitude: form.latitude,
+        longitude: form.longitude,
         peso: form.peso ? Number(form.peso) : null,
         altura: form.altura ? Number(form.altura) : null,
         posicao: form.posicao,
@@ -154,6 +165,24 @@ export function PerfilCompleto() {
                 </Select>
               </div>
             </div>
+            <Button
+              type="button" variant="outline" size="sm" disabled={buscandoLocalizacao}
+              onClick={async () => {
+                setBuscandoLocalizacao(true);
+                try {
+                  const loc = await obterLocalizacaoCompleta();
+                  setForm((f) => ({ ...f, cidade: loc.cidade, estado: loc.estado || f.estado, latitude: loc.latitude, longitude: loc.longitude }));
+                  toast.success(`Localização encontrada: ${loc.cidade}${loc.estado ? `/${loc.estado}` : ""}`);
+                } catch (e: any) {
+                  toast.error(e.message || "Não foi possível obter sua localização");
+                } finally {
+                  setBuscandoLocalizacao(false);
+                }
+              }}
+              className="w-full"
+            >
+              <MapPin className="h-4 w-4 mr-1.5" /> {buscandoLocalizacao ? "Localizando..." : "Usar minha localização"}
+            </Button>
             <div className="grid grid-cols-2 gap-2">
               <div><Label>Peso (kg)</Label><Input type="number" value={form.peso} onChange={(e) => setForm({ ...form, peso: e.target.value })} /></div>
               <div><Label>Altura (cm)</Label><Input type="number" value={form.altura} onChange={(e) => setForm({ ...form, altura: e.target.value })} /></div>
@@ -396,7 +425,9 @@ export function PerfilCompleto() {
       />
       {user?.goleiro && (
         <MenuRow
-          icon={Shirt} titulo="Virar goleiro profissional" subtitulo="Apareça no catálogo pra capitães te chamarem"
+          icon={Shirt}
+          titulo={temPerfilGoleiro ? "Meu catálogo de goleiro" : "Virar goleiro profissional"}
+          subtitulo={temPerfilGoleiro ? "Editar preço, disponibilidade e catálogo" : "Apareça no catálogo pra capitães te chamarem"}
           onClick={() => navigate({ to: "/goleiros/meu-perfil" })}
         />
       )}
