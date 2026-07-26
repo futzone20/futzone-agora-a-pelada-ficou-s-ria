@@ -16,14 +16,6 @@ const SKILLS_LABELS: { key: string; label: string; emoji: string }[] = [
   { key: "comando_area", label: "Comando de área", emoji: "📣" },
 ];
 
-function tituloPorNivel(nivel: number, totalAvaliacoes: number): { titulo: string; emoji: string } | null {
-  if (totalAvaliacoes < 5) return null;
-  if (nivel >= 4.5) return { titulo: "Muralha", emoji: "🧱" };
-  if (nivel >= 4.0) return { titulo: "Paredão", emoji: "🛡️" };
-  if (nivel >= 3.5) return { titulo: "Seguro nas alturas", emoji: "🐱" };
-  return null;
-}
-
 function GoleiroPerfilPublico() {
   const { userId } = Route.useParams();
   const [dados, setDados] = useState<any>(null);
@@ -42,16 +34,16 @@ function GoleiroPerfilPublico() {
   if (loading) return <div className="p-8 text-center text-sm text-muted-foreground">Carregando...</div>;
   if (erro || !dados) return <div className="p-8 text-center text-sm text-muted-foreground">Perfil não encontrado.</div>;
 
-  const { perfil, jogando_agora, skills, carreira, marketplace } = dados;
+  const { perfil, jogando_agora, skills, carreira, marketplace, selos } = dados;
   const nivel = skills?.nivel_geral ?? 3;
   const totalAvaliacoes = skills?.total_avaliacoes_recebidas ?? 0;
-  const titulo = tituloPorNivel(nivel, totalAvaliacoes);
 
   const partidas = carreira?.partidas_jogadas ?? 0;
   const vitorias = carreira?.vitorias ?? 0;
   const empates = carreira?.empates ?? 0;
   const derrotas = carreira?.derrotas ?? 0;
   const golsSofridos = carreira?.gols_sofridos_carreira ?? 0;
+  const semSofrerGol = carreira?.jogos_sem_sofrer_gol ?? 0;
   const mediaGolsSofridos = partidas > 0 ? (golsSofridos / partidas).toFixed(2) : "—";
 
   return (
@@ -72,10 +64,14 @@ function GoleiroPerfilPublico() {
           </div>
           {perfil.handle && <p className="text-sm font-medium text-primary">@{perfil.handle}</p>}
           <p className="text-sm text-muted-foreground">{perfil.cidade}{perfil.estado && `/${perfil.estado}`}</p>
-          {titulo && (
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
-              {titulo.emoji} {titulo.titulo}
-            </span>
+          {selos?.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {selos.map((s: any) => (
+                <span key={s.codigo} title={s.nome} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                  {s.emoji} {s.nome}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </Card>
@@ -97,13 +93,6 @@ function GoleiroPerfilPublico() {
               <div className="text-sm font-medium text-muted-foreground">Sem cobrança fixa</div>
             )}
           </div>
-          {marketplace.total_avaliacoes_catalogo > 0 && (
-            <div className="flex items-center gap-1 text-sm">
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span className="font-bold">{marketplace.nota_catalogo}</span>
-              <span className="text-xs text-muted-foreground">({marketplace.total_avaliacoes_catalogo} avaliações do catálogo)</span>
-            </div>
-          )}
         </Card>
       )}
 
@@ -153,6 +142,12 @@ function GoleiroPerfilPublico() {
           <span className="flex items-center gap-1.5 text-muted-foreground"><Target className="h-3.5 w-3.5" /> Gols sofridos na carreira</span>
           <span className="font-bold">{golsSofridos} <span className="text-xs font-normal text-muted-foreground">({mediaGolsSofridos}/partida)</span></span>
         </div>
+        {partidas > 0 && (
+          <div className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">🧱 Partidas sem sofrer gol</span>
+            <span className="font-bold">{semSofrerGol} <span className="text-xs font-normal text-muted-foreground">de {partidas}</span></span>
+          </div>
+        )}
         {partidas === 0 && (
           <p className="text-xs text-muted-foreground">
             Carreira contada a partir de agora — partidas jogadas antes dessa atualização não entram na conta.
