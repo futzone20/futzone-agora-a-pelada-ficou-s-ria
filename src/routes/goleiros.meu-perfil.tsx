@@ -72,7 +72,9 @@ function MeuPerfilGoleiro() {
 
   const toggleTipo = (v: string) => setTipos((arr) => arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-  const linkPublico = user?.id && typeof window !== "undefined" ? `${window.location.origin}/goleiros/perfil/${user.id}` : "";
+  const linkPublico = user?.id && typeof window !== "undefined"
+    ? `${window.location.origin}/goleiros/perfil/${user.handle ? `@${user.handle}` : user.id}`
+    : "";
 
   const copiarLink = async () => {
     try {
