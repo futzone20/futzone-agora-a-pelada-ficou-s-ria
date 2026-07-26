@@ -55,9 +55,20 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
       tipo: "conhecimento_previo", conhece_jogador: true, ...vals,
     } as never);
     if (error) { setSaving(false); return toast.error(error.message); }
-    await supabase.rpc("creditar_pontos", { _user_id: user.id, _acao: "avaliou_novo_membro" } as never);
+    // O crédito de XP já acontece sozinho via trigger no banco (dispara na
+    // hora que essa linha é inserida) — aqui só lemos de volta o valor real
+    // pra mostrar certinho no toast, sem chutar um número fixo.
+    const { data: hist } = await supabase
+      .from("pontos_historico")
+      .select("valor_pontos")
+      .eq("user_id", user.id)
+      .eq("acao", "avaliou_novo_membro")
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const xp = (hist as any)?.valor_pontos;
     setSaving(false);
-    toast.success("Avaliação enviada! +8 pontos");
+    toast.success(`Avaliação enviada!${xp ? ` +${xp} XP` : ""}`);
     onDone?.(); onClose();
   };
 
