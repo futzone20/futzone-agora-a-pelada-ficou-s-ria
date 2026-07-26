@@ -32,9 +32,10 @@ function GoleiroPage() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, handle)").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("goleiros_perfil").select("*").eq("id", id).maybeSingle();
       if (error || !data) { setErro(true); setLoading(false); return; }
-      setG(data);
+      const { data: prof } = await supabase.from("profiles").select("nome, cidade, estado, foto_url, handle").eq("user_id", (data as any).user_id).maybeSingle();
+      setG({ ...data, profiles: prof });
       const { data: d } = await supabase.from("goleiros_disponibilidade").select("*").eq("goleiro_id", id).order("dia_semana");
       setDisp(d ?? []);
       // Nota unificada: vem das skills reais de goleiro (mesma fonte da carreira pública),
