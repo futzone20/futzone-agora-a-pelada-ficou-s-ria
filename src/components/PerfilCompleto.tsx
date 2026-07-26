@@ -406,6 +406,12 @@ export function PerfilCompleto() {
           onClick={() => navigate({ to: "/jogador/convites-goleiro" })}
         />
       )}
+      {user?.goleiro && (
+        <MenuRow
+          icon={Shirt} titulo="Virar goleiro profissional" subtitulo="Apareça no catálogo pra capitães te chamarem"
+          onClick={() => navigate({ to: "/goleiros/meu-perfil" })}
+        />
+      )}
       <MenuRow
         icon={Coins} titulo="Minha Carteira" subtitulo="Mr.Coins"
         preview={<CarteiraPreview userId={user?.id} />}
