@@ -51,22 +51,45 @@ function SorteioPage() {
     const { data: confs } = await supabase
       .from("pelada_confirmacoes").select("*").eq("pelada_id", id).eq("status", "confirmado");
     const userIds = (confs || []).map((c: any) => c.user_id);
-    const [{ data: profs }, { data: skills }] = await Promise.all([
+    const [{ data: profs }, { data: skills }, { data: convitesAceitos }] = await Promise.all([
       supabase.from("profiles").select("user_id, nome, posicao_preferida, quer_ser_goleiro").in("user_id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("skills").select("*").in("user_id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]),
+      (supabase as any).from("goleiros_convites").select("goleiro_id, goleiros_perfil!inner(user_id)").eq("pelada_id", id).eq("status", "aceito"),
     ]);
     const profMap = new Map((profs || []).map((x: any) => [x.user_id, x]));
     const skMap = new Map((skills || []).map((x: any) => [x.user_id, x]));
+    const contratadosIds = new Set((convitesAceitos || []).map((c: any) => c.goleiros_perfil?.user_id).filter(Boolean));
+
+    // pra goleiro (contratado ou não), o nível usado no sorteio vem das skills
+    // específicas de goleiro (reflexo/segurança/etc.), não das skills de linha —
+    // reflete melhor a habilidade real dele naquela função.
+    const goleiroIds = userIds.filter((uid) => {
+      const prof: any = profMap.get(uid) || {};
+      return !!prof.quer_ser_goleiro || prof.posicao_preferida === "goleiro" || contratadosIds.has(uid);
+    });
+    const { data: skillsGoleiro } = goleiroIds.length
+      ? await (supabase as any).from("skills_goleiro").select("*").in("user_id", goleiroIds)
+      : { data: [] as any[] };
+    const skGoleiroMap = new Map((skillsGoleiro || []).map((x: any) => [x.user_id, x]));
+    const mediaGoleiro = (sk: any) => {
+      if (!sk) return 3.0;
+      const vals = [sk.reflexo, sk.seguranca, sk.jogo_aereo, sk.saida_pes, sk.posicionamento, sk.comando_area];
+      return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
+    };
 
     const list: JogadorSorteio[] = (confs || []).map((c: any) => {
       const prof: any = profMap.get(c.user_id) || {};
-      const sk: any = skMap.get(c.user_id);
-      const pendente = !sk || !sk.origem_ultima_atualizacao;
+      const ehGk = !!c.eh_goleiro || prof.posicao_preferida === "goleiro" || !!prof.quer_ser_goleiro || contratadosIds.has(c.user_id);
+      const contratado = contratadosIds.has(c.user_id);
+      const skGk = skGoleiroMap.get(c.user_id);
+      const skLinha = skMap.get(c.user_id);
+      const pendente = ehGk ? !skGk : (!skLinha || !skLinha.origem_ultima_atualizacao);
       return {
         user_id: c.user_id,
-        nome: prof.nome || "Jogador",
-        media: pendente ? 3.0 : mediaSkill(sk as any),
-        eh_goleiro: !!c.eh_goleiro || prof.posicao_preferida === "goleiro" || !!prof.quer_ser_goleiro,
+        nome: contratado ? `${prof.nome || "Jogador"} (contratado)` : (prof.nome || "Jogador"),
+        media: ehGk ? mediaGoleiro(skGk) : (pendente ? 3.0 : mediaSkill(skLinha as any)),
+        eh_goleiro: ehGk,
+        contratado,
         skills_pendentes: pendente,
       };
     });
