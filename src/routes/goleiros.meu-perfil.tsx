@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ExternalLink, Copy, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/goleiros/meu-perfil")({ component: Wrapper });
@@ -71,6 +71,29 @@ function MeuPerfilGoleiro() {
   }, [user?.id]);
 
   const toggleTipo = (v: string) => setTipos((arr) => arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+
+  const linkPublico = user?.id && typeof window !== "undefined" ? `${window.location.origin}/goleiros/perfil/${user.id}` : "";
+
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(linkPublico);
+      toast.success("Link copiado!");
+    } catch {
+      toast.error("Não foi possível copiar. Copie manualmente.");
+    }
+  };
+
+  const compartilharLink = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Meu perfil de goleiro", text: "Dá uma olhada no meu perfil de goleiro no MrFut!", url: linkPublico });
+      } catch {
+        // usuário cancelou o compartilhamento — sem problema
+      }
+    } else {
+      void copiarLink();
+    }
+  };
 
   const addSlot = () => setSlots((arr) => [...arr, { dia_semana: 1, horario_inicio: "18:00", horario_fim: "22:00", novo: true }]);
   const updSlot = (idx: number, patch: Partial<Slot>) => setSlots((arr) => arr.map((s, i) => i === idx ? { ...s, ...patch } : s));
@@ -141,6 +164,26 @@ function MeuPerfilGoleiro() {
         <h2 className="text-xl font-bold">🧤 Perfil profissional de goleiro</h2>
         <p className="text-sm text-muted-foreground">Apareça no catálogo pra capitães te chamarem pra jogar — cobrando ou não.</p>
       </div>
+
+      {existiaAntes && (
+        <Card className="p-4 space-y-2 border-primary/30" style={{ boxShadow: "0 0 24px rgba(0,255,135,0.08)" }}>
+          <div className="font-bold flex items-center gap-1.5">📣 Divulgue seu perfil</div>
+          <p className="text-xs text-muted-foreground">
+            Compartilha esse link no Instagram, story, WhatsApp — quanto mais gente ver, mais pelada você joga.
+          </p>
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+            <span className="flex-1 truncate text-xs text-muted-foreground">{linkPublico}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" onClick={copiarLink}>
+              <Copy className="h-4 w-4 mr-1.5" /> Copiar link
+            </Button>
+            <Button type="button" onClick={compartilharLink} className="bg-primary font-bold">
+              <Share2 className="h-4 w-4 mr-1.5" /> Compartilhar
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-4 flex items-center justify-between">
         <div>
