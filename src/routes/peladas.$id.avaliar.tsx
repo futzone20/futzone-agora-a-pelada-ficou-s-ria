@@ -27,10 +27,23 @@ type Ja = {
   user_id: string;
   nome: string;
   time_nome?: string;
+  eh_goleiro: boolean;
   gols: number; passes: number; defesas: number;
   nota_geral: number; nota_comportamento: number;
   desempenho: number;
+  // skills específicas de goleiro — só usadas quando eh_goleiro é true
+  reflexo: number; seguranca: number; jogo_aereo: number;
+  saida_pes: number; posicionamento_gk: number; comando_area: number;
 };
+
+const SKILLS_GOLEIRO: { key: "reflexo" | "seguranca" | "jogo_aereo" | "saida_pes" | "posicionamento_gk" | "comando_area"; label: string; caption: string }[] = [
+  { key: "reflexo", label: "Reflexo", caption: "Pega bola difícil, defesa na trave" },
+  { key: "seguranca", label: "Segurança", caption: "Pega firme, não solta rebote perigoso" },
+  { key: "jogo_aereo", label: "Jogo aéreo", caption: "Sai bem nos cruzamentos e bolas altas" },
+  { key: "saida_pes", label: "Saída com os pés", caption: "Sabe sair jogando, passe curto e longo" },
+  { key: "posicionamento_gk", label: "Posicionamento", caption: "Se coloca bem no gol, fecha ângulo" },
+  { key: "comando_area", label: "Comando de área", caption: "Organiza a defesa, avisa os companheiros" },
+];
 
 const DESEMPENHO_LABELS = ["", "Muito abaixo", "Abaixo", "Como esperado", "Acima", "Muito acima"];
 
@@ -66,15 +79,16 @@ function Avaliar() {
       if (!user) return;
       const { data: p } = await supabase.from("peladas").select("*").eq("id", id).maybeSingle();
       setPelada(p);
-      const { data: tj } = await supabase.from("time_jogadores").select("user_id,time_id").eq("pelada_id", id);
+      const { data: tj } = await supabase.from("time_jogadores").select("user_id,time_id,eh_goleiro").eq("pelada_id", id);
       const uids = Array.from(new Set((tj || []).map((x: any) => x.user_id))).filter((u) => u !== user.id);
       const timeIds = Array.from(new Set((tj || []).map((x: any) => x.time_id)));
-      const [{ data: profs }, { data: times }, { data: lances }, { data: existentes }, { data: existentesSkill }, { data: mvpExistente }, { data: resenhaExistente }] = await Promise.all([
+      const [{ data: profs }, { data: times }, { data: lances }, { data: existentes }, { data: existentesSkill }, { data: existentesGoleiro }, { data: mvpExistente }, { data: resenhaExistente }] = await Promise.all([
         supabase.from("profiles").select("user_id,nome").in("user_id", uids.length ? uids : ["00000000-0000-0000-0000-000000000000"]),
         supabase.from("times").select("id,nome").in("id", timeIds.length ? timeIds : ["00000000-0000-0000-0000-000000000000"]),
         supabase.from("lances").select("user_id,tipo").eq("pelada_id", id),
         supabase.from("avaliacoes_pos_pelada").select("avaliado_id,nota_geral,nota_comportamento,gols_confirmados,passes_confirmados,defesas_confirmadas").eq("pelada_id", id).eq("avaliador_id", user.id),
         (supabase as any).from("avaliacoes_skill_membro").select("avaliado_id,nota_desempenho_geral").eq("pelada_id", id).eq("avaliador_id", user.id).eq("tipo", "pos_pelada"),
+        (supabase as any).from("avaliacoes_goleiro_pos_pelada").select("avaliado_id,reflexo,seguranca,jogo_aereo,saida_pes,posicionamento,comando_area").eq("pelada_id", id).eq("avaliador_id", user.id),
         supabase.from("mvp_votos").select("votado_id").eq("pelada_id", id).eq("votante_id", user.id).maybeSingle(),
         (supabase as any).from("resenha_votos").select("categoria,votado_id").eq("pelada_id", id).eq("votante_id", user.id),
       ]);
@@ -90,7 +104,8 @@ function Avaliar() {
       const tMap: Record<string, string> = {};
       (times || []).forEach((t: any) => { tMap[t.id] = t.nome; });
       const userTime: Record<string, string> = {};
-      (tj || []).forEach((x: any) => { userTime[x.user_id] = tMap[x.time_id] || ""; });
+      const goleiroMap: Record<string, boolean> = {};
+      (tj || []).forEach((x: any) => { userTime[x.user_id] = tMap[x.time_id] || ""; goleiroMap[x.user_id] = !!x.eh_goleiro; });
       const stats: Record<string, { g: number; p: number; d: number }> = {};
       (lances || []).forEach((l: any) => {
         const s = stats[l.user_id] = stats[l.user_id] || { g: 0, p: 0, d: 0 };
@@ -102,13 +117,17 @@ function Avaliar() {
       (existentes || []).forEach((e: any) => { existentesMap[e.avaliado_id] = e; });
       const skillMap: Record<string, any> = {};
       (existentesSkill || []).forEach((e: any) => { skillMap[e.avaliado_id] = e; });
+      const skillGoleiroMap: Record<string, any> = {};
+      (existentesGoleiro || []).forEach((e: any) => { skillGoleiroMap[e.avaliado_id] = e; });
 
       setJogadores(uids.map((uid) => {
         const ex = existentesMap[uid];
+        const exGk = skillGoleiroMap[uid];
         return {
           user_id: uid,
           nome: pMap[uid] || "Jogador",
           time_nome: userTime[uid],
+          eh_goleiro: !!goleiroMap[uid],
           gols: ex ? ex.gols_confirmados : (stats[uid]?.g || 0),
           passes: ex ? ex.passes_confirmados : (stats[uid]?.p || 0),
           defesas: ex ? ex.defesas_confirmadas : (stats[uid]?.d || 0),
@@ -116,6 +135,12 @@ function Avaliar() {
           nota_geral: ex?.nota_geral || 0,
           nota_comportamento: ex?.nota_comportamento || 0,
           desempenho: skillMap[uid]?.nota_desempenho_geral || 0,
+          reflexo: exGk?.reflexo || 0,
+          seguranca: exGk?.seguranca || 0,
+          jogo_aereo: exGk?.jogo_aereo || 0,
+          saida_pes: exGk?.saida_pes || 0,
+          posicionamento_gk: exGk?.posicionamento || 0,
+          comando_area: exGk?.comando_area || 0,
         };
       }));
 
@@ -154,7 +179,16 @@ function Avaliar() {
     if (!user || !pelada) return;
     const j = jogadores.find((x) => x.user_id === uid);
     if (!j) return;
-    if (j.nota_geral < 1 || j.nota_comportamento < 1 || j.desempenho < 1) {
+    if (j.nota_geral < 1 || j.nota_comportamento < 1) {
+      toast.error("Dê pelo menos 1 estrela em cada categoria antes de confirmar.");
+      return;
+    }
+    if (j.eh_goleiro) {
+      if (j.reflexo < 1 || j.seguranca < 1 || j.jogo_aereo < 1 || j.saida_pes < 1 || j.posicionamento_gk < 1 || j.comando_area < 1) {
+        toast.error("Avalie todas as 6 skills de goleiro antes de confirmar.");
+        return;
+      }
+    } else if (j.desempenho < 1) {
       toast.error("Dê pelo menos 1 estrela em cada categoria antes de confirmar.");
       return;
     }
@@ -171,7 +205,14 @@ function Avaliar() {
       return;
     }
 
-    if (pelada.grupo_id) {
+    if (j.eh_goleiro) {
+      const { error: e2 } = await (supabase as any).from("avaliacoes_goleiro_pos_pelada").insert({
+        avaliador_id: user.id, avaliado_id: uid, pelada_id: id,
+        reflexo: j.reflexo, seguranca: j.seguranca, jogo_aereo: j.jogo_aereo,
+        saida_pes: j.saida_pes, posicionamento: j.posicionamento_gk, comando_area: j.comando_area,
+      });
+      if (e2) toast.error(e2.message);
+    } else if (pelada.grupo_id) {
       const { error: e2 } = await (supabase as any).from("avaliacoes_skill_membro").insert({
         avaliador_id: user.id, avaliado_id: uid, grupo_id: pelada.grupo_id,
         tipo: "pos_pelada", pelada_id: id, conhece_jogador: true,
@@ -276,6 +317,7 @@ function Avaliar() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-bold flex items-center gap-1.5">
+                  {j.eh_goleiro && <span title="Jogou de goleiro">🧤</span>}
                   {j.nome}
                   {confirmado && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                 </div>
@@ -314,22 +356,44 @@ function Avaliar() {
               disabled={confirmado}
               onChange={(v) => upd(j.user_id, { nota_comportamento: v })}
             />
-            <div>
-              <div className="text-xs text-muted-foreground">Desempenho na pelada</div>
-              <div className="flex gap-1">
-                {[1,2,3,4,5].map((n) => (
-                  <button key={n} type="button" disabled={confirmado} onClick={() => upd(j.user_id, { desempenho: n })} className="disabled:cursor-not-allowed">
-                    <Star className={`h-6 w-6 ${n <= j.desempenho ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
-                  </button>
+
+            {j.eh_goleiro ? (
+              <div className="space-y-3 rounded-xl border border-border bg-secondary/20 p-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">🧤 Avaliação de goleiro</div>
+                {SKILLS_GOLEIRO.map((sk) => (
+                  <Stars
+                    key={sk.key}
+                    label={sk.label}
+                    caption={sk.caption}
+                    value={(j as any)[sk.key]}
+                    disabled={confirmado}
+                    onChange={(v) => upd(j.user_id, { [sk.key]: v } as any)}
+                  />
                 ))}
               </div>
-              {j.desempenho > 0 && <div className="text-[11px] text-muted-foreground mt-1">{DESEMPENHO_LABELS[j.desempenho]}</div>}
-            </div>
+            ) : (
+              <div>
+                <div className="text-xs text-muted-foreground">Desempenho na pelada</div>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map((n) => (
+                    <button key={n} type="button" disabled={confirmado} onClick={() => upd(j.user_id, { desempenho: n })} className="disabled:cursor-not-allowed">
+                      <Star className={`h-6 w-6 ${n <= j.desempenho ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
+                    </button>
+                  ))}
+                </div>
+                {j.desempenho > 0 && <div className="text-[11px] text-muted-foreground mt-1">{DESEMPENHO_LABELS[j.desempenho]}</div>}
+              </div>
+            )}
 
             {!confirmado && (
               <Button
                 onClick={() => confirmarJogador(j.user_id)}
-                disabled={!!confirmando[j.user_id] || j.nota_geral < 1 || j.nota_comportamento < 1 || j.desempenho < 1}
+                disabled={
+                  !!confirmando[j.user_id] || j.nota_geral < 1 || j.nota_comportamento < 1 ||
+                  (j.eh_goleiro
+                    ? (j.reflexo < 1 || j.seguranca < 1 || j.jogo_aereo < 1 || j.saida_pes < 1 || j.posicionamento_gk < 1 || j.comando_area < 1)
+                    : j.desempenho < 1)
+                }
                 className="w-full bg-primary font-bold"
               >
                 {confirmando[j.user_id] ? "Confirmando..." : "Confirmar avaliação"}
