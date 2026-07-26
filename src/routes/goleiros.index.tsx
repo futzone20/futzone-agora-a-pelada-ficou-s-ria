@@ -25,17 +25,28 @@ function GoleirosCat() {
     (async () => {
       const { data: g } = await supabase.from("goleiros_perfil").select("*, profiles!goleiros_perfil_user_id_fkey(nome, cidade, estado, foto_url, whatsapp, handle)").eq("ativo_catalogo", true);
       const ids = (g ?? []).map((x:any)=>x.id);
-      let medias: Record<string, {soma:number; n:number}> = {};
-      if (ids.length) {
-        const { data: avs } = await supabase.from("goleiros_avaliacoes").select("goleiro_id, nota").in("goleiro_id", ids);
-        (avs ?? []).forEach((a:any)=>{ const m = medias[a.goleiro_id] ??= {soma:0,n:0}; m.soma += a.nota; m.n++; });
+      const userIds = (g ?? []).map((x:any)=>x.user_id);
+      // Nota unificada: vem das skills reais de goleiro (construídas a partir das
+      // avaliações de pelada de verdade), não mais de um catálogo separado.
+      let skillsMap: Record<string, { nivel: number; n: number }> = {};
+      if (userIds.length) {
+        const { data: sk } = await (supabase as any).from("skills_goleiro").select("user_id, reflexo, seguranca, jogo_aereo, saida_pes, posicionamento, comando_area, total_avaliacoes_recebidas").in("user_id", userIds);
+        (sk ?? []).forEach((s: any) => {
+          const nivel = (s.reflexo + s.seguranca + s.jogo_aereo + s.saida_pes + s.posicionamento + s.comando_area) / 6;
+          skillsMap[s.user_id] = { nivel, n: s.total_avaliacoes_recebidas || 0 };
+        });
       }
       let bloq: Record<string, boolean> = {};
       if (data && hora && ids.length) {
         const { data: bs } = await supabase.from("goleiros_bloqueios").select("goleiro_id").in("goleiro_id", ids).eq("data", data).lte("horario_inicio", hora).gte("horario_fim", hora);
         (bs ?? []).forEach((b:any)=>{ bloq[b.goleiro_id] = true; });
       }
-      let arr = (g ?? []).map((x:any)=>({...x, _media: medias[x.id] ? medias[x.id].soma/medias[x.id].n : 0, _n: medias[x.id]?.n ?? 0, _ocupado: !!bloq[x.id] }));
+      let arr = (g ?? []).map((x:any)=>({
+        ...x,
+        _media: skillsMap[x.user_id]?.nivel ?? 3,
+        _n: skillsMap[x.user_id]?.n ?? 0,
+        _ocupado: !!bloq[x.id],
+      }));
       if (cidade) arr = arr.filter((x:any)=>x.profiles?.cidade?.toLowerCase().includes(cidade.toLowerCase()));
       if (tipo !== "todos") arr = arr.filter((x:any)=>x.tipos_quadra?.includes(tipo));
       if (ordem === "avaliacao") arr.sort((a:any,b:any)=>b._media - a._media);
