@@ -216,7 +216,7 @@ function MeuPerfilGoleiro() {
 
       {existiaAntes && user?.id && (
         <button
-          onClick={() => navigate({ to: "/goleiros/$id", params: { id: perfilId! } })}
+          onClick={() => user?.id && navigate({ to: "/goleiros/perfil/$userId", params: { userId: user.id } })}
           className="flex w-full items-center justify-center gap-1.5 text-sm font-medium text-primary"
         >
           Ver como aparece pros capitães <ExternalLink className="h-3.5 w-3.5" />
