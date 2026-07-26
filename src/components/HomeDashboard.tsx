@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Bell, MessageCircle, Calendar, Clock, MapPin, Users, BarChart3, ChevronRight,
-  CalendarDays, Trophy, Zap, Radio, CircleDot, Hexagon,
+  CalendarDays, Trophy, Zap, Radio, CircleDot, Hexagon, Hand,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -205,6 +205,13 @@ export function HomeDashboard() {
           <div className="mt-2 text-lg font-black leading-tight">Convites e Alertas</div>
           <div className="mt-0.5 text-xs text-muted-foreground">{alertasCount} pendente(s)</div>
         </Link>
+        {base === "/capitao" && (
+          <Link to="/goleiros" className="col-span-2 rounded-2xl border border-border bg-card p-4">
+            <Hand className="h-6 w-6 text-primary" />
+            <div className="mt-2 text-lg font-black leading-tight">Buscar Goleiros</div>
+            <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">Encontre e convide um goleiro pra sua pelada <ChevronRight className="h-3 w-3" /></div>
+          </Link>
+        )}
       </div>
 
       <div>
