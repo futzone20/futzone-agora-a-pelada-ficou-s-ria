@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Trophy, Shield, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Star, Trophy, Shield, Target, ArrowLeft, Send } from "lucide-react";
 
 export const Route = createFileRoute("/goleiros/perfil/$userId")({ component: GoleiroPerfilPublico });
 
@@ -18,6 +19,7 @@ const SKILLS_LABELS: { key: string; label: string; emoji: string }[] = [
 
 function GoleiroPerfilPublico() {
   const { userId } = Route.useParams();
+  const navigate = useNavigate();
   const [dados, setDados] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -31,8 +33,14 @@ function GoleiroPerfilPublico() {
     })();
   }, [userId]);
 
-  if (loading) return <div className="p-8 text-center text-sm text-muted-foreground">Carregando...</div>;
-  if (erro || !dados) return <div className="p-8 text-center text-sm text-muted-foreground">Perfil não encontrado.</div>;
+  const Voltar = () => (
+    <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+      <ArrowLeft className="h-4 w-4" /> Voltar
+    </button>
+  );
+
+  if (loading) return <div className="p-4 space-y-4"><Voltar /><p className="text-center text-sm text-muted-foreground py-8">Carregando...</p></div>;
+  if (erro || !dados) return <div className="p-4 space-y-4"><Voltar /><p className="text-center text-sm text-muted-foreground py-8">Perfil não encontrado.</p></div>;
 
   const { perfil, jogando_agora, skills, carreira, marketplace, selos } = dados;
   const nivel = skills?.nivel_geral ?? 3;
@@ -48,7 +56,7 @@ function GoleiroPerfilPublico() {
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-3">
-      {/* Cabeçalho */}
+      <Voltar />
       <Card className="p-4 flex gap-4 items-center">
         <div className="relative w-20 h-20 shrink-0 rounded-full bg-muted overflow-hidden">
           {perfil.foto_url && <img src={perfil.foto_url} className="w-full h-full object-cover" />}
@@ -84,7 +92,7 @@ function GoleiroPerfilPublico() {
 
       {/* Preço / catálogo, se ele tiver */}
       {marketplace?.ativo_catalogo && (
-        <Card className="p-4 space-y-2">
+        <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex gap-1 flex-wrap">{marketplace.tipos_quadra?.map((t: string) => <Badge key={t}>{t}</Badge>)}</div>
             {marketplace.valor_hora ? (
@@ -93,6 +101,11 @@ function GoleiroPerfilPublico() {
               <div className="text-sm font-medium text-muted-foreground">Sem cobrança fixa</div>
             )}
           </div>
+          {marketplace.id && (
+            <Button onClick={() => navigate({ to: "/goleiros/$id", params: { id: marketplace.id } })} className="w-full bg-primary font-bold">
+              <Send className="h-4 w-4 mr-1.5" /> Convidar para pelada
+            </Button>
+          )}
         </Card>
       )}
 
