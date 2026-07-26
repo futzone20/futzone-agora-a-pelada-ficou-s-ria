@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { CentralMensagensCard } from "@/components/CentralMensagensCard";
 import {
   Copy, ArrowLeft, ChevronRight, User, Radar as RadarIcon, Flame, Star,
-  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays, Coins,
+  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays, Coins, Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,7 @@ function maskPhone(v: string) {
 
 export function PerfilCompleto() {
   const { user, updateUser, signOut } = useAuth();
+  const navigate = useNavigate();
   const [secaoAtiva, setSecaoAtiva] = useState<Secao>(null);
   const [form, setForm] = useState({
     nome: "", whatsapp: "", nascimento: "", cidade: "", estado: "",
@@ -392,6 +394,12 @@ export function PerfilCompleto() {
         icon={CalendarDays} titulo="Minha Carreira" subtitulo="Sua evolução pelada após pelada"
         onClick={() => setSecaoAtiva("historico")}
       />
+      {user?.goleiro && (
+        <MenuRow
+          icon={Shield} titulo="Meu perfil de goleiro" subtitulo="Veja como sua carreira aparece publicamente"
+          onClick={() => user?.id && navigate({ to: "/goleiros/perfil/$userId", params: { userId: user.id } })}
+        />
+      )}
       <MenuRow
         icon={Coins} titulo="Minha Carteira" subtitulo="Mr.Coins"
         preview={<CarteiraPreview userId={user?.id} />}
