@@ -400,6 +400,12 @@ export function PerfilCompleto() {
           onClick={() => user?.id && navigate({ to: "/goleiros/perfil/$userId", params: { userId: user.id } })}
         />
       )}
+      {user?.goleiro && (
+        <MenuRow
+          icon={MessageCircle} titulo="Convites de peladas" subtitulo="Capitães te chamando pra jogar"
+          onClick={() => navigate({ to: "/jogador/convites-goleiro" })}
+        />
+      )}
       <MenuRow
         icon={Coins} titulo="Minha Carteira" subtitulo="Mr.Coins"
         preview={<CarteiraPreview userId={user?.id} />}
