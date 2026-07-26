@@ -45,7 +45,7 @@ export function mediaSkill(s?: SkillRow | null): number {
   return SKILL_KEYS.reduce((acc, k) => acc + (s[k] || 0), 0) / SKILL_KEYS.length;
 }
 
-export type Jogador = { user_id: string; nome: string; media: number; eh_goleiro: boolean };
+export type Jogador = { user_id: string; nome: string; media: number; eh_goleiro: boolean; contratado?: boolean };
 
 /** Distribuição em serpentina: 1→A, 2→B, 3→C, 4→C, 5→B, 6→A... */
 export function serpentina(jogadores: Jogador[], numTimes: number): Jogador[][] {
@@ -74,11 +74,23 @@ export function sortear(
   const shuffle = <T,>(arr: T[]) => arr.map(v => [Math.random(), v] as const).sort((a,b)=>a[0]-b[0]).map(([,v])=>v);
 
   if (modalidadeGoleiro === "sorteado") {
-    // Goleiros entram no sorteio como jogadores de linha
+    // Exceção: goleiro contratado pelo capitão (fora do grupo, via marketplace) sempre
+    // entra como goleiro fixo — ninguém contrata e paga um goleiro pra ele cair sorteado
+    // jogando de linha. Só os demais entram misturados no sorteio normal.
+    const fixosObrigatorios = confirmados.filter((c) => c.eh_goleiro && c.contratado);
+    if (fixosObrigatorios.length === 0) {
+      return {
+        jogadores: serpentina(shuffle(confirmados), numTimes),
+        goleiros: Array.from({ length: numTimes }, () => []),
+        goleirosFixos: [],
+      };
+    }
+    const resto = confirmados.filter((c) => !(c.eh_goleiro && c.contratado));
+    const timesLinha = serpentina(shuffle(resto), numTimes);
     return {
-      jogadores: serpentina(shuffle(confirmados), numTimes),
-      goleiros: Array.from({ length: numTimes }, () => []),
-      goleirosFixos: [],
+      jogadores: timesLinha,
+      goleiros: distribuirGoleiros(fixosObrigatorios, timesLinha),
+      goleirosFixos: shuffle(fixosObrigatorios),
     };
   }
 
