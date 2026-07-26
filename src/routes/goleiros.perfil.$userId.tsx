@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Trophy, Shield, Target, ArrowLeft, Send } from "lucide-react";
+import { Star, Trophy, Shield, Target, ArrowLeft, Send, LogIn } from "lucide-react";
 
 export const Route = createFileRoute("/goleiros/perfil/$userId")({ component: GoleiroPerfilPublico });
 
@@ -20,6 +21,7 @@ const SKILLS_LABELS: { key: string; label: string; emoji: string }[] = [
 function GoleiroPerfilPublico() {
   const { userId } = Route.useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [dados, setDados] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -102,8 +104,18 @@ function GoleiroPerfilPublico() {
             )}
           </div>
           {marketplace.id && (
-            <Button onClick={() => navigate({ to: "/goleiros/$id", params: { id: marketplace.id } })} className="w-full bg-primary font-bold">
-              <Send className="h-4 w-4 mr-1.5" /> Convidar para pelada
+            <Button
+              onClick={() => {
+                if (!user) { navigate({ to: "/login" }); return; }
+                navigate({ to: "/goleiros/$id", params: { id: marketplace.id } });
+              }}
+              className="w-full bg-primary font-bold"
+            >
+              {user ? (
+                <><Send className="h-4 w-4 mr-1.5" /> Convidar para pelada</>
+              ) : (
+                <><LogIn className="h-4 w-4 mr-1.5" /> Fazer login para contratar</>
+              )}
             </Button>
           )}
         </Card>
