@@ -70,7 +70,7 @@ function GrupoPage() {
       setLoading(true);
       const [g, m, p] = await Promise.all([
         supabase.from("grupos").select("*").eq("id", id).maybeSingle(),
-        supabase.from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).in("status", ["ativo", "pendente"]),
+        (supabase as any).from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).eq("avulso", false).in("status", ["ativo", "pendente"]),
         supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, status").eq("grupo_id", id).order("data", { ascending: true }),
       ]);
       if (g.error) toast.error(g.error.message);
