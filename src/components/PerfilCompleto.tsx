@@ -183,6 +183,12 @@ export function PerfilCompleto() {
             >
               <MapPin className="h-4 w-4 mr-1.5" /> {buscandoLocalizacao ? "Localizando..." : "Usar minha localização"}
             </Button>
+            {form.latitude != null && form.longitude != null && (
+              <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                Localização salva: {form.cidade}{form.estado && `/${form.estado}`}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <div><Label>Peso (kg)</Label><Input type="number" value={form.peso} onChange={(e) => setForm({ ...form, peso: e.target.value })} /></div>
               <div><Label>Altura (cm)</Label><Input type="number" value={form.altura} onChange={(e) => setForm({ ...form, altura: e.target.value })} /></div>
