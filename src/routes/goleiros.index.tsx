@@ -24,12 +24,26 @@ function GoleirosCat() {
   const [ordem, setOrdem] = useState("avaliacao");
   const [minhaLoc, setMinhaLoc] = useState<Coordenadas | null>(null);
   const [buscandoLoc, setBuscandoLoc] = useState(false);
+  const [localizacaoDe, setLocalizacaoDe] = useState<"perfil" | "atual" | null>(null);
+
+  // Se a pessoa já salvou a localização no perfil dela, usa direto —
+  // ninguém precisa clicar no botão toda vez que abrir a busca.
+  useEffect(() => {
+    if (user?.latitude != null && user?.longitude != null && !minhaLoc) {
+      setMinhaLoc({ latitude: user.latitude, longitude: user.longitude });
+      setLocalizacaoDe("perfil");
+      setOrdem("distancia");
+      if (user.cidade) setCidade(user.cidade);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.latitude, user?.longitude]);
 
   const usarMinhaLocalizacao = async () => {
     setBuscandoLoc(true);
     try {
       const loc = await obterLocalizacaoCompleta();
       setMinhaLoc({ latitude: loc.latitude, longitude: loc.longitude });
+      setLocalizacaoDe("atual");
       setCidade(loc.cidade);
       setOrdem("distancia");
       toast.success(`Localização encontrada: ${loc.cidade}${loc.estado ? `/${loc.estado}` : ""} — mostrando os mais próximos`);
@@ -95,6 +109,16 @@ function GoleirosCat() {
         <Button type="button" variant="outline" disabled={buscandoLoc} onClick={usarMinhaLocalizacao} className="w-full">
           <MapPin className="h-4 w-4 mr-1.5" /> {buscandoLoc ? "Localizando..." : "Usar minha localização"}
         </Button>
+        {minhaLoc && (
+          <div className="flex items-center justify-between rounded-lg bg-primary/10 px-3 py-2 text-xs">
+            <span className="flex items-center gap-1.5 text-primary font-medium">
+              <MapPin className="h-3.5 w-3.5" />
+              {localizacaoDe === "perfil" ? "Usando a localização salva no seu perfil" : "Localização atual em uso"}
+              {cidade && ` — ${cidade}`}
+            </span>
+            <button onClick={usarMinhaLocalizacao} className="text-muted-foreground underline shrink-0">atualizar</button>
+          </div>
+        )}
         <Input placeholder="Ou digite uma cidade" value={cidade} onChange={e=>setCidade(e.target.value)}/>
         <div className="grid grid-cols-2 gap-2">
           <Select value={tipo} onValueChange={setTipo}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>
