@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -74,6 +74,11 @@ function GoleiroPage() {
           {g.profiles?.handle && <p className="text-sm font-medium text-primary">@{g.profiles.handle}</p>}
           <p className="text-sm text-muted-foreground">{g.profiles?.cidade}{g.profiles?.estado && `/${g.profiles.estado}`}</p>
           <div className="flex items-center gap-1 mt-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/><span className="font-bold">{media.toFixed(1)}</span><span className="text-xs text-muted-foreground">({avs.length})</span></div>
+          {g.user_id && (
+            <Link to="/goleiros/perfil/$userId" params={{ userId: g.user_id }} className="mt-1 inline-block text-xs font-medium text-primary underline">
+              Ver carreira completa →
+            </Link>
+          )}
         </div>
       </Card>
 
