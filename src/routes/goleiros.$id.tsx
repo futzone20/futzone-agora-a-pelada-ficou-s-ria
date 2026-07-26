@@ -22,7 +22,7 @@ function GoleiroPage() {
   const { user } = useAuth();
   const [g, setG] = useState<any>(null);
   const [disp, setDisp] = useState<any[]>([]);
-  const [avs, setAvs] = useState<any[]>([]);
+  const [skillsGoleiro, setSkillsGoleiro] = useState<any>(null);
   const [peladas, setPeladas] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>({ pelada_id:"", data:"", horario_inicio:"", horario_fim:"", arena_nome:"", valor_combinado:"", mensagem:"" });
@@ -33,8 +33,12 @@ function GoleiroPage() {
       setG(data);
       const { data: d } = await supabase.from("goleiros_disponibilidade").select("*").eq("goleiro_id", id).order("dia_semana");
       setDisp(d ?? []);
-      const { data: a } = await supabase.from("goleiros_avaliacoes").select("nota").eq("goleiro_id", id);
-      setAvs(a ?? []);
+      // Nota unificada: vem das skills reais de goleiro (mesma fonte da carreira pública),
+      // não mais de um catálogo de avaliação separado.
+      if ((data as any)?.user_id) {
+        const { data: sk } = await (supabase as any).from("skills_goleiro").select("*").eq("user_id", (data as any).user_id).maybeSingle();
+        setSkillsGoleiro(sk);
+      }
     })();
   }, [id]);
 
@@ -63,7 +67,10 @@ function GoleiroPage() {
   };
 
   if (!g) return <div className="p-8 text-center">Carregando...</div>;
-  const media = avs.length ? avs.reduce((s,a)=>s+a.nota,0)/avs.length : 0;
+  const media = skillsGoleiro
+    ? (skillsGoleiro.reflexo + skillsGoleiro.seguranca + skillsGoleiro.jogo_aereo + skillsGoleiro.saida_pes + skillsGoleiro.posicionamento + skillsGoleiro.comando_area) / 6
+    : 3;
+  const totalAvaliacoes = skillsGoleiro?.total_avaliacoes_recebidas ?? 0;
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-3">
@@ -73,7 +80,7 @@ function GoleiroPage() {
           <h1 className="text-xl font-bold">{g.profiles?.nome}</h1>
           {g.profiles?.handle && <p className="text-sm font-medium text-primary">@{g.profiles.handle}</p>}
           <p className="text-sm text-muted-foreground">{g.profiles?.cidade}{g.profiles?.estado && `/${g.profiles.estado}`}</p>
-          <div className="flex items-center gap-1 mt-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/><span className="font-bold">{media.toFixed(1)}</span><span className="text-xs text-muted-foreground">({avs.length})</span></div>
+          <div className="flex items-center gap-1 mt-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/><span className="font-bold">{media.toFixed(1)}</span><span className="text-xs text-muted-foreground">({totalAvaliacoes})</span></div>
           {g.user_id && (
             <Link to="/goleiros/perfil/$userId" params={{ userId: g.user_id }} className="mt-1 inline-block text-xs font-medium text-primary underline">
               Ver carreira completa →
