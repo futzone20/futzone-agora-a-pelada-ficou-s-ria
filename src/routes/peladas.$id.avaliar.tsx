@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
 import { Star, ArrowLeft, CheckCircle2, Lock, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 
 export const Route = createFileRoute("/peladas/$id/avaliar")({
   component: Wrapper,
@@ -58,6 +59,7 @@ function Avaliar() {
   const [ordemConfirmacao, setOrdemConfirmacao] = useState<string[]>([]);
   const [xpModal, setXpModal] = useState<{ bonus: number; totalSessao: number } | null>(null);
   const xpSessaoRef = useRef(0);
+  const [jaEnviouVotos, setJaEnviouVotos] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -82,6 +84,7 @@ function Avaliar() {
         (resenhaExistente as any[]).forEach((r) => { rMap[r.categoria] = r.votado_id; });
         setVotosResenha(rMap);
       }
+      if (mvpExistente || resenhaExistente?.length) setJaEnviouVotos(true);
       const pMap: Record<string, string> = {};
       (profs || []).forEach((p: any) => { pMap[p.user_id] = p.nome; });
       const tMap: Record<string, string> = {};
@@ -211,6 +214,7 @@ function Avaliar() {
       if (e3) toast.error(e3.message);
     }
     toast.success("Votos enviados!");
+    setJaEnviouVotos(true);
     setSaving(false);
     navigate({ to: "/jogador/peladas" });
   };
@@ -238,6 +242,13 @@ function Avaliar() {
       </button>
       <h2 className="text-xl font-bold">Avaliar pelada</h2>
       <p className="text-xs text-muted-foreground">Avaliações são anônimas. Confirme cada jogador pra garantir seu XP.</p>
+
+      {jaEnviouVotos && (
+        <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-2.5 text-sm font-semibold text-green-500">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Você já votou em MVP/Resenha nessa pelada. Pode alterar seu voto se quiser.
+        </div>
+      )}
 
       <div className="rounded-xl border border-border bg-card p-3">
         <div className="flex justify-between text-xs mb-1">
@@ -365,7 +376,7 @@ function Avaliar() {
       </div>
 
       <Button onClick={enviarVotos} disabled={saving} className="w-full bg-primary font-bold">
-        Enviar votos de MVP e Resenha
+        {saving ? "Enviando..." : jaEnviouVotos ? "Atualizar votos de MVP e Resenha" : "Enviar votos de MVP e Resenha"}
       </Button>
 
       {xpModal && (
@@ -395,46 +406,135 @@ function Stars({ label, caption, value, onChange, disabled }: { label: string; c
   );
 }
 
+function animarNumero(de: number, para: number, duracaoMs: number, onUpdate: (v: number) => void, onFim?: () => void) {
+  const inicio = performance.now();
+  let frame: number;
+  const passo = (agora: number) => {
+    const progresso = Math.min(1, (agora - inicio) / duracaoMs);
+    const facil = 1 - Math.pow(1 - progresso, 3); // ease-out
+    onUpdate(Math.round(de + (para - de) * facil));
+    if (progresso < 1) frame = requestAnimationFrame(passo);
+    else onFim?.();
+  };
+  frame = requestAnimationFrame(passo);
+  return () => cancelAnimationFrame(frame);
+}
+
+function dispararConfete() {
+  const cores = ["#00FF87", "#FFD500", "#FF7A00", "#FFFFFF"];
+  confetti({ particleCount: 90, spread: 100, startVelocity: 45, origin: { y: 0.35 }, colors: cores, zIndex: 9999 });
+  confetti({ particleCount: 40, angle: 60, spread: 60, origin: { x: 0, y: 0.6 }, colors: cores, zIndex: 9999 });
+  confetti({ particleCount: 40, angle: 120, spread: 60, origin: { x: 1, y: 0.6 }, colors: cores, zIndex: 9999 });
+}
+
 function XpBonusModal({ bonus, totalSessao, onClose }: { bonus: number; totalSessao: number; onClose: () => void }) {
+  const base = Math.max(0, totalSessao);
+  const temBonus = bonus > 0;
+  const alvoFinal = base + Math.max(0, bonus);
+
   const [contador, setContador] = useState(0);
-  const alvo = bonus > 0 ? bonus : totalSessao;
+  const [fase, setFase] = useState<"contando_base" | "explosao" | "contando_bonus" | "fim">("contando_base");
+  const [explodindo, setExplodindo] = useState(false);
+  const [bonusRevelado, setBonusRevelado] = useState(false);
 
   useEffect(() => {
-    if (alvo <= 0) { setContador(0); return; }
-    const duracaoMs = 1200;
-    const inicio = performance.now();
-    let frame: number;
-    const passo = (agora: number) => {
-      const progresso = Math.min(1, (agora - inicio) / duracaoMs);
-      const valorAtual = Math.round(alvo * (1 - Math.pow(1 - progresso, 3))); // ease-out
-      setContador(valorAtual);
-      if (progresso < 1) frame = requestAnimationFrame(passo);
+    let cancelarAtual = () => {};
+    let timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    if (base <= 0 && !temBonus) {
+      setContador(0);
+      setFase("fim");
+      dispararConfete();
+      return;
+    }
+
+    // FASE 1 — conta do zero até o XP normal ganho nas avaliações
+    cancelarAtual = animarNumero(0, base, base > 0 ? 900 : 1, setContador, () => {
+      if (!temBonus) {
+        setFase("fim");
+        dispararConfete();
+        return;
+      }
+      // FASE 2 — explosão: confete + pulso + muda de cor + revela o bônus
+      timeouts.push(setTimeout(() => {
+        setFase("explosao");
+        setExplodindo(true);
+        setBonusRevelado(true);
+        dispararConfete();
+        timeouts.push(setTimeout(() => setExplodindo(false), 350));
+        // FASE 3 — continua contando até o total (base + bônus)
+        timeouts.push(setTimeout(() => {
+          setFase("contando_bonus");
+          cancelarAtual = animarNumero(base, alvoFinal, 900, setContador, () => setFase("fim"));
+        }, 300));
+      }, 250));
+    });
+
+    return () => {
+      cancelarAtual();
+      timeouts.forEach(clearTimeout);
     };
-    frame = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(frame);
-  }, [alvo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const corNumero = fase === "explosao" || fase === "contando_bonus" || (fase === "fim" && temBonus) ? "#FFD500" : "#00FF87";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-6" onClick={fase === "fim" ? onClose : undefined}>
       <div
-        className="w-full max-w-sm rounded-3xl border border-primary/30 bg-card p-6 text-center shadow-2xl"
-        style={{ boxShadow: "0 0 60px rgba(0,255,135,0.25)" }}
+        className={`w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl transition-transform duration-300 ${explodindo ? "scale-110" : "scale-100"}`}
+        style={{
+          borderColor: temBonus && (fase === "explosao" || fase === "contando_bonus" || fase === "fim") ? "rgba(255,213,0,0.4)" : "rgba(0,255,135,0.3)",
+          background: "#151515",
+          boxShadow: fase === "fim" || fase === "contando_bonus" || fase === "explosao"
+            ? "0 0 80px rgba(255,213,0,0.35)"
+            : "0 0 60px rgba(0,255,135,0.25)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
-          <PartyPopper className="h-8 w-8 text-primary" />
+        <div
+          className={`mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full transition-colors duration-300`}
+          style={{ background: corNumero === "#FFD500" ? "rgba(255,213,0,0.15)" : "rgba(0,255,135,0.15)" }}
+        >
+          <PartyPopper className="h-8 w-8" style={{ color: corNumero }} />
         </div>
-        <h3 className="text-lg font-bold">Avaliação completa!</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Você avaliou todo mundo e ganhou um bônus de XP</p>
-        <div className="my-5 text-5xl font-black tabular-nums text-primary">+{contador}</div>
-        {bonus > 0 && totalSessao > bonus && (
-          <p className="text-xs text-muted-foreground">
-            Somando o XP de cada avaliação, você faturou <span className="font-bold text-foreground">{totalSessao} XP</span> nessa rodada.
+
+        <h3 className="text-lg font-bold">
+          {fase === "contando_base" && "Mandou muito bem! 🔥"}
+          {fase === "explosao" && "BÔNUS DESBLOQUEADO! 🎉"}
+          {fase === "contando_bonus" && "BÔNUS DESBLOQUEADO! 🎉"}
+          {fase === "fim" && (temBonus ? "UAU! Avaliação completa! 🏆" : "Avaliação registrada!")}
+        </h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {fase === "contando_base" && "Contando o XP que você ganhou avaliando a galera..."}
+          {(fase === "explosao" || fase === "contando_bonus") && "Você avaliou todo mundo — bônus liberado!"}
+          {fase === "fim" && (temBonus ? "Você avaliou todo mundo e faturou um bônus surpresa." : "Seu XP já caiu na conta.")}
+        </p>
+
+        <div
+          className={`my-5 font-black tabular-nums transition-all duration-300 ${explodindo ? "text-6xl" : "text-5xl"}`}
+          style={{ color: corNumero, textShadow: fase !== "contando_base" ? `0 0 24px ${corNumero}66` : "none" }}
+        >
+          +{contador} XP
+        </div>
+
+        {bonusRevelado && (
+          <p className="mb-2 text-xs font-bold" style={{ color: "#FFD500" }}>
+            + {bonus} XP de bônus por avaliar todo mundo
           </p>
         )}
-        <Button onClick={onClose} className="mt-5 w-full bg-primary font-bold">
-          Show de bola!
-        </Button>
+
+        {fase === "fim" && (
+          <p className="text-xs text-muted-foreground">
+            Continue avaliando toda pelada — quanto mais você participa, mais XP entra. 💪
+          </p>
+        )}
+
+        {fase === "fim" && (
+          <Button onClick={onClose} className="mt-5 w-full font-bold" style={{ background: corNumero, color: "#0D0D0D" }}>
+            Show de bola!
+          </Button>
+        )}
       </div>
     </div>
   );
