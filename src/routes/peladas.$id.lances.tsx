@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { ArrowLeft, Bell, Clock, MapPin, Shield, X, Activity, Home, CircleDot, Trophy, User, Trash2, ChevronDown, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
@@ -71,6 +71,26 @@ function LancesPage() {
   const [confirmandoProxima, setConfirmandoProxima] = useState(false);
   const [acordiaoOverride, setAcordiaoOverride] = useState<Record<string, boolean>>({});
 
+  // Apito de fim de partida — som configurado pelo super admin (Aparência > Sons).
+  const apitoUrlRef = useRef<string | null>(null);
+  const encerradasConhecidasRef = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any).from("configuracoes_marca").select("chave").eq("chave", "apito-fim-partida").maybeSingle();
+      if (data) {
+        const supaUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "";
+        apitoUrlRef.current = supaUrl ? `${supaUrl}/storage/v1/object/public/branding/apito-fim-partida` : null;
+      }
+    })();
+  }, []);
+
+  const tocarApito = () => {
+    if (!apitoUrlRef.current) return;
+    const audio = new Audio(apitoUrlRef.current);
+    audio.play().catch(() => {}); // ignora silenciosamente (autoplay bloqueado, som não configurado, etc.)
+  };
+
   const load = async () => {
     const { data: pelData } = await supabase
       .from("peladas")
@@ -88,6 +108,19 @@ function LancesPage() {
     const ativa = (ps || []).find((p: any) => p.status === "em_andamento") || (ps || []).find((p: any) => p.status === "aguardando");
     setPartida(ativa);
     setPartidasAll(ps || []);
+
+    // Toca o apito assim que QUALQUER partida vira "encerrada" — vale pra
+    // quem clicou em encerrar quanto pra quem só está assistindo (recebe
+    // via realtime). Na primeira carga da tela só registra o que já estava
+    // encerrado, sem apitar (senão apitaria tudo de uma vez ao abrir a tela).
+    const idsEncerradas = new Set((ps || []).filter((p: any) => p.status === "encerrada").map((p: any) => p.id));
+    if (encerradasConhecidasRef.current === null) {
+      encerradasConhecidasRef.current = idsEncerradas;
+    } else {
+      const novaEncerrada = [...idsEncerradas].some((pid) => !encerradasConhecidasRef.current!.has(pid));
+      if (novaEncerrada) tocarApito();
+      encerradasConhecidasRef.current = idsEncerradas;
+    }
     const { data: ts } = await supabase.from("times").select("*").eq("pelada_id", id).order("ordem");
     setTimes(ts || []);
     const { data: tj } = await supabase.from("time_jogadores").select("*").eq("pelada_id", id);
