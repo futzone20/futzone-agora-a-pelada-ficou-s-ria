@@ -52,7 +52,7 @@ function ConvitesGoleiro() {
     const peladaIds = Array.from(new Set((data || []).map((c: any) => c.pelada_id).filter(Boolean))) as string[];
     let peladasMap: Record<string, any> = {};
     if (peladaIds.length) {
-      const { data: peladas } = await supabase.from("peladas").select("id, nome_pelada").in("id", peladaIds);
+      const { data: peladas } = await supabase.from("peladas").select("id, nome_pelada, status, criado_por").in("id", peladaIds);
       (peladas || []).forEach((p: any) => { peladasMap[p.id] = p; });
     }
     setConvites((data || []).map((c: any) => ({ ...c, peladas: c.pelada_id ? peladasMap[c.pelada_id] : null })));
@@ -77,8 +77,29 @@ function ConvitesGoleiro() {
     setRespondendo(null);
   };
 
+  const [saindoDe, setSaindoDe] = useState<string | null>(null);
+  const sairDaPelada = async (convite: any) => {
+    if (!user) return;
+    if (!window.confirm(`Tem certeza que quer sair de "${convite.peladas?.nome_pelada || "essa pelada"}"? O capitão será avisado.`)) return;
+    setSaindoDe(convite.id);
+    await supabase.from("pelada_confirmacoes").update({ status: "recusado" } as never).eq("pelada_id", convite.pelada_id).eq("user_id", user.id);
+    await supabase.from("time_jogadores").delete().eq("pelada_id", convite.pelada_id).eq("user_id", user.id);
+    if (convite.peladas?.criado_por) {
+      await supabase.from("notificacoes").insert({
+        user_id: convite.peladas.criado_por,
+        titulo: "🧤 Goleiro saiu da pelada",
+        mensagem: `O goleiro que você contratou avisou que não vai poder jogar em "${convite.peladas?.nome_pelada || "sua pelada"}".`,
+        link: "/capitao/peladas",
+      } as never);
+    }
+    toast.success("Você saiu dessa pelada. O capitão foi avisado.");
+    setSaindoDe(null);
+    void load();
+  };
+
   const pendentes = convites.filter((c) => c.status === "pendente");
-  const respondidos = convites.filter((c) => c.status !== "pendente");
+  const confirmadasAtivas = convites.filter((c) => c.status === "aceito" && c.pelada_id && !["encerrada", "cancelada"].includes(c.peladas?.status));
+  const respondidos = convites.filter((c) => c.status !== "pendente" && !confirmadasAtivas.includes(c));
 
   return (
     <div className="space-y-4">
@@ -138,6 +159,33 @@ function ConvitesGoleiro() {
                       </Button>
                     </div>
                   )}
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {confirmadasAtivas.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Peladas confirmadas</h3>
+              {confirmadasAtivas.map((c) => (
+                <Card key={c.id} className="p-4 space-y-2 border-primary/30">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold">{c.peladas?.nome_pelada || "Pelada"}</div>
+                    <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-500">Confirmado</span>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {c.data}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {c.horario_inicio?.slice(0,5)}–{c.horario_fim?.slice(0,5)}</span>
+                    {c.arena_nome && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {c.arena_nome}</span>}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full text-red-500 border-red-500/30 hover:bg-red-500/10"
+                    disabled={saindoDe === c.id}
+                    onClick={() => sairDaPelada(c)}
+                  >
+                    {saindoDe === c.id ? "Saindo..." : "Sair dessa pelada"}
+                  </Button>
                 </Card>
               ))}
             </div>
