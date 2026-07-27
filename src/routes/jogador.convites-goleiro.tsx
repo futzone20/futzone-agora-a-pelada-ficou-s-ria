@@ -42,12 +42,20 @@ function ConvitesGoleiro() {
     setLoading(true);
     const { data: perfil } = await (supabase as any).from("goleiros_perfil").select("id").eq("user_id", user.id).maybeSingle();
     if (!perfil) { setConvites([]); setLoading(false); return; }
-    const { data } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from("goleiros_convites")
-      .select("*, peladas(nome_pelada, local_nome)")
+      .select("*")
       .eq("goleiro_id", perfil.id)
       .order("criado_em", { ascending: false });
-    setConvites(data || []);
+    if (error) { toast.error(error.message); setConvites([]); setLoading(false); return; }
+
+    const peladaIds = Array.from(new Set((data || []).map((c: any) => c.pelada_id).filter(Boolean))) as string[];
+    let peladasMap: Record<string, any> = {};
+    if (peladaIds.length) {
+      const { data: peladas } = await supabase.from("peladas").select("id, nome_pelada").in("id", peladaIds);
+      (peladas || []).forEach((p: any) => { peladasMap[p.id] = p; });
+    }
+    setConvites((data || []).map((c: any) => ({ ...c, peladas: c.pelada_id ? peladasMap[c.pelada_id] : null })));
     setLoading(false);
   };
 
