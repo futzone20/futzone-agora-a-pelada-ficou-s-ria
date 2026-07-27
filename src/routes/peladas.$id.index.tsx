@@ -554,6 +554,25 @@ function PeladaDetail() {
       <div className="mt-4 space-y-4 px-4">
         <ConviteAuxiliarCard peladaId={id} onChange={load} />
 
+        {isCapitao && pelada.status !== "encerrada" && pelada.status !== "cancelada" && (
+          <Link
+            to="/goleiros"
+            search={{ peladaId: id }}
+            className="flex items-center justify-between rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00FF87]/15">
+                <Hand className="h-5 w-5 text-[#00FF87]" />
+              </div>
+              <div>
+                <div className="font-bold text-white">Buscar Goleiro</div>
+                <div className="text-xs text-[#888]">Convide um goleiro do catálogo pra essa pelada</div>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-[#888]" />
+          </Link>
+        )}
+
         {times.length === 0 && pelada.status !== "encerrada" && (
           <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
             <div>
