@@ -75,14 +75,14 @@ function GoleiroPerfilPublico() {
   };
 
   const enviarConvite = async () => {
-    if (!user || !dados?.marketplace?.id) return;
+    if (!user || !dados?.marketplace?.id || !form.pelada_id) return;
     const { error } = await supabase.from("goleiros_convites").insert({
-      pelada_id: form.pelada_id || null, capitao_id: user.id, goleiro_id: dados.marketplace.id,
+      pelada_id: form.pelada_id, capitao_id: user.id, goleiro_id: dados.marketplace.id,
       data: form.data, horario_inicio: form.horario_inicio, horario_fim: form.horario_fim,
       arena_nome: form.arena_nome, valor_combinado: form.valor_combinado ? Number(form.valor_combinado) : null,
       mensagem: form.mensagem || null,
     } as never);
-    if (error) toast.error(error.message); else { toast.success("Convite enviado!"); setOpenConvite(false); }
+    if (error) toast.error(error.message); else { toast.success("Convite enviado! Se ele aceitar, já entra confirmado na pelada."); setOpenConvite(false); }
   };
 
   const Voltar = () => (
@@ -196,28 +196,38 @@ function GoleiroPerfilPublico() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Convidar {perfil.nome}</DialogTitle>
-                    <DialogDescription>Escolha a pelada, data e horário pra enviar o convite.</DialogDescription>
+                    <DialogDescription>
+                      {peladas.length > 0
+                        ? "Escolha pra qual das suas peladas você quer chamar esse goleiro."
+                        : "Você precisa ter uma pelada criada antes de convidar um goleiro."}
+                    </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-3">
-                    {peladas.length > 0 && (
+                  {peladas.length === 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        O convite é sempre vinculado a uma pelada específica — assim, se ele aceitar, já entra confirmado direto nela.
+                      </p>
+                      <Button className="w-full" onClick={() => navigate({ to: "/capitao/peladas" })}>Criar uma pelada</Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
                       <div>
                         <Label>Pelada</Label>
                         <Select value={form.pelada_id} onValueChange={selectPelada}>
-                          <SelectTrigger><SelectValue placeholder="Sua pelada" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Escolha a pelada" /></SelectTrigger>
                           <SelectContent>{peladas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome_pelada} — {p.data}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
-                    )}
-                    <div><Label>Data</Label><Input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div><Label>Início</Label><Input type="time" value={form.horario_inicio} onChange={(e) => setForm({ ...form, horario_inicio: e.target.value })} /></div>
-                      <div><Label>Fim</Label><Input type="time" value={form.horario_fim} onChange={(e) => setForm({ ...form, horario_fim: e.target.value })} /></div>
+                      {form.pelada_id && (
+                        <div className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+                          {form.data} · {form.horario_inicio?.slice(0,5)}–{form.horario_fim?.slice(0,5)}{form.arena_nome && ` · ${form.arena_nome}`}
+                        </div>
+                      )}
+                      <div><Label>Valor combinado (opcional)</Label><Input type="number" step="0.01" placeholder="Combinado fora do app" value={form.valor_combinado} onChange={(e) => setForm({ ...form, valor_combinado: e.target.value })} /></div>
+                      <div><Label>Mensagem</Label><Textarea maxLength={200} placeholder="Alguma observação pro goleiro..." value={form.mensagem} onChange={(e) => setForm({ ...form, mensagem: e.target.value })} /></div>
+                      <Button onClick={enviarConvite} className="w-full" disabled={!form.pelada_id}>Enviar Convite</Button>
                     </div>
-                    <div><Label>Arena</Label><Input value={form.arena_nome} onChange={(e) => setForm({ ...form, arena_nome: e.target.value })} /></div>
-                    <div><Label>Valor (opcional)</Label><Input type="number" step="0.01" value={form.valor_combinado} onChange={(e) => setForm({ ...form, valor_combinado: e.target.value })} /></div>
-                    <div><Label>Mensagem</Label><Textarea maxLength={200} value={form.mensagem} onChange={(e) => setForm({ ...form, mensagem: e.target.value })} /></div>
-                    <Button onClick={enviarConvite} className="w-full" disabled={!form.data || !form.horario_inicio}>Enviar Convite</Button>
-                  </div>
+                  )}
                 </DialogContent>
               </Dialog>
             )
