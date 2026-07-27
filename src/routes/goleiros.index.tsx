@@ -153,7 +153,7 @@ function GoleirosCat() {
       </Card>
 
       {goleiros.map(g=>(
-        <Link key={g.id} to="/goleiros/$id" params={{id: g.id}}>
+        <Link key={g.id} to="/goleiros/perfil/$userId" params={{userId: g.profiles?.handle ? `@${g.profiles.handle}` : g.user_id}}>
           <Card className="p-3 flex gap-3 items-center">
             <div className="w-14 h-14 rounded-full bg-muted overflow-hidden">{g.profiles?.foto_url && <img src={g.profiles.foto_url} className="w-full h-full object-cover"/>}</div>
             <div className="flex-1">
