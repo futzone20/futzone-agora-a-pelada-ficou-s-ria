@@ -75,7 +75,17 @@ export function MobileShell({ items, children }: { items: NavItem[]; children: R
 
   useEffect(() => {
     if (!user) return;
-    const ch = supabase.channel("notif-" + user.id)
+    const topic = "notif-" + user.id;
+    // Evita o erro "cannot add postgres_changes callbacks after subscribe()":
+    // como o MobileShell remonta a cada navegação, é possível que um canal
+    // com esse mesmo nome ainda não tenha sido removido (limpeza assíncrona)
+    // quando essa tela já está tentando abrir um novo — remove qualquer
+    // resquício antes de criar o canal de verdade.
+    supabase.getChannels()
+      .filter((c) => c.topic === `realtime:${topic}`)
+      .forEach((c) => { supabase.removeChannel(c); });
+
+    const ch = supabase.channel(topic)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notificacoes", filter: `user_id=eq.${user.id}` }, () => { void loadNotifs(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
