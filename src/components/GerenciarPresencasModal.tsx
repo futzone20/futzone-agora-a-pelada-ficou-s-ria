@@ -43,9 +43,9 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
     setPeladaStatus((pel as any)?.status || null);
 
 
-    const { data: gm } = await supabase
+    const { data: gm } = await (supabase as any)
       .from("grupo_membros")
-      .select("user_id, papel, status")
+      .select("user_id, papel, status, avulso")
       .eq("grupo_id", grupoId)
       .eq("status", "ativo");
 
@@ -69,7 +69,7 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
       const c = s?.chute || 3, r = s?.resistencia || 3, po = s?.posicionamento || 3;
       const nivel = Number(((v + d + pa + c + r + po) / 6).toFixed(1));
       const nome = p?.nome || p?.email?.split("@")[0] || "Usuário";
-      return { user_id: m.user_id, nome, foto: p?.foto_url, papel: m.papel, nivel, skills: s };
+      return { user_id: m.user_id, nome, foto: p?.foto_url, papel: m.papel, nivel, skills: s, avulso: !!m.avulso };
     });
 
     setMembros(list);
@@ -176,7 +176,14 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
                       <AvatarFallback className="bg-secondary text-xs">{initials(m.nome)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold truncate">{m.nome}</div>
+                      <div className="text-sm font-bold truncate flex items-center gap-1.5">
+                        {m.nome}
+                        {m.avulso && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary shrink-0">
+                            🧤 Contratado
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs">
                         <div className="h-1.5 w-16 rounded-full bg-secondary overflow-hidden">
                           <div className="h-full bg-primary" style={{ width: `${(skill / 5) * 100}%` }} />
