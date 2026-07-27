@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -30,6 +30,7 @@ function GoleiroPerfilPublico() {
   const { userId: identificador } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const searchParams = useSearch({ strict: false }) as { peladaId?: string };
   const [dados, setDados] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -64,10 +65,32 @@ function GoleiroPerfilPublico() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, horario_fim, local_nome").eq("criado_por", user.id).in("status", ["aguardando", "confirmada"]).order("data", { ascending: false }).limit(20);
-      setPeladas(data ?? []);
+      const { data, error } = await supabase.from("peladas")
+        .select("id, nome_pelada, data, horario_inicio, horario_fim, quadra_id")
+        .eq("criado_por", user.id).in("status", ["aguardando", "confirmada"])
+        .order("data", { ascending: false }).limit(20);
+      if (error) { toast.error(`Erro ao buscar suas peladas: ${error.message}`); return; }
+      const quadraIds = Array.from(new Set((data || []).map((p: any) => p.quadra_id).filter(Boolean))) as string[];
+      let quadrasMap: Record<string, string> = {};
+      if (quadraIds.length) {
+        const { data: quadras } = await supabase.from("quadras_publicas").select("id, nome").in("id", quadraIds);
+        (quadras || []).forEach((q: any) => { quadrasMap[q.id] = q.nome; });
+      }
+      setPeladas((data || []).map((p: any) => ({ ...p, local_nome: p.quadra_id ? quadrasMap[p.quadra_id] : "" })));
     })();
   }, [user?.id]);
+
+  // Veio direto de dentro de uma pelada ("Buscar Goleiro") — já pré-seleciona
+  // ela no convite e abre o formulário, sem precisar escolher de novo.
+  useEffect(() => {
+    if (!searchParams?.peladaId || peladas.length === 0) return;
+    const existe = peladas.some((p) => p.id === searchParams.peladaId);
+    if (existe) {
+      selectPelada(searchParams.peladaId);
+      setOpenConvite(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams?.peladaId, peladas]);
 
   const selectPelada = (pid: string) => {
     const p = peladas.find((x) => x.id === pid); if (!p) return;
