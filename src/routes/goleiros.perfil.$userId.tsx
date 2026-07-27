@@ -1,11 +1,17 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Trophy, Shield, Target, ArrowLeft, Send, LogIn } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Star, Trophy, Shield, Target, ArrowLeft, Send, LogIn, ChevronDown, CalendarClock } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/goleiros/perfil/$userId")({ component: GoleiroPerfilPublico });
 
@@ -18,6 +24,8 @@ const SKILLS_LABELS: { key: string; label: string; emoji: string }[] = [
   { key: "comando_area", label: "Comando de área", emoji: "📣" },
 ];
 
+const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
 function GoleiroPerfilPublico() {
   const { userId: identificador } = Route.useParams();
   const navigate = useNavigate();
@@ -25,6 +33,12 @@ function GoleiroPerfilPublico() {
   const [dados, setDados] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
+
+  const [disp, setDisp] = useState<any[]>([]);
+  const [dispAberta, setDispAberta] = useState(false);
+  const [peladas, setPeladas] = useState<any[]>([]);
+  const [openConvite, setOpenConvite] = useState(false);
+  const [form, setForm] = useState<any>({ pelada_id: "", data: "", horario_inicio: "", horario_fim: "", arena_nome: "", valor_combinado: "", mensagem: "" });
 
   useEffect(() => {
     (async () => {
@@ -39,9 +53,37 @@ function GoleiroPerfilPublico() {
       const { data, error } = await (supabase as any).rpc("goleiro_perfil_publico", { _user_id: userIdReal });
       if (error || !data?.perfil) { setErro(true); setLoading(false); return; }
       setDados(data);
+      if (data.marketplace?.id) {
+        const { data: d } = await supabase.from("goleiros_disponibilidade").select("*").eq("goleiro_id", data.marketplace.id).order("dia_semana");
+        setDisp(d ?? []);
+      }
       setLoading(false);
     })();
   }, [identificador]);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, horario_fim, local_nome").eq("criado_por", user.id).in("status", ["aguardando", "confirmada"]).order("data", { ascending: false }).limit(20);
+      setPeladas(data ?? []);
+    })();
+  }, [user?.id]);
+
+  const selectPelada = (pid: string) => {
+    const p = peladas.find((x) => x.id === pid); if (!p) return;
+    setForm({ ...form, pelada_id: pid, data: p.data, horario_inicio: p.horario_inicio, horario_fim: p.horario_fim || p.horario_inicio, arena_nome: p.local_nome });
+  };
+
+  const enviarConvite = async () => {
+    if (!user || !dados?.marketplace?.id) return;
+    const { error } = await supabase.from("goleiros_convites").insert({
+      pelada_id: form.pelada_id || null, capitao_id: user.id, goleiro_id: dados.marketplace.id,
+      data: form.data, horario_inicio: form.horario_inicio, horario_fim: form.horario_fim,
+      arena_nome: form.arena_nome, valor_combinado: form.valor_combinado ? Number(form.valor_combinado) : null,
+      mensagem: form.mensagem || null,
+    } as never);
+    if (error) toast.error(error.message); else { toast.success("Convite enviado!"); setOpenConvite(false); }
+  };
 
   const Voltar = () => (
     <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -82,6 +124,11 @@ function GoleiroPerfilPublico() {
           </div>
           {perfil.handle && <p className="text-sm font-medium text-primary">@{perfil.handle}</p>}
           <p className="text-sm text-muted-foreground">{perfil.cidade}{perfil.estado && `/${perfil.estado}`}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+            <span className="font-bold">{nivel.toFixed(1)}</span>
+            <span className="text-xs text-muted-foreground">({totalAvaliacoes})</span>
+          </div>
           {selos?.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {selos.map((s: any) => (
@@ -100,7 +147,7 @@ function GoleiroPerfilPublico() {
         </Card>
       )}
 
-      {/* Preço / catálogo, se ele tiver */}
+      {/* Catálogo: tipos de quadra, preço, bio profissional, convite e disponibilidade */}
       {marketplace?.ativo_catalogo && (
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -111,20 +158,66 @@ function GoleiroPerfilPublico() {
               <div className="text-sm font-medium text-muted-foreground">Sem cobrança fixa</div>
             )}
           </div>
-          {marketplace.id && (
-            <Button
-              onClick={() => {
-                if (!user) { navigate({ to: "/login" }); return; }
-                navigate({ to: "/goleiros/$id", params: { id: marketplace.id } });
-              }}
-              className="w-full bg-primary font-bold"
+          {marketplace.bio && <p className="text-sm">{marketplace.bio}</p>}
+
+          {/* Disponibilidade — acordião fechado por padrão */}
+          <div className="rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setDispAberta((v) => !v)}
+              className="flex w-full items-center justify-between px-3 py-2 text-sm font-bold"
             >
-              {user ? (
-                <><Send className="h-4 w-4 mr-1.5" /> Convidar para pelada</>
-              ) : (
-                <><LogIn className="h-4 w-4 mr-1.5" /> Fazer login para contratar</>
-              )}
-            </Button>
+              <span className="flex items-center gap-1.5"><CalendarClock className="h-3.5 w-3.5 text-muted-foreground" /> Disponibilidade</span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${dispAberta ? "rotate-180" : ""}`} />
+            </button>
+            {dispAberta && (
+              <div className="border-t border-border px-3 py-2">
+                {disp.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-1">Sem horários fixos cadastrados.</p>
+                ) : disp.map((d) => (
+                  <div key={d.id} className="text-sm flex justify-between py-1">
+                    <span>{DIAS[d.dia_semana]}</span>
+                    <span>{d.horario_inicio?.slice(0, 5)} – {d.horario_fim?.slice(0, 5)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {marketplace.id && (
+            !user ? (
+              <Button onClick={() => navigate({ to: "/login" })} className="w-full bg-primary font-bold">
+                <LogIn className="h-4 w-4 mr-1.5" /> Fazer login para contratar
+              </Button>
+            ) : (
+              <Dialog open={openConvite} onOpenChange={setOpenConvite}>
+                <DialogTrigger asChild>
+                  <Button className="w-full bg-primary font-bold"><Send className="h-4 w-4 mr-1.5" /> Convidar para pelada</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Convidar {perfil.nome}</DialogTitle></DialogHeader>
+                  <div className="space-y-3">
+                    {peladas.length > 0 && (
+                      <div>
+                        <Label>Pelada</Label>
+                        <Select value={form.pelada_id} onValueChange={selectPelada}>
+                          <SelectTrigger><SelectValue placeholder="Sua pelada" /></SelectTrigger>
+                          <SelectContent>{peladas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome_pelada} — {p.data}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div><Label>Data</Label><Input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label>Início</Label><Input type="time" value={form.horario_inicio} onChange={(e) => setForm({ ...form, horario_inicio: e.target.value })} /></div>
+                      <div><Label>Fim</Label><Input type="time" value={form.horario_fim} onChange={(e) => setForm({ ...form, horario_fim: e.target.value })} /></div>
+                    </div>
+                    <div><Label>Arena</Label><Input value={form.arena_nome} onChange={(e) => setForm({ ...form, arena_nome: e.target.value })} /></div>
+                    <div><Label>Valor (opcional)</Label><Input type="number" step="0.01" value={form.valor_combinado} onChange={(e) => setForm({ ...form, valor_combinado: e.target.value })} /></div>
+                    <div><Label>Mensagem</Label><Textarea maxLength={200} value={form.mensagem} onChange={(e) => setForm({ ...form, mensagem: e.target.value })} /></div>
+                    <Button onClick={enviarConvite} className="w-full" disabled={!form.data || !form.horario_inicio}>Enviar Convite</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )
           )}
         </Card>
       )}
