@@ -116,12 +116,17 @@ function LancesPage() {
       ...(tj || []).map((x: any) => x.user_id),
       ...(lsAll || []).map((x: any) => x.marcado_por).filter(Boolean),
     ]));
+    const m: Record<string, any> = {};
     if (uids.length) {
       const { data: profs } = await supabase.from("profiles").select("user_id, nome").in("user_id", uids);
-      const m: Record<string, any> = {};
       (profs || []).forEach((x: any) => { m[x.user_id] = x; });
-      setProfiles(m);
     }
+    // "Convidados" (jogador avulso sem conta, digitado manualmente pelo capitão)
+    // usam o próprio id da linha em pelada_convidados como user_id fictício em
+    // time_jogadores — sem isso aqui, o nome nunca é achado e cai no "Jogador".
+    const { data: convidados } = await supabase.from("pelada_convidados").select("id, nome").eq("pelada_id", id);
+    (convidados || []).forEach((c: any) => { m[c.id] = { user_id: c.id, nome: c.nome }; });
+    setProfiles(m);
   };
 
   useEffect(() => { void load(); }, [id]);
