@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Star, Trophy, Shield, Target, ArrowLeft, Send, LogIn, ChevronDown, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -194,7 +194,10 @@ function GoleiroPerfilPublico() {
                   <Button className="w-full bg-primary font-bold"><Send className="h-4 w-4 mr-1.5" /> Convidar para pelada</Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Convidar {perfil.nome}</DialogTitle></DialogHeader>
+                  <DialogHeader>
+                    <DialogTitle>Convidar {perfil.nome}</DialogTitle>
+                    <DialogDescription>Escolha a pelada, data e horário pra enviar o convite.</DialogDescription>
+                  </DialogHeader>
                   <div className="space-y-3">
                     {peladas.length > 0 && (
                       <div>
