@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, ImageIcon } from "lucide-react";
+import { Upload, ImageIcon, Music } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,6 +16,22 @@ type Asset = {
   descricao: string;
   dica: string;
 };
+
+type AudioAsset = {
+  chave: "apito-fim-partida";
+  titulo: string;
+  descricao: string;
+  dica: string;
+};
+
+const AUDIOS: AudioAsset[] = [
+  {
+    chave: "apito-fim-partida",
+    titulo: "Apito de fim de partida",
+    descricao: "Toca sozinho, pra todo mundo que estiver com o Painel de Lances aberto, assim que uma partida é encerrada.",
+    dica: "Recomendado: MP3 ou WAV curto (1 a 3 segundos), até 2MB.",
+  },
+];
 
 const ASSETS: Asset[] = [
   {
@@ -54,6 +70,7 @@ function Page() {
     const { data } = await (supabase as any).from("configuracoes_marca").select("chave, atualizado_em");
     const v: Record<string, number | null> = {};
     ASSETS.forEach((a) => { v[a.chave] = null; });
+    AUDIOS.forEach((a) => { v[a.chave] = null; });
     (data || []).forEach((row: any) => { v[row.chave] = new Date(row.atualizado_em).getTime(); });
     setVersoes(v);
     setLoading(false);
@@ -61,8 +78,8 @@ function Page() {
 
   useEffect(() => { void load(); }, []);
 
-  const enviar = async (chave: string, file: File) => {
-    if (!file.type.startsWith("image/")) return toast.error("Envie um arquivo de imagem.");
+  const enviar = async (chave: string, file: File, tipoEsperado: "image" | "audio" = "image") => {
+    if (!file.type.startsWith(`${tipoEsperado}/`)) return toast.error(tipoEsperado === "audio" ? "Envie um arquivo de áudio." : "Envie um arquivo de imagem.");
     if (file.size > 3 * 1024 * 1024) return toast.error("Arquivo muito grande (máximo 3MB).");
     setEnviando(chave);
     try {
@@ -126,6 +143,58 @@ function Page() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) void enviar(a.chave, file);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  disabled={enviando === a.chave}
+                  onClick={() => inputRefs.current[a.chave]?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {enviando === a.chave ? "Enviando..." : temArquivo ? "Substituir" : "Enviar arquivo"}
+                </Button>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="pt-2">
+        <h2 className="text-xl font-bold">Sons</h2>
+        <p className="text-sm text-muted-foreground">Efeitos sonoros usados durante as peladas.</p>
+      </div>
+
+      {!loading && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {AUDIOS.map((a) => {
+            const url = publicUrl(a.chave, versoes[a.chave] ?? null);
+            const temArquivo = versoes[a.chave] != null;
+            return (
+              <Card key={a.chave} className="flex flex-col gap-3 p-4">
+                <div>
+                  <div className="font-bold">{a.titulo}</div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{a.descricao}</p>
+                </div>
+
+                <div className="flex h-16 items-center justify-center rounded-xl border border-dashed border-border bg-secondary/30 px-2">
+                  {temArquivo && url ? (
+                    <audio controls src={url} className="w-full h-9" />
+                  ) : (
+                    <Music className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+
+                <p className="text-[11px] text-muted-foreground">{a.dica}</p>
+
+                <input
+                  ref={(el) => { inputRefs.current[a.chave] = el; }}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void enviar(a.chave, file, "audio");
                     e.target.value = "";
                   }}
                 />
