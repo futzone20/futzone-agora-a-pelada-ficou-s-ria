@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -16,6 +16,17 @@ export const Route = createFileRoute("/goleiros/")({ component: GoleirosCat });
 function GoleirosCat() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { peladaId?: string };
+  const peladaId = search?.peladaId;
+  const [peladaNome, setPeladaNome] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!peladaId) { setPeladaNome(null); return; }
+    (async () => {
+      const { data } = await supabase.from("peladas").select("nome_pelada").eq("id", peladaId).maybeSingle();
+      setPeladaNome((data as any)?.nome_pelada || null);
+    })();
+  }, [peladaId]);
   const [goleiros, setGoleiros] = useState<any[]>([]);
   const [cidade, setCidade] = useState("");
   const [tipo, setTipo] = useState("todos");
@@ -122,6 +133,11 @@ function GoleirosCat() {
   return (
     <div className="min-h-screen bg-background p-4 max-w-3xl mx-auto space-y-3">
       <div className="flex justify-between items-center"><h1 className="text-2xl font-bold">🧤 Goleiros</h1>{user && <Button variant="ghost" onClick={()=>navigate({to:"/jogador"})}>Voltar</Button>}</div>
+      {peladaId && (
+        <div className="rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary">
+          🧤 Buscando goleiro pra {peladaNome ? `"${peladaNome}"` : "sua pelada"} — o convite já sai vinculado a ela.
+        </div>
+      )}
       <Card className="p-3 space-y-2">
         <Button type="button" variant="outline" disabled={buscandoLoc} onClick={usarMinhaLocalizacao} className="w-full">
           <MapPin className="h-4 w-4 mr-1.5" /> {buscandoLoc ? "Localizando..." : "Usar minha localização"}
@@ -153,7 +169,7 @@ function GoleirosCat() {
       </Card>
 
       {goleiros.map(g=>(
-        <Link key={g.id} to="/goleiros/perfil/$userId" params={{userId: g.profiles?.handle ? `@${g.profiles.handle}` : g.user_id}}>
+        <Link key={g.id} to="/goleiros/perfil/$userId" params={{userId: g.profiles?.handle ? `@${g.profiles.handle}` : g.user_id}} search={peladaId ? { peladaId } : undefined}>
           <Card className="p-3 flex gap-3 items-center">
             <div className="w-14 h-14 rounded-full bg-muted overflow-hidden">{g.profiles?.foto_url && <img src={g.profiles.foto_url} className="w-full h-full object-cover"/>}</div>
             <div className="flex-1">
