@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
-import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ParceiroRouteImport } from './routes/parceiro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JogadorRouteImport } from './routes/jogador'
@@ -37,7 +36,11 @@ import { Route as JogadorResenhaRouteImport } from './routes/jogador.resenha'
 import { Route as JogadorRankingRouteImport } from './routes/jogador.ranking'
 import { Route as JogadorPerfilRouteImport } from './routes/jogador.perfil'
 import { Route as JogadorPeladasRouteImport } from './routes/jogador.peladas'
+import { Route as JogadorGruposRouteImport } from './routes/jogador.grupos'
+import { Route as JogadorConvitesGoleiroRouteImport } from './routes/jogador.convites-goleiro'
+import { Route as IndicarCodigoRouteImport } from './routes/indicar.$codigo'
 import { Route as GruposIdRouteImport } from './routes/grupos.$id'
+import { Route as GoleirosMeuPerfilRouteImport } from './routes/goleiros.meu-perfil'
 import { Route as GoleirosIdRouteImport } from './routes/goleiros.$id'
 import { Route as DonoQuadrasRouteImport } from './routes/dono.quadras'
 import { Route as DonoProdutosRouteImport } from './routes/dono.produtos'
@@ -60,6 +63,7 @@ import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
 import { Route as AdminGamificacaoRouteImport } from './routes/admin.gamificacao'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
 import { Route as AdminComunicacaoRouteImport } from './routes/admin.comunicacao'
+import { Route as AdminAparenciaRouteImport } from './routes/admin.aparencia'
 import { Route as AdminAdsRouteImport } from './routes/admin.ads'
 import { Route as PeladasIdIndexRouteImport } from './routes/peladas.$id.index'
 import { Route as JogadorParceirosIndexRouteImport } from './routes/jogador.parceiros.index'
@@ -70,6 +74,7 @@ import { Route as PeladasIdControleRouteImport } from './routes/peladas.$id.cont
 import { Route as PeladasIdCardRouteImport } from './routes/peladas.$id.card'
 import { Route as PeladasIdAvaliarRouteImport } from './routes/peladas.$id.avaliar'
 import { Route as JogadorParceirosSlugRouteImport } from './routes/jogador.parceiros.$slug'
+import { Route as GoleirosPerfilUserIdRouteImport } from './routes/goleiros.perfil.$userId'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -79,11 +84,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RankingRoute = RankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParceiroRoute = ParceiroRouteImport.update({
@@ -211,9 +211,29 @@ const JogadorPeladasRoute = JogadorPeladasRouteImport.update({
   path: '/peladas',
   getParentRoute: () => JogadorRoute,
 } as any)
+const JogadorGruposRoute = JogadorGruposRouteImport.update({
+  id: '/grupos',
+  path: '/grupos',
+  getParentRoute: () => JogadorRoute,
+} as any)
+const JogadorConvitesGoleiroRoute = JogadorConvitesGoleiroRouteImport.update({
+  id: '/convites-goleiro',
+  path: '/convites-goleiro',
+  getParentRoute: () => JogadorRoute,
+} as any)
+const IndicarCodigoRoute = IndicarCodigoRouteImport.update({
+  id: '/indicar/$codigo',
+  path: '/indicar/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GruposIdRoute = GruposIdRouteImport.update({
   id: '/grupos/$id',
   path: '/grupos/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoleirosMeuPerfilRoute = GoleirosMeuPerfilRouteImport.update({
+  id: '/goleiros/meu-perfil',
+  path: '/goleiros/meu-perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GoleirosIdRoute = GoleirosIdRouteImport.update({
@@ -326,6 +346,11 @@ const AdminComunicacaoRoute = AdminComunicacaoRouteImport.update({
   path: '/comunicacao',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAparenciaRoute = AdminAparenciaRouteImport.update({
+  id: '/aparencia',
+  path: '/aparencia',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAdsRoute = AdminAdsRouteImport.update({
   id: '/ads',
   path: '/ads',
@@ -376,6 +401,11 @@ const JogadorParceirosSlugRoute = JogadorParceirosSlugRouteImport.update({
   path: '/parceiros/$slug',
   getParentRoute: () => JogadorRoute,
 } as any)
+const GoleirosPerfilUserIdRoute = GoleirosPerfilUserIdRouteImport.update({
+  id: '/goleiros/perfil/$userId',
+  path: '/goleiros/perfil/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -387,10 +417,10 @@ export interface FileRoutesByFullPath {
   '/jogador': typeof JogadorRouteWithChildren
   '/login': typeof LoginRoute
   '/parceiro': typeof ParceiroRouteWithChildren
-  '/ranking': typeof RankingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/ads': typeof AdminAdsRoute
+  '/admin/aparencia': typeof AdminAparenciaRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/gamificacao': typeof AdminGamificacaoRoute
@@ -413,7 +443,11 @@ export interface FileRoutesByFullPath {
   '/dono/produtos': typeof DonoProdutosRoute
   '/dono/quadras': typeof DonoQuadrasRoute
   '/goleiros/$id': typeof GoleirosIdRoute
+  '/goleiros/meu-perfil': typeof GoleirosMeuPerfilRoute
   '/grupos/$id': typeof GruposIdRoute
+  '/indicar/$codigo': typeof IndicarCodigoRoute
+  '/jogador/convites-goleiro': typeof JogadorConvitesGoleiroRoute
+  '/jogador/grupos': typeof JogadorGruposRoute
   '/jogador/peladas': typeof JogadorPeladasRoute
   '/jogador/perfil': typeof JogadorPerfilRoute
   '/jogador/ranking': typeof JogadorRankingRoute
@@ -430,6 +464,7 @@ export interface FileRoutesByFullPath {
   '/goleiros/': typeof GoleirosIndexRoute
   '/jogador/': typeof JogadorIndexRoute
   '/parceiro/': typeof ParceiroIndexRoute
+  '/goleiros/perfil/$userId': typeof GoleirosPerfilUserIdRoute
   '/jogador/parceiros/$slug': typeof JogadorParceirosSlugRoute
   '/peladas/$id/avaliar': typeof PeladasIdAvaliarRoute
   '/peladas/$id/card': typeof PeladasIdCardRoute
@@ -445,10 +480,10 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/completar-cadastro': typeof CompletarCadastroRoute
   '/login': typeof LoginRoute
-  '/ranking': typeof RankingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/ads': typeof AdminAdsRoute
+  '/admin/aparencia': typeof AdminAparenciaRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/gamificacao': typeof AdminGamificacaoRoute
@@ -471,7 +506,11 @@ export interface FileRoutesByTo {
   '/dono/produtos': typeof DonoProdutosRoute
   '/dono/quadras': typeof DonoQuadrasRoute
   '/goleiros/$id': typeof GoleirosIdRoute
+  '/goleiros/meu-perfil': typeof GoleirosMeuPerfilRoute
   '/grupos/$id': typeof GruposIdRoute
+  '/indicar/$codigo': typeof IndicarCodigoRoute
+  '/jogador/convites-goleiro': typeof JogadorConvitesGoleiroRoute
+  '/jogador/grupos': typeof JogadorGruposRoute
   '/jogador/peladas': typeof JogadorPeladasRoute
   '/jogador/perfil': typeof JogadorPerfilRoute
   '/jogador/ranking': typeof JogadorRankingRoute
@@ -488,6 +527,7 @@ export interface FileRoutesByTo {
   '/goleiros': typeof GoleirosIndexRoute
   '/jogador': typeof JogadorIndexRoute
   '/parceiro': typeof ParceiroIndexRoute
+  '/goleiros/perfil/$userId': typeof GoleirosPerfilUserIdRoute
   '/jogador/parceiros/$slug': typeof JogadorParceirosSlugRoute
   '/peladas/$id/avaliar': typeof PeladasIdAvaliarRoute
   '/peladas/$id/card': typeof PeladasIdCardRoute
@@ -509,10 +549,10 @@ export interface FileRoutesById {
   '/jogador': typeof JogadorRouteWithChildren
   '/login': typeof LoginRoute
   '/parceiro': typeof ParceiroRouteWithChildren
-  '/ranking': typeof RankingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/ads': typeof AdminAdsRoute
+  '/admin/aparencia': typeof AdminAparenciaRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/gamificacao': typeof AdminGamificacaoRoute
@@ -535,7 +575,11 @@ export interface FileRoutesById {
   '/dono/produtos': typeof DonoProdutosRoute
   '/dono/quadras': typeof DonoQuadrasRoute
   '/goleiros/$id': typeof GoleirosIdRoute
+  '/goleiros/meu-perfil': typeof GoleirosMeuPerfilRoute
   '/grupos/$id': typeof GruposIdRoute
+  '/indicar/$codigo': typeof IndicarCodigoRoute
+  '/jogador/convites-goleiro': typeof JogadorConvitesGoleiroRoute
+  '/jogador/grupos': typeof JogadorGruposRoute
   '/jogador/peladas': typeof JogadorPeladasRoute
   '/jogador/perfil': typeof JogadorPerfilRoute
   '/jogador/ranking': typeof JogadorRankingRoute
@@ -552,6 +596,7 @@ export interface FileRoutesById {
   '/goleiros/': typeof GoleirosIndexRoute
   '/jogador/': typeof JogadorIndexRoute
   '/parceiro/': typeof ParceiroIndexRoute
+  '/goleiros/perfil/$userId': typeof GoleirosPerfilUserIdRoute
   '/jogador/parceiros/$slug': typeof JogadorParceirosSlugRoute
   '/peladas/$id/avaliar': typeof PeladasIdAvaliarRoute
   '/peladas/$id/card': typeof PeladasIdCardRoute
@@ -574,10 +619,10 @@ export interface FileRouteTypes {
     | '/jogador'
     | '/login'
     | '/parceiro'
-    | '/ranking'
     | '/recuperar-senha'
     | '/reset-password'
     | '/admin/ads'
+    | '/admin/aparencia'
     | '/admin/comunicacao'
     | '/admin/financeiro'
     | '/admin/gamificacao'
@@ -600,7 +645,11 @@ export interface FileRouteTypes {
     | '/dono/produtos'
     | '/dono/quadras'
     | '/goleiros/$id'
+    | '/goleiros/meu-perfil'
     | '/grupos/$id'
+    | '/indicar/$codigo'
+    | '/jogador/convites-goleiro'
+    | '/jogador/grupos'
     | '/jogador/peladas'
     | '/jogador/perfil'
     | '/jogador/ranking'
@@ -617,6 +666,7 @@ export interface FileRouteTypes {
     | '/goleiros/'
     | '/jogador/'
     | '/parceiro/'
+    | '/goleiros/perfil/$userId'
     | '/jogador/parceiros/$slug'
     | '/peladas/$id/avaliar'
     | '/peladas/$id/card'
@@ -632,10 +682,10 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/completar-cadastro'
     | '/login'
-    | '/ranking'
     | '/recuperar-senha'
     | '/reset-password'
     | '/admin/ads'
+    | '/admin/aparencia'
     | '/admin/comunicacao'
     | '/admin/financeiro'
     | '/admin/gamificacao'
@@ -658,7 +708,11 @@ export interface FileRouteTypes {
     | '/dono/produtos'
     | '/dono/quadras'
     | '/goleiros/$id'
+    | '/goleiros/meu-perfil'
     | '/grupos/$id'
+    | '/indicar/$codigo'
+    | '/jogador/convites-goleiro'
+    | '/jogador/grupos'
     | '/jogador/peladas'
     | '/jogador/perfil'
     | '/jogador/ranking'
@@ -675,6 +729,7 @@ export interface FileRouteTypes {
     | '/goleiros'
     | '/jogador'
     | '/parceiro'
+    | '/goleiros/perfil/$userId'
     | '/jogador/parceiros/$slug'
     | '/peladas/$id/avaliar'
     | '/peladas/$id/card'
@@ -695,10 +750,10 @@ export interface FileRouteTypes {
     | '/jogador'
     | '/login'
     | '/parceiro'
-    | '/ranking'
     | '/recuperar-senha'
     | '/reset-password'
     | '/admin/ads'
+    | '/admin/aparencia'
     | '/admin/comunicacao'
     | '/admin/financeiro'
     | '/admin/gamificacao'
@@ -721,7 +776,11 @@ export interface FileRouteTypes {
     | '/dono/produtos'
     | '/dono/quadras'
     | '/goleiros/$id'
+    | '/goleiros/meu-perfil'
     | '/grupos/$id'
+    | '/indicar/$codigo'
+    | '/jogador/convites-goleiro'
+    | '/jogador/grupos'
     | '/jogador/peladas'
     | '/jogador/perfil'
     | '/jogador/ranking'
@@ -738,6 +797,7 @@ export interface FileRouteTypes {
     | '/goleiros/'
     | '/jogador/'
     | '/parceiro/'
+    | '/goleiros/perfil/$userId'
     | '/jogador/parceiros/$slug'
     | '/peladas/$id/avaliar'
     | '/peladas/$id/card'
@@ -759,15 +819,17 @@ export interface RootRouteChildren {
   JogadorRoute: typeof JogadorRouteWithChildren
   LoginRoute: typeof LoginRoute
   ParceiroRoute: typeof ParceiroRouteWithChildren
-  RankingRoute: typeof RankingRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ConviteCodigoRoute: typeof ConviteCodigoRoute
   GoleirosIdRoute: typeof GoleirosIdRoute
+  GoleirosMeuPerfilRoute: typeof GoleirosMeuPerfilRoute
   GruposIdRoute: typeof GruposIdRoute
+  IndicarCodigoRoute: typeof IndicarCodigoRoute
   PIdRoute: typeof PIdRoute
   PeladaConfirmarTokenRoute: typeof PeladaConfirmarTokenRoute
   GoleirosIndexRoute: typeof GoleirosIndexRoute
+  GoleirosPerfilUserIdRoute: typeof GoleirosPerfilUserIdRoute
   PeladasIdAvaliarRoute: typeof PeladasIdAvaliarRoute
   PeladasIdCardRoute: typeof PeladasIdCardRoute
   PeladasIdControleRoute: typeof PeladasIdControleRoute
@@ -791,13 +853,6 @@ declare module '@tanstack/react-router' {
       path: '/recuperar-senha'
       fullPath: '/recuperar-senha'
       preLoaderRoute: typeof RecuperarSenhaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ranking': {
-      id: '/ranking'
-      path: '/ranking'
-      fullPath: '/ranking'
-      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parceiro': {
@@ -975,11 +1030,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JogadorPeladasRouteImport
       parentRoute: typeof JogadorRoute
     }
+    '/jogador/grupos': {
+      id: '/jogador/grupos'
+      path: '/grupos'
+      fullPath: '/jogador/grupos'
+      preLoaderRoute: typeof JogadorGruposRouteImport
+      parentRoute: typeof JogadorRoute
+    }
+    '/jogador/convites-goleiro': {
+      id: '/jogador/convites-goleiro'
+      path: '/convites-goleiro'
+      fullPath: '/jogador/convites-goleiro'
+      preLoaderRoute: typeof JogadorConvitesGoleiroRouteImport
+      parentRoute: typeof JogadorRoute
+    }
+    '/indicar/$codigo': {
+      id: '/indicar/$codigo'
+      path: '/indicar/$codigo'
+      fullPath: '/indicar/$codigo'
+      preLoaderRoute: typeof IndicarCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/grupos/$id': {
       id: '/grupos/$id'
       path: '/grupos/$id'
       fullPath: '/grupos/$id'
       preLoaderRoute: typeof GruposIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/goleiros/meu-perfil': {
+      id: '/goleiros/meu-perfil'
+      path: '/goleiros/meu-perfil'
+      fullPath: '/goleiros/meu-perfil'
+      preLoaderRoute: typeof GoleirosMeuPerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/goleiros/$id': {
@@ -1136,6 +1219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminComunicacaoRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/aparencia': {
+      id: '/admin/aparencia'
+      path: '/aparencia'
+      fullPath: '/admin/aparencia'
+      preLoaderRoute: typeof AdminAparenciaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ads': {
       id: '/admin/ads'
       path: '/ads'
@@ -1206,11 +1296,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JogadorParceirosSlugRouteImport
       parentRoute: typeof JogadorRoute
     }
+    '/goleiros/perfil/$userId': {
+      id: '/goleiros/perfil/$userId'
+      path: '/goleiros/perfil/$userId'
+      fullPath: '/goleiros/perfil/$userId'
+      preLoaderRoute: typeof GoleirosPerfilUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminAdsRoute: typeof AdminAdsRoute
+  AdminAparenciaRoute: typeof AdminAparenciaRoute
   AdminComunicacaoRoute: typeof AdminComunicacaoRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminGamificacaoRoute: typeof AdminGamificacaoRoute
@@ -1222,6 +1320,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdsRoute: AdminAdsRoute,
+  AdminAparenciaRoute: AdminAparenciaRoute,
   AdminComunicacaoRoute: AdminComunicacaoRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminGamificacaoRoute: AdminGamificacaoRoute,
@@ -1283,6 +1382,8 @@ const DonoRouteChildren: DonoRouteChildren = {
 const DonoRouteWithChildren = DonoRoute._addFileChildren(DonoRouteChildren)
 
 interface JogadorRouteChildren {
+  JogadorConvitesGoleiroRoute: typeof JogadorConvitesGoleiroRoute
+  JogadorGruposRoute: typeof JogadorGruposRoute
   JogadorPeladasRoute: typeof JogadorPeladasRoute
   JogadorPerfilRoute: typeof JogadorPerfilRoute
   JogadorRankingRoute: typeof JogadorRankingRoute
@@ -1294,6 +1395,8 @@ interface JogadorRouteChildren {
 }
 
 const JogadorRouteChildren: JogadorRouteChildren = {
+  JogadorConvitesGoleiroRoute: JogadorConvitesGoleiroRoute,
+  JogadorGruposRoute: JogadorGruposRoute,
   JogadorPeladasRoute: JogadorPeladasRoute,
   JogadorPerfilRoute: JogadorPerfilRoute,
   JogadorRankingRoute: JogadorRankingRoute,
@@ -1335,15 +1438,17 @@ const rootRouteChildren: RootRouteChildren = {
   JogadorRoute: JogadorRouteWithChildren,
   LoginRoute: LoginRoute,
   ParceiroRoute: ParceiroRouteWithChildren,
-  RankingRoute: RankingRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ConviteCodigoRoute: ConviteCodigoRoute,
   GoleirosIdRoute: GoleirosIdRoute,
+  GoleirosMeuPerfilRoute: GoleirosMeuPerfilRoute,
   GruposIdRoute: GruposIdRoute,
+  IndicarCodigoRoute: IndicarCodigoRoute,
   PIdRoute: PIdRoute,
   PeladaConfirmarTokenRoute: PeladaConfirmarTokenRoute,
   GoleirosIndexRoute: GoleirosIndexRoute,
+  GoleirosPerfilUserIdRoute: GoleirosPerfilUserIdRoute,
   PeladasIdAvaliarRoute: PeladasIdAvaliarRoute,
   PeladasIdCardRoute: PeladasIdCardRoute,
   PeladasIdControleRoute: PeladasIdControleRoute,
@@ -1355,3 +1460,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
