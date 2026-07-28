@@ -922,6 +922,12 @@ function PeladaDetail() {
                     <div className="text-[10px] text-gray-400">Gere e compartilhe com o time</div>
                     <div className="mt-2 flex items-center justify-end gap-1 text-[10px] font-bold text-[#00FF87]">Compartilhe <ChevronRight className="h-4 w-4" /></div>
                   </Link>
+                  <Link to="/peladas/$id/resumo-jogador" params={{ id }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3">
+                    <User className="h-5 w-5 text-[#00FF87]" />
+                    <div className="mt-2 text-sm font-bold text-white">Meu Resumo</div>
+                    <div className="text-[10px] text-gray-400">Tempo em campo, gols e mais</div>
+                    <div className="mt-2 flex items-center justify-end gap-1 text-[10px] font-bold text-[#00FF87]">Compartilhe <ChevronRight className="h-4 w-4" /></div>
+                  </Link>
                 </div>
 
                 <div>
