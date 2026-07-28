@@ -916,19 +916,30 @@ function PeladaDetail() {
                       <div className="mt-2 flex justify-end text-[#00FF87]"><ChevronRight className="h-4 w-4" /></div>
                     </Link>
                   )}
-                  <Link to="/peladas/$id/card" params={{ id }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3">
+                  <Link
+                    to="/peladas/$id/card" params={{ id }}
+                    className={`rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3 ${pelada.avaliacao_aberta ? "" : "col-span-2"}`}
+                  >
                     <Trophy className="h-5 w-5 text-[#00FF87]" />
                     <div className="mt-2 text-sm font-bold text-white">Card da Vitória</div>
                     <div className="text-[10px] text-gray-400">Gere e compartilhe com o time</div>
                     <div className="mt-2 flex items-center justify-end gap-1 text-[10px] font-bold text-[#00FF87]">Compartilhe <ChevronRight className="h-4 w-4" /></div>
                   </Link>
-                  <Link to="/peladas/$id/resumo-jogador" params={{ id }} className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-3">
-                    <User className="h-5 w-5 text-[#00FF87]" />
-                    <div className="mt-2 text-sm font-bold text-white">Meu Resumo</div>
-                    <div className="text-[10px] text-gray-400">Tempo em campo, gols e mais</div>
-                    <div className="mt-2 flex items-center justify-end gap-1 text-[10px] font-bold text-[#00FF87]">Compartilhe <ChevronRight className="h-4 w-4" /></div>
-                  </Link>
                 </div>
+
+                <Link
+                  to="/peladas/$id/resumo-jogador" params={{ id }}
+                  className="flex items-center gap-3 rounded-xl border border-[#00FF87]/40 bg-gradient-to-r from-[#00FF87]/10 to-[#1A1A1A] p-4"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#00FF87]/15">
+                    <User className="h-5 w-5 text-[#00FF87]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-bold text-white">Meu Resumo da Pelada</div>
+                    <div className="text-[10px] text-gray-400">Tempo em campo, gols, vitórias do time e mais — compartilhe do seu jeito</div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-[#00FF87]" />
+                </Link>
 
                 <div>
                   <div className="mb-2 flex items-center justify-between">
