@@ -6,3 +6,6 @@ verify_jwt = false
 [functions.gerar-peladas-recorrentes]
 verify_jwt = false
 
+[functions.send-push]
+verify_jwt = false
+
