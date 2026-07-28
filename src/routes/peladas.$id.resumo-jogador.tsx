@@ -36,6 +36,7 @@ function ResumoJogador() {
   const [data, setData] = useState<any>(null);
   const [busy, setBusy] = useState<"baixar" | "compartilhar" | null>(null);
   const [estilo, setEstilo] = useState<Estilo>("classico");
+  const [carregado, setCarregado] = useState(false);
   const [foto, setFoto] = useState<string | null>(null);
   const galeriaRef = useRef<HTMLInputElement>(null);
   const selfieRef = useRef<HTMLInputElement>(null);
@@ -48,7 +49,7 @@ function ResumoJogador() {
       const { data: perfil } = await supabase.from("profiles").select("nome, foto_url, handle").eq("user_id", user.id).maybeSingle();
       const { data: tj } = await supabase.from("time_jogadores").select("time_id, eh_goleiro").eq("pelada_id", id).eq("user_id", user.id).maybeSingle();
 
-      if (!tj) { setData(null); return; }
+      if (!tj) { setData(null); setCarregado(true); return; }
 
       const resumo = await calcularResumoJogadorPelada(id, user.id);
 
@@ -68,6 +69,7 @@ function ResumoJogador() {
         vitoriasTime,
         partidasTime,
       });
+      setCarregado(true);
     })();
   }, [id, user?.id]);
 
@@ -130,7 +132,17 @@ function ResumoJogador() {
     }
   };
 
-  if (!data) return <div className="text-sm text-muted-foreground">Gerando card...</div>;
+  if (!carregado) return <div className="text-sm text-muted-foreground">Gerando card...</div>;
+  if (!data) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate({ to: "/peladas/$id", params: { id } })} className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </button>
+        <div className="text-sm text-muted-foreground">Você não fez parte de nenhum time nessa pelada, então não tem resumo pra gerar.</div>
+      </div>
+    );
+  }
 
   const resumo: ResumoJogadorPelada | null = data.resumo;
   const nomePelada = data.pelada?.nome_pelada || data.grupo?.nome || "";
