@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backfill_convite_grupo_controle: {
+        Row: {
+          grupo_membro_id: string
+          processado_em: string
+        }
+        Insert: {
+          grupo_membro_id: string
+          processado_em?: string
+        }
+        Update: {
+          grupo_membro_id?: string
+          processado_em?: string
+        }
+        Relationships: []
+      }
       admin_comunicacoes: {
         Row: {
           criado_em: string
@@ -551,6 +566,56 @@ export type Database = {
           },
         ]
       }
+      avaliacoes_goleiro_pos_pelada: {
+        Row: {
+          avaliado_id: string
+          avaliador_id: string
+          comando_area: number
+          criado_em: string
+          id: string
+          jogo_aereo: number
+          pelada_id: string
+          posicionamento: number
+          reflexo: number
+          saida_pes: number
+          seguranca: number
+        }
+        Insert: {
+          avaliado_id: string
+          avaliador_id: string
+          comando_area: number
+          criado_em?: string
+          id?: string
+          jogo_aereo: number
+          pelada_id: string
+          posicionamento: number
+          reflexo: number
+          saida_pes: number
+          seguranca: number
+        }
+        Update: {
+          avaliado_id?: string
+          avaliador_id?: string
+          comando_area?: number
+          criado_em?: string
+          id?: string
+          jogo_aereo?: number
+          pelada_id?: string
+          posicionamento?: number
+          reflexo?: number
+          saida_pes?: number
+          seguranca?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_goleiro_pos_pelada_pelada_id_fkey"
+            columns: ["pelada_id"]
+            isOneToOne: false
+            referencedRelation: "peladas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       avaliacoes_pos_pelada: {
         Row: {
           avaliado_id: string
@@ -846,6 +911,21 @@ export type Database = {
           },
         ]
       }
+      configuracoes_marca: {
+        Row: {
+          atualizado_em: string
+          chave: string
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+        }
+        Relationships: []
+      }
       convites_grupo: {
         Row: {
           capitao_id: string
@@ -894,7 +974,7 @@ export type Database = {
           codigo_unico: string
           convidado_id: string | null
           criado_em: string
-          grupo_id: string
+          grupo_id: string | null
           id: string
           indicador_id: string
           jogou_primeira_pelada: boolean
@@ -907,7 +987,7 @@ export type Database = {
           codigo_unico: string
           convidado_id?: string | null
           criado_em?: string
-          grupo_id: string
+          grupo_id?: string | null
           id?: string
           indicador_id: string
           jogou_primeira_pelada?: boolean
@@ -920,7 +1000,7 @@ export type Database = {
           codigo_unico?: string
           convidado_id?: string | null
           criado_em?: string
-          grupo_id?: string
+          grupo_id?: string | null
           id?: string
           indicador_id?: string
           jogou_primeira_pelada?: boolean
@@ -1017,6 +1097,7 @@ export type Database = {
           deletado: boolean
           id: string
           post_id: string
+          resposta_para: string | null
           texto: string
           user_id: string
         }
@@ -1025,6 +1106,7 @@ export type Database = {
           deletado?: boolean
           id?: string
           post_id: string
+          resposta_para?: string | null
           texto: string
           user_id: string
         }
@@ -1033,6 +1115,7 @@ export type Database = {
           deletado?: boolean
           id?: string
           post_id?: string
+          resposta_para?: string | null
           texto?: string
           user_id?: string
         }
@@ -1042,6 +1125,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_comentarios_resposta_para_fkey"
+            columns: ["resposta_para"]
+            isOneToOne: false
+            referencedRelation: "feed_comentarios"
             referencedColumns: ["id"]
           },
         ]
@@ -1166,6 +1256,55 @@ export type Database = {
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goleiro_partida_historico: {
+        Row: {
+          criado_em: string
+          id: string
+          partida_id: string
+          pelada_id: string
+          time_id: string
+          user_id: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          partida_id: string
+          pelada_id: string
+          time_id: string
+          user_id: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          partida_id?: string
+          pelada_id?: string
+          time_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goleiro_partida_historico_partida_id_fkey"
+            columns: ["partida_id"]
+            isOneToOne: false
+            referencedRelation: "partidas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goleiro_partida_historico_pelada_id_fkey"
+            columns: ["pelada_id"]
+            isOneToOne: false
+            referencedRelation: "peladas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goleiro_partida_historico_time_id_fkey"
+            columns: ["time_id"]
+            isOneToOne: false
+            referencedRelation: "times"
             referencedColumns: ["id"]
           },
         ]
@@ -1389,6 +1528,7 @@ export type Database = {
       }
       grupo_membros: {
         Row: {
+          avulso: boolean
           entrou_em: string
           grupo_id: string
           id: string
@@ -1397,6 +1537,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avulso?: boolean
           entrou_em?: string
           grupo_id: string
           id?: string
@@ -1405,6 +1546,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avulso?: boolean
           entrou_em?: string
           grupo_id?: string
           id?: string
@@ -1575,6 +1717,48 @@ export type Database = {
           id?: string
           lance_id?: string | null
           pelada_id?: string
+        }
+        Relationships: []
+      }
+      mrcoins_lotes: {
+        Row: {
+          aviso_enviado: boolean
+          criado_em: string
+          expira_em: string
+          id: string
+          mes_referencia: string
+          moedas: number
+          prazo_resgate: string
+          resgatado_em: string | null
+          status: string
+          user_id: string
+          xp_do_mes: number
+        }
+        Insert: {
+          aviso_enviado?: boolean
+          criado_em?: string
+          expira_em: string
+          id?: string
+          mes_referencia: string
+          moedas: number
+          prazo_resgate: string
+          resgatado_em?: string | null
+          status?: string
+          user_id: string
+          xp_do_mes: number
+        }
+        Update: {
+          aviso_enviado?: boolean
+          criado_em?: string
+          expira_em?: string
+          id?: string
+          mes_referencia?: string
+          moedas?: number
+          prazo_resgate?: string
+          resgatado_em?: string | null
+          status?: string
+          user_id?: string
+          xp_do_mes?: number
         }
         Relationships: []
       }
@@ -2204,6 +2388,44 @@ export type Database = {
           },
         ]
       }
+      pelada_auxiliares: {
+        Row: {
+          convidado_por: string
+          criado_em: string
+          id: string
+          pelada_id: string
+          respondido_em: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          convidado_por: string
+          criado_em?: string
+          id?: string
+          pelada_id: string
+          respondido_em?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          convidado_por?: string
+          criado_em?: string
+          id?: string
+          pelada_id?: string
+          respondido_em?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pelada_auxiliares_pelada_id_fkey"
+            columns: ["pelada_id"]
+            isOneToOne: false
+            referencedRelation: "peladas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pelada_confirmacoes: {
         Row: {
           atualizado_em: string
@@ -2449,6 +2671,7 @@ export type Database = {
         Row: {
           acao: string
           ativo: boolean
+          bonus_capitao: number
           descricao: string
           id: string
           multiplicador_capitao: number
@@ -2457,6 +2680,7 @@ export type Database = {
         Insert: {
           acao: string
           ativo?: boolean
+          bonus_capitao?: number
           descricao: string
           id?: string
           multiplicador_capitao?: number
@@ -2465,6 +2689,7 @@ export type Database = {
         Update: {
           acao?: string
           ativo?: boolean
+          bonus_capitao?: number
           descricao?: string
           id?: string
           multiplicador_capitao?: number
@@ -2477,6 +2702,7 @@ export type Database = {
           acao: string
           criado_em: string
           descricao_legivel: string | null
+          detalhes: Json
           id: string
           pelada_id: string | null
           saldo_apos: number
@@ -2487,6 +2713,7 @@ export type Database = {
           acao: string
           criado_em?: string
           descricao_legivel?: string | null
+          detalhes?: Json
           id?: string
           pelada_id?: string | null
           saldo_apos: number
@@ -2497,6 +2724,7 @@ export type Database = {
           acao?: string
           criado_em?: string
           descricao_legivel?: string | null
+          detalhes?: Json
           id?: string
           pelada_id?: string | null
           saldo_apos?: number
@@ -2524,7 +2752,10 @@ export type Database = {
           email: string
           estado: string | null
           foto_url: string | null
+          handle: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           motivo_rebaixamento: string | null
           motivo_suspensao: string | null
           nome: string
@@ -2554,7 +2785,10 @@ export type Database = {
           email?: string
           estado?: string | null
           foto_url?: string | null
+          handle?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           motivo_rebaixamento?: string | null
           motivo_suspensao?: string | null
           nome?: string
@@ -2584,7 +2818,10 @@ export type Database = {
           email?: string
           estado?: string | null
           foto_url?: string | null
+          handle?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           motivo_rebaixamento?: string | null
           motivo_suspensao?: string | null
           nome?: string
@@ -2740,6 +2977,41 @@ export type Database = {
         }
         Relationships: []
       }
+      resenha_votos: {
+        Row: {
+          categoria: string
+          criado_em: string
+          id: string
+          pelada_id: string
+          votado_id: string
+          votante_id: string
+        }
+        Insert: {
+          categoria: string
+          criado_em?: string
+          id?: string
+          pelada_id: string
+          votado_id: string
+          votante_id: string
+        }
+        Update: {
+          categoria?: string
+          criado_em?: string
+          id?: string
+          pelada_id?: string
+          votado_id?: string
+          votante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resenha_votos_pelada_id_fkey"
+            columns: ["pelada_id"]
+            isOneToOne: false
+            referencedRelation: "peladas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       selos: {
         Row: {
           ativo: boolean
@@ -2821,6 +3093,48 @@ export type Database = {
           total_avaliacoes_recebidas?: number
           user_id?: string
           velocidade?: number
+        }
+        Relationships: []
+      }
+      skills_goleiro: {
+        Row: {
+          atualizado_em: string
+          comando_area: number
+          id: string
+          jogo_aereo: number
+          origem_ultima_atualizacao: string | null
+          posicionamento: number
+          reflexo: number
+          saida_pes: number
+          seguranca: number
+          total_avaliacoes_recebidas: number
+          user_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          comando_area?: number
+          id?: string
+          jogo_aereo?: number
+          origem_ultima_atualizacao?: string | null
+          posicionamento?: number
+          reflexo?: number
+          saida_pes?: number
+          seguranca?: number
+          total_avaliacoes_recebidas?: number
+          user_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          comando_area?: number
+          id?: string
+          jogo_aereo?: number
+          origem_ultima_atualizacao?: string | null
+          posicionamento?: number
+          reflexo?: number
+          saida_pes?: number
+          seguranca?: number
+          total_avaliacoes_recebidas?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -3259,11 +3573,43 @@ export type Database = {
         Args: { _data: string; _user_id: string }
         Returns: undefined
       }
+      atualizar_status_mrcoins: { Args: never; Returns: undefined }
+      buscar_indicacao_por_codigo: {
+        Args: { _codigo: string }
+        Returns: {
+          id: string
+          indicador_id: string
+          indicador_nome: string
+        }[]
+      }
+      buscar_info_grupo: {
+        Args: { _codigo?: string; _grupo_id?: string }
+        Returns: {
+          criado_por: string
+          id: string
+          nome: string
+        }[]
+      }
+      cancelar_peladas_nao_iniciadas: { Args: never; Returns: undefined }
       check_selos: { Args: { _user_id: string }; Returns: undefined }
-      creditar_pontos: {
-        Args: { _acao: string; _pelada_id?: string; _user_id: string }
+      convidar_auxiliares_pelada: {
+        Args: { _pelada_id: string; _user_ids: string[] }
         Returns: undefined
       }
+      creditar_pontos:
+        | {
+            Args: { _acao: string; _pelada_id?: string; _user_id: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _acao: string
+              _detalhes?: Json
+              _pelada_id?: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
       criar_codigo_indicacao: {
         Args: { _grupo_id: string; _tipo: string; _user_id: string }
         Returns: string
@@ -3278,8 +3624,12 @@ export type Database = {
         }
         Returns: string
       }
+      fechar_mes_mrcoins: { Args: never; Returns: undefined }
       fechar_temporada: { Args: { _temporada_id: string }; Returns: undefined }
+      fechar_temporadas_vencidas: { Args: never; Returns: undefined }
+      gerar_handle_unico: { Args: { _nome: string }; Returns: string }
       gerar_posts_pelada: { Args: { _pelada_id: string }; Returns: undefined }
+      goleiro_perfil_publico: { Args: { _user_id: string }; Returns: Json }
       grupo_de_pelada: { Args: { _pelada_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -3296,7 +3646,19 @@ export type Database = {
         Args: { _grupo_id: string; _user_id: string }
         Returns: boolean
       }
+      limites_temporada_atual: {
+        Args: never
+        Returns: {
+          fim: string
+          inicio: string
+        }[]
+      }
+      marcar_indicacao_cadastro: {
+        Args: { _codigo: string; _novo_user_id: string }
+        Returns: undefined
+      }
       media_skill_user: { Args: { _user_id: string }; Returns: number }
+      obter_ou_criar_temporada_atual: { Args: never; Returns: string }
       recalcular_skills_jogador: {
         Args: { _grupo_id: string; _user_id: string }
         Returns: undefined
@@ -3305,7 +3667,13 @@ export type Database = {
         Args: { _convite_id: string }
         Returns: undefined
       }
+      resgatar_mrcoins: { Args: { _lote_id: string }; Returns: undefined }
+      responder_convite_auxiliar: {
+        Args: { _aceitar: boolean; _id: string }
+        Returns: undefined
+      }
       slugify: { Args: { _text: string }; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
       user_stats: { Args: { _user_id: string }; Returns: Json }
       verify_capitao_status: { Args: never; Returns: undefined }
     }
