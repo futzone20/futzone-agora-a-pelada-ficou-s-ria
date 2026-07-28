@@ -8,16 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { CentralMensagensCard } from "@/components/CentralMensagensCard";
 import {
   Copy, ArrowLeft, ChevronRight, User, Radar as RadarIcon, Flame, Star,
-  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays, Coins,
+  MessageCircle, UserPlus, Settings, MapPin, Pencil, Shirt, LogOut, Clock, CalendarDays, Coins, Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { calcularResumoJogadorPelada, type ResumoJogadorPelada } from "@/lib/resumoJogadorPelada";
 import { obterLocalizacaoCompleta } from "@/lib/geolocalizacao";
+import { pushSuportado, ativarPush, desativarPush } from "@/lib/pushNotifications";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 
 const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -60,6 +62,9 @@ export function PerfilCompleto() {
   const [saving, setSaving] = useState(false);
   const [diaXpSelecionado, setDiaXpSelecionado] = useState<Date | undefined>(undefined);
   const [temPerfilGoleiro, setTemPerfilGoleiro] = useState(false);
+  const [pushDisponivel, setPushDisponivel] = useState(false);
+  const [pushAtivo, setPushAtivo] = useState(false);
+  const [pushCarregando, setPushCarregando] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -94,8 +99,36 @@ export function PerfilCompleto() {
         const { data: gp } = await (supabase as any).from("goleiros_perfil").select("id").eq("user_id", user.id).maybeSingle();
         setTemPerfilGoleiro(!!gp);
       }
+      if (pushSuportado()) {
+        setPushDisponivel(true);
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          setPushAtivo(!!sub);
+        } catch { /* service worker ainda não pronto — trata como desativado */ }
+      }
     })();
   }, [user?.id]);
+
+  const alternarPush = async () => {
+    if (!user) return;
+    setPushCarregando(true);
+    try {
+      if (pushAtivo) {
+        await desativarPush();
+        setPushAtivo(false);
+        toast.success("Notificações desativadas");
+      } else {
+        await ativarPush(user.id, (msg) => toast.info(msg));
+        setPushAtivo(true);
+        toast.success("Notificações ativadas! Você vai receber avisos mesmo com o app fechado.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível alterar as notificações");
+    } finally {
+      setPushCarregando(false);
+    }
+  };
 
   const save = async () => {
     if (!form.nome.trim()) return toast.error("Nome é obrigatório");
@@ -448,6 +481,18 @@ export function PerfilCompleto() {
         preview={<CarteiraPreview userId={user?.id} />}
         onClick={() => setSecaoAtiva("carteira")}
       />
+      {pushDisponivel && (
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <Bell className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <div className="font-bold">Notificações push</div>
+            <div className="text-xs text-muted-foreground">{pushAtivo ? "Ativadas — você recebe avisos mesmo com o app fechado" : "Ative pra não perder convites e avisos"}</div>
+          </div>
+          <Switch checked={pushAtivo} disabled={pushCarregando} onCheckedChange={alternarPush} />
+        </div>
+      )}
       <MenuRow
         icon={Settings} titulo="Conta e preferências" subtitulo="Segurança, privacidade e configurações"
         onClick={() => setSecaoAtiva("conta")}
