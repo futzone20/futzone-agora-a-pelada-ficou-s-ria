@@ -52,14 +52,7 @@ interface AuthCtx {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
-async function loadProfile(userId: string): Promise<FZUser | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("user_id, nome, email, whatsapp, data_nascimento, role, quer_ser_goleiro, posicao_preferida, foto_url, cidade, estado, latitude, longitude, peso, altura, bio, handle")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error || !data) return null;
-  const d = data as any;
+function mapDbProfileToUser(d: any): FZUser {
   return {
     id: d.user_id,
     nome: d.nome ?? "",
@@ -81,6 +74,16 @@ async function loadProfile(userId: string): Promise<FZUser | null> {
   };
 }
 
+async function loadProfile(userId: string): Promise<FZUser | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id, nome, email, whatsapp, data_nascimento, role, quer_ser_goleiro, posicao_preferida, foto_url, cidade, estado, latitude, longitude, peso, altura, bio, handle")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapDbProfileToUser(data);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FZUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,8 +93,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       return;
     }
-    const p = await loadProfile(session.user.id);
-    setUser(p);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("user_id, nome, email, whatsapp, data_nascimento, role, quer_ser_goleiro, posicao_preferida, foto_url, cidade, estado, latitude, longitude, peso, altura, bio, handle")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    if (error) {
+      // Falha transitória (rede instável, token ainda sendo renovado bem na
+      // hora que o app volta do segundo plano, etc.) — NÃO desloga a pessoa
+      // por causa disso. Se a sessão realmente tiver caído de verdade, o
+      // próprio Supabase dispara um evento SIGNED_OUT (session vira null)
+      // e cai no branch acima, que trata isso corretamente.
+      console.warn("[auth] falha ao recarregar perfil, mantendo sessão atual:", error.message);
+      return;
+    }
+    if (!data) { setUser(null); return; }
+    setUser(mapDbProfileToUser(data));
   };
 
   useEffect(() => {
@@ -102,7 +119,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       void hydrate(data.session).finally(() => setLoading(false));
     });
-    return () => { sub.subscription.unsubscribe(); };
+
+    // Quando o app volta do segundo plano (troca de app no celular, tela
+    // bloqueada, etc.), o token de acesso pode ter vencido enquanto estava
+    // congelado. Força uma checagem de sessão nessa hora — o próprio
+    // supabase-js renova o token sozinho se o refresh token ainda for
+    // válido, evitando que a primeira consulta depois de voltar falhe.
+    const aoVoltarPraTela = () => {
+      if (document.visibilityState === "visible") {
+        void supabase.auth.getSession().then(({ data }) => { void hydrate(data.session); });
+      }
+    };
+    document.addEventListener("visibilitychange", aoVoltarPraTela);
+    window.addEventListener("focus", aoVoltarPraTela);
+
+    return () => {
+      sub.subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", aoVoltarPraTela);
+      window.removeEventListener("focus", aoVoltarPraTela);
+    };
   }, []);
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
