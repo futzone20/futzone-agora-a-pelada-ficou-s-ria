@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Search, Sparkles, Info, BookOpen, FolderPlus, PiggyBank, ChevronRight, Trophy } from "lucide-react";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Sparkles, Info, BookOpen, FolderPlus, PiggyBank, ChevronRight, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -64,6 +63,28 @@ function GrupoPage() {
 
   const isCapitao = !!membros.find((m) => m.user_id === user?.id && (m.papel === "capitao" || m.papel === "auxiliar"));
   const souCapitaoExato = !!membros.find((m) => m.user_id === user?.id && m.papel === "capitao");
+  const confirmRevogar = useConfirm();
+  const linkConvite = `${typeof window !== "undefined" ? window.location.origin : ""}/convite/${grupo?.codigo_convite || ""}`;
+
+  const copiarLinkConvite = () => {
+    navigator.clipboard.writeText(linkConvite);
+    toast.success("Link copiado!");
+  };
+
+  const revogarLinkConvite = async () => {
+    const ok = await confirmRevogar({
+      title: "Revogar link de convite",
+      description: "O link atual para de funcionar imediatamente e um novo é gerado. Quem já tinha o link antigo salvo não vai mais conseguir entrar com ele.",
+      variant: "destructive",
+      confirmLabel: "Revogar e gerar novo",
+    });
+    if (!ok) return;
+    const novo = "FZ-" + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const { error } = await supabase.from("grupos").update({ codigo_convite: novo } as never).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Link revogado — novo link gerado!");
+    void load();
+  };
 
   const load = async () => {
     try {
@@ -171,6 +192,20 @@ function GrupoPage() {
         <h1 className="text-3xl font-black">{grupo.nome}</h1>
         <p className="mt-1 text-sm text-muted-foreground">Código: <span className="font-mono font-bold text-primary">{grupo.codigo_convite}</span></p>
       </div>
+
+      {isCapitao && (
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+          <div className="text-sm font-bold">🔗 Link de convite</div>
+          <p className="text-xs text-muted-foreground">Não expira sozinho — enquanto estiver ativo, qualquer um que abrir entra no grupo direto.</p>
+          <div className="flex gap-2">
+            <Input readOnly value={linkConvite} className="font-mono text-xs" />
+            <Button onClick={copiarLinkConvite} variant="secondary" size="icon"><Copy className="h-4 w-4" /></Button>
+          </div>
+          <Button onClick={revogarLinkConvite} variant="outline" size="sm" className="w-full text-red-500 border-red-500/30 hover:bg-red-500/10">
+            Revogar link e gerar novo
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-4 rounded-2xl border border-primary/30 bg-card p-4">
         <div className="text-sm font-bold text-primary">Resumo do grupo</div>
@@ -429,12 +464,9 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
 
 function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros: Membro[]; onDone: () => void }) {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"buscar" | "link">("buscar");
   const [termo, setTermo] = useState("");
   const [resultados, setResultados] = useState<any[]>([]);
   const [buscando, setBuscando] = useState(false);
-  const link = `${typeof window !== "undefined" ? window.location.origin : ""}/convite/${grupo.codigo_convite}`;
-  const copy = () => { navigator.clipboard.writeText(link); toast.success("Link copiado"); };
 
   const memberIds = useMemo(() => new Set(membros.map((m) => m.user_id)), [membros]);
 
@@ -466,60 +498,40 @@ function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros:
     setResultados((arr) => arr.filter((r) => r.user_id !== convidado_id));
   };
 
-  const gerarNovoCodigo = async () => {
-    const novo = "FZ-" + Math.random().toString(36).slice(2, 6).toUpperCase();
-    const { error } = await supabase.from("grupos").update({ codigo_convite: novo } as never).eq("id", grupo.id);
-    if (error) return toast.error(error.message);
-    toast.success("Novo código gerado"); onDone();
-  };
-
   return (
-    <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="buscar"><Search className="mr-2 h-4 w-4" />Buscar Jogador</TabsTrigger>
-        <TabsTrigger value="link"><Copy className="mr-2 h-4 w-4" />Link de Convite</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="buscar" className="mt-3 space-y-3">
-        <Input placeholder="Nome, @usuário ou WhatsApp (mínimo 3 letras)" value={termo} onChange={(e) => setTermo(e.target.value)} autoFocus />
-        {buscando && <p className="text-xs text-muted-foreground">Buscando...</p>}
-        {!buscando && termo.length >= 3 && resultados.length === 0 && (
-          <p className="text-xs text-muted-foreground">Nenhum jogador encontrado.</p>
-        )}
-        <div className="space-y-2">
-          {resultados.map((r) => {
-            const initials = (r.nome || "?").split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
-            return (
-              <div key={r.user_id} className="flex items-center gap-3 rounded-xl border border-border bg-secondary/30 p-2">
-                <Avatar className="h-9 w-9">
-                  {r.foto_url ? <AvatarImage src={r.foto_url} /> : null}
-                  <AvatarFallback className="bg-secondary text-xs">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-sm font-bold truncate">{r.nome}</span>
-                    {r.handle && <span className="shrink-0 text-xs text-primary">@{r.handle}</span>}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {r.cidade || "—"}{r.cidade && r.estado ? `/${r.estado}` : r.estado || ""} · {r.role === "capitao" ? "👑 Capitão" : "🎮 Jogador"}
-                  </div>
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Busque um jogador já cadastrado no app pra convidar direto — ou use o "Link de convite" que já aparece na tela principal do grupo pra convidar qualquer um, cadastrado ou não.
+      </p>
+      <Input placeholder="Nome, @usuário ou WhatsApp (mínimo 3 letras)" value={termo} onChange={(e) => setTermo(e.target.value)} autoFocus />
+      {buscando && <p className="text-xs text-muted-foreground">Buscando...</p>}
+      {!buscando && termo.length >= 3 && resultados.length === 0 && (
+        <p className="text-xs text-muted-foreground">Nenhum jogador encontrado.</p>
+      )}
+      <div className="space-y-2">
+        {resultados.map((r) => {
+          const initials = (r.nome || "?").split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
+          return (
+            <div key={r.user_id} className="flex items-center gap-3 rounded-xl border border-border bg-secondary/30 p-2">
+              <Avatar className="h-9 w-9">
+                {r.foto_url ? <AvatarImage src={r.foto_url} /> : null}
+                <AvatarFallback className="bg-secondary text-xs">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="text-sm font-bold truncate">{r.nome}</span>
+                  {r.handle && <span className="shrink-0 text-xs text-primary">@{r.handle}</span>}
                 </div>
-                <Button size="sm" onClick={() => convidar(r.user_id)}>Convidar</Button>
+                <div className="text-xs text-muted-foreground truncate">
+                  {r.cidade || "—"}{r.cidade && r.estado ? `/${r.estado}` : r.estado || ""} · {r.role === "capitao" ? "👑 Capitão" : "🎮 Jogador"}
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </TabsContent>
-
-      <TabsContent value="link" className="mt-3 space-y-3">
-        <Label className="text-xs text-muted-foreground">URL de convite</Label>
-        <div className="flex gap-2">
-          <Input readOnly value={link} className="font-mono text-xs" />
-          <Button onClick={copy} variant="secondary"><Copy className="h-4 w-4" /></Button>
-        </div>
-        <Button variant="outline" size="sm" onClick={gerarNovoCodigo}>Gerar novo código</Button>
-      </TabsContent>
-    </Tabs>
+              <Button size="sm" onClick={() => convidar(r.user_id)}>Convidar</Button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
