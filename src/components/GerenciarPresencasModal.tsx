@@ -106,15 +106,26 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
       targetStatus = "lista_espera";
       toast.warning("Pelada lotada. Jogador adicionado como reserva.");
     }
+
+    // Atualização otimista — a lista já reflete a mudança na hora, sem
+    // esperar o servidor responder nem recarregar tudo de novo (isso é o
+    // que causava aquele "pisca" de tela virando "Carregando..." a cada clique).
+    const confirmacoesAnteriores = confirmacoes;
+    if (existing) {
+      setConfirmacoes((prev) => prev.map((c) => (c.user_id === userId ? { ...c, status: targetStatus } : c)));
+    } else {
+      setConfirmacoes((prev) => [...prev, { id: `temp-${userId}`, user_id: userId, status: targetStatus }]);
+    }
+
     if (existing) {
       const { error } = await supabase.from("pelada_confirmacoes").update({ status: targetStatus } as never).eq("id", existing.id);
-      if (error) toast.error(error.message);
+      if (error) { toast.error(error.message); setConfirmacoes(confirmacoesAnteriores); }
     } else {
-      const { error } = await supabase.from("pelada_confirmacoes").insert({ pelada_id: peladaId, user_id: userId, status: targetStatus } as never);
-      if (error) toast.error(error.message);
+      const { data, error } = await supabase.from("pelada_confirmacoes").insert({ pelada_id: peladaId, user_id: userId, status: targetStatus } as never).select().maybeSingle();
+      if (error) { toast.error(error.message); setConfirmacoes(confirmacoesAnteriores); }
+      else if (data) setConfirmacoes((prev) => prev.map((c) => (c.user_id === userId ? { ...c, id: (data as any).id } : c)));
     }
     setActing(false);
-    void load();
   };
 
   const encerrarListaManualmente = async () => {
@@ -219,7 +230,7 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
 
 
           <TabsContent value="convidados">
-            <ConvidadosTab peladaId={peladaId} grupoId={grupoId} convidados={convidados} onChange={load} />
+            <ConvidadosTab peladaId={peladaId} grupoId={grupoId} convidados={convidados} setConvidados={setConvidados} />
           </TabsContent>
 
           <TabsContent value="reservas" className="space-y-2">
@@ -239,7 +250,7 @@ function StatusBadge({ status }: { status?: string }) {
   return <Badge variant="secondary">— Pendente</Badge>;
 }
 
-function ConvidadosTab({ peladaId, grupoId, convidados, onChange }: { peladaId: string; grupoId: string; convidados: any[]; onChange: () => void }) {
+function ConvidadosTab({ peladaId, grupoId, convidados, setConvidados }: { peladaId: string; grupoId: string; convidados: any[]; setConvidados: (updater: any[] | ((prev: any[]) => any[])) => void }) {
   const [nome, setNome] = useState("");
   const [wpp, setWpp] = useState("");
   const [posicao, setPosicao] = useState<"linha" | "goleiro">("linha");
@@ -271,21 +282,22 @@ function ConvidadosTab({ peladaId, grupoId, convidados, onChange }: { peladaId: 
     if (!nome.trim()) return toast.error("Nome obrigatório");
     setSaving(true);
     const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("pelada_convidados").insert({
+    const { data, error } = await supabase.from("pelada_convidados").insert({
       pelada_id: peladaId, nome: nome.trim(), whatsapp: wpp || null,
       posicao, nivel_geral: nivel, adicionado_por: u.user?.id,
-    } as never);
+    } as never).select().maybeSingle();
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Convidado adicionado");
+    if (data) setConvidados((prev) => [...prev, data]);
     setNome(""); setWpp(""); setNivel(3); setPosicao("linha"); setNivelAnteriorInfo(null);
-    onChange();
   };
 
   const remove = async (id: string) => {
+    const anterior = convidados;
+    setConvidados((prev) => prev.filter((c) => c.id !== id));
     const { error } = await supabase.from("pelada_convidados").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else onChange();
+    if (error) { toast.error(error.message); setConvidados(anterior); }
   };
 
   return (
