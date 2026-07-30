@@ -12,7 +12,7 @@ const SKILLS = [
   { key: "drible", emoji: "🎯", label: "Drible" },
   { key: "passe", emoji: "🤝", label: "Passe" },
   { key: "chute", emoji: "👟", label: "Chute" },
-  { key: "resistencia", emoji: "💪", label: "Resistência" },
+  { key: "resistencia", emoji: "🛡️", label: "Marcação" },
   { key: "posicionamento", emoji: "📍", label: "Posicionamento" },
 ] as const;
 
