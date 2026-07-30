@@ -34,7 +34,7 @@ function PublicProfile() {
   const s = data.skills || {};
   const skillsArr = [
     ["Velocidade", s.velocidade || 3], ["Drible", s.drible || 3], ["Passe", s.passe || 3],
-    ["Chute", s.chute || 3], ["Resistência", s.resistencia || 3], ["Posicionamento", s.posicionamento || 3],
+    ["Chute", s.chute || 3], ["Marcação", s.resistencia || 3], ["Posicionamento", s.posicionamento || 3],
   ];
   const stats = data.stats || {};
 
