@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { calcularProximaPartida, iniciarProximaPartida, type ProximaPartidaPreview } from "@/lib/rotacaoPartida";
 import { calcularTabela } from "@/lib/placar";
+import { corTextoLegivel } from "@/lib/sorteio";
 
 
 export const Route = createFileRoute("/peladas/$id/lances")({ component: Wrapper });
@@ -548,9 +549,9 @@ function LancesPage() {
               className="grid h-16 w-14 place-items-center rounded-t-xl rounded-b-[24px_16px]"
               style={{ background: `${timeA?.cor}22`, border: `2px solid ${timeA?.cor}` }}
             >
-              <Shield className="h-8 w-8" style={{ color: timeA?.cor }} />
+              <Shield className="h-8 w-8" style={{ color: corTextoLegivel(timeA?.cor || "#888") }} />
             </div>
-            <div className="mt-1.5 text-sm font-bold truncate max-w-full" style={{ color: timeA?.cor }}>{timeA?.nome}</div>
+            <div className="mt-1.5 text-sm font-bold truncate max-w-full" style={{ color: corTextoLegivel(timeA?.cor || "#888") }}>{timeA?.nome}</div>
           </div>
 
           {/* Centro cronômetro + placar */}
@@ -560,9 +561,9 @@ function LancesPage() {
               {fmt(restanteSec)}
             </div>
             <div className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-black/40 px-5 py-2">
-              <span className="text-[44px] font-black leading-none tabular-nums" style={{ color: timeA?.cor }}>{partida.placar_a}</span>
+              <span className="text-[44px] font-black leading-none tabular-nums" style={{ color: corTextoLegivel(timeA?.cor || "#888") }}>{partida.placar_a}</span>
               <span className="text-2xl font-bold text-white/40">x</span>
-              <span className="text-[44px] font-black leading-none tabular-nums text-white">{partida.placar_b}</span>
+              <span className="text-[44px] font-black leading-none tabular-nums" style={{ color: corTextoLegivel(timeB?.cor || "#888") }}>{partida.placar_b}</span>
             </div>
           </div>
 
@@ -572,9 +573,9 @@ function LancesPage() {
               className="grid h-16 w-14 place-items-center rounded-t-xl rounded-b-[24px_16px]"
               style={{ background: `${timeB?.cor}22`, border: `2px solid ${timeB?.cor}` }}
             >
-              <Shield className="h-8 w-8" style={{ color: timeB?.cor }} />
+              <Shield className="h-8 w-8" style={{ color: corTextoLegivel(timeB?.cor || "#888") }} />
             </div>
-            <div className="mt-1.5 text-sm font-bold truncate max-w-full" style={{ color: timeB?.cor }}>{timeB?.nome}</div>
+            <div className="mt-1.5 text-sm font-bold truncate max-w-full" style={{ color: corTextoLegivel(timeB?.cor || "#888") }}>{timeB?.nome}</div>
           </div>
         </div>
       </div>
@@ -593,7 +594,7 @@ function LancesPage() {
             <div key={t.id} className="rounded-2xl border border-[#1F1F1F] bg-[#111111] p-2.5">
               <div className="mb-2 flex items-center gap-2 px-1">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: t.cor }} />
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.cor }}>{t.nome}</span>
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: corTextoLegivel(t.cor) }}>{t.nome}</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {TIPOS.map((tp) => (
@@ -694,9 +695,9 @@ function LancesPage() {
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 shrink-0">{ordinal(p.numero_partida)} PARTIDA</span>
                         <span className="text-[12px] font-bold text-white truncate">
-                          <span style={{ color: tA?.cor }}>{tA?.nome || "—"}</span>
+                          <span style={{ color: corTextoLegivel(tA?.cor || "#888") }}>{tA?.nome || "—"}</span>
                           <span className="mx-1 text-white/80">{p.placar_a} x {p.placar_b}</span>
-                          <span style={{ color: tB?.cor }}>{tB?.nome || "—"}</span>
+                          <span style={{ color: corTextoLegivel(tB?.cor || "#888") }}>{tB?.nome || "—"}</span>
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
