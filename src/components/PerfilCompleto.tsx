@@ -26,7 +26,7 @@ const ESTADOS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG
 const SKILL_KEYS = ["velocidade","drible","passe","chute","resistencia","posicionamento"] as const;
 const SKILL_LABELS: Record<typeof SKILL_KEYS[number], string> = {
   velocidade: "⚡ Velocidade", drible: "✨ Drible", passe: "🎯 Passe",
-  chute: "💥 Chute", resistencia: "🫁 Resistência", posicionamento: "🧠 Posicionamento",
+  chute: "💥 Chute", resistencia: "🛡️ Marcação", posicionamento: "🧠 Posicionamento",
 };
 type SkillKey = typeof SKILL_KEYS[number];
 type Secao = "dados" | "skills" | "ofensiva" | "pontos" | "whatsapp" | "indicar" | "conta" | "historico" | "carteira" | null;
