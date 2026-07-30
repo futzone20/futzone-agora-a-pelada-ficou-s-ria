@@ -646,7 +646,17 @@ function PeladaDetail() {
           };
           return (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-white font-bold uppercase tracking-wide text-sm"><Users className="h-5 w-5" /> Times sorteados</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-white font-bold uppercase tracking-wide text-sm"><Users className="h-5 w-5" /> Times sorteados</div>
+                {isCapitao && pelada.status !== "encerrada" && pelada.status !== "cancelada" && (
+                  <Link
+                    to="/peladas/$id/editar-times" params={{ id }}
+                    className="flex items-center gap-1 rounded-full border border-[#00FF87]/40 px-2.5 py-1 text-[10px] font-bold text-[#00FF87]"
+                  >
+                    Editar times <ChevronRight className="h-3 w-3" />
+                  </Link>
+                )}
+              </div>
 
               {meuTime && (
                 <div className="rounded-2xl border-2 bg-[#1A1A1A] p-4 relative overflow-hidden" style={{ borderColor: meuTime.cor }}>
