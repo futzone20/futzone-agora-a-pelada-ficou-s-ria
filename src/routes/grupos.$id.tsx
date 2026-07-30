@@ -546,7 +546,7 @@ function SkillsModal({ membro, onDone }: { membro: Membro; onDone: () => void })
 
   const labels: Record<string, string> = {
     velocidade: "⚡ Velocidade", drible: "🎯 Drible", passe: "🤝 Passe",
-    chute: "👟 Chute", resistencia: "💪 Resistência", posicionamento: "📍 Posicionamento",
+    chute: "👟 Chute", resistencia: "🛡️ Marcação", posicionamento: "📍 Posicionamento",
   };
 
   const salvar = async () => {
