@@ -554,25 +554,6 @@ function PeladaDetail() {
       <div className="mt-4 space-y-4 px-4">
         <ConviteAuxiliarCard peladaId={id} onChange={load} />
 
-        {isCapitao && pelada.status !== "encerrada" && pelada.status !== "cancelada" && (
-          <Link
-            to="/goleiros"
-            search={{ peladaId: id }}
-            className="flex items-center justify-between rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00FF87]/15">
-                <Hand className="h-5 w-5 text-[#00FF87]" />
-              </div>
-              <div>
-                <div className="font-bold text-white">Buscar Goleiro</div>
-                <div className="text-xs text-[#888]">Convide um goleiro do catálogo pra essa pelada</div>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-[#888]" />
-          </Link>
-        )}
-
         {times.length === 0 && pelada.status !== "encerrada" && (
           <div className="grid grid-cols-2 gap-4 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4">
             <div>
@@ -696,7 +677,7 @@ function PeladaDetail() {
               {(() => {
                 const outros = times.filter((t) => t !== meuTime);
                 return (
-                  <div className={`grid gap-3 ${outros.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+                  <div className="grid grid-cols-1 gap-3">
                     {outros.map((t) => (
                       <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
                         {temRodizio && estaDeFora(t) && (
@@ -791,7 +772,7 @@ function PeladaDetail() {
           );
         })()}
 
-        {isCapitao && pelada.status === "aguardando" && pelada.token_confirmacao && (() => {
+        {isCapitao && !pelada.sorteio_feito && pelada.status === "aguardando" && pelada.token_confirmacao && (() => {
           const linkCompleto = `${window.location.origin}/pelada-confirmar/${pelada.token_confirmacao}`;
           const mensagemWhats = encodeURIComponent(`⚽ A lista da pelada "${pelada.nome_pelada}" está aberta! Confirma sua presença: ${linkCompleto}`);
           return (
@@ -828,18 +809,20 @@ function PeladaDetail() {
 
         {pelada.status !== "encerrada" && pelada.status !== "em_andamento" && (
           <div className="grid grid-cols-2 gap-3">
-            {(!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
-              <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
-            ) : minhaConf?.status === "confirmado" ? (
-              <>
-                <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
-                <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
-              </>
-            ) : (
-              <>
-                <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold uppercase tracking-wide h-13 rounded-xl">Em lista de espera</Button>
-                <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
-              </>
+            {!pelada.sorteio_feito && (
+              (!minhaConf || (minhaConf.status !== "confirmado" && minhaConf.status !== "lista_espera")) ? (
+                <Button onClick={confirmar} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Confirmar presença</Button>
+              ) : minhaConf?.status === "confirmado" ? (
+                <>
+                  <Button disabled className="bg-green-900/30 text-[#00FF87] border border-green-900/50 font-bold uppercase tracking-wide h-13 rounded-xl"><Check className="mr-2 h-5 w-5" /> Presença confirmada ✓</Button>
+                  <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Cancelar</Button>
+                </>
+              ) : (
+                <>
+                  <Button disabled className="bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 font-bold uppercase tracking-wide h-13 rounded-xl">Em lista de espera</Button>
+                  <Button onClick={cancelar} disabled={acting} className="bg-[#CC0000] text-white font-bold uppercase tracking-wide h-13 rounded-xl"><X className="mr-2 h-5 w-5" /> Sair</Button>
+                </>
+              )
             )}
 
             {!pelada.sorteio_feito && isCapitao && (confirmados.length + convidados.length) >= pelada.numero_times * 2 && (
