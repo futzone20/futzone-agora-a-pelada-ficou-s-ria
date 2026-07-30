@@ -219,7 +219,7 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
 
 
           <TabsContent value="convidados">
-            <ConvidadosTab peladaId={peladaId} convidados={convidados} onChange={load} />
+            <ConvidadosTab peladaId={peladaId} grupoId={grupoId} convidados={convidados} onChange={load} />
           </TabsContent>
 
           <TabsContent value="reservas" className="space-y-2">
@@ -239,12 +239,33 @@ function StatusBadge({ status }: { status?: string }) {
   return <Badge variant="secondary">— Pendente</Badge>;
 }
 
-function ConvidadosTab({ peladaId, convidados, onChange }: { peladaId: string; convidados: any[]; onChange: () => void }) {
+function ConvidadosTab({ peladaId, grupoId, convidados, onChange }: { peladaId: string; grupoId: string; convidados: any[]; onChange: () => void }) {
   const [nome, setNome] = useState("");
   const [wpp, setWpp] = useState("");
   const [posicao, setPosicao] = useState<"linha" | "goleiro">("linha");
   const [nivel, setNivel] = useState(3);
   const [saving, setSaving] = useState(false);
+  const [nivelAnteriorInfo, setNivelAnteriorInfo] = useState<string | null>(null);
+
+  const buscarNivelAnterior = async () => {
+    const nomeLimpo = nome.trim();
+    setNivelAnteriorInfo(null);
+    if (nomeLimpo.length < 2) return;
+    const { data: peladasDoGrupo } = await supabase.from("peladas").select("id").eq("grupo_id", grupoId);
+    const peladaIds = (peladasDoGrupo || []).map((p: any) => p.id).filter((pid: string) => pid !== peladaId);
+    if (!peladaIds.length) return;
+    const { data: anteriores } = await supabase
+      .from("pelada_convidados")
+      .select("nivel_geral, criado_em")
+      .in("pelada_id", peladaIds)
+      .ilike("nome", nomeLimpo)
+      .order("criado_em", { ascending: false })
+      .limit(1);
+    if (anteriores && anteriores.length) {
+      setNivel(anteriores[0].nivel_geral);
+      setNivelAnteriorInfo(`Já jogou aqui antes — nível ${anteriores[0].nivel_geral} da última vez, já preenchido.`);
+    }
+  };
 
   const add = async () => {
     if (!nome.trim()) return toast.error("Nome obrigatório");
@@ -257,7 +278,7 @@ function ConvidadosTab({ peladaId, convidados, onChange }: { peladaId: string; c
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Convidado adicionado");
-    setNome(""); setWpp(""); setNivel(3); setPosicao("linha");
+    setNome(""); setWpp(""); setNivel(3); setPosicao("linha"); setNivelAnteriorInfo(null);
     onChange();
   };
 
@@ -271,7 +292,11 @@ function ConvidadosTab({ peladaId, convidados, onChange }: { peladaId: string; c
     <div className="space-y-3">
       <div className="rounded-xl border border-border bg-card p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
-          <div><Label className="text-xs">Nome *</Label><Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="João Silva" /></div>
+          <div>
+            <Label className="text-xs">Nome *</Label>
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} onBlur={buscarNivelAnterior} placeholder="João Silva" />
+            {nivelAnteriorInfo && <p className="mt-1 text-[11px] text-primary">{nivelAnteriorInfo}</p>}
+          </div>
           <div><Label className="text-xs">WhatsApp</Label><Input value={wpp} onChange={(e) => setWpp(e.target.value)} placeholder="(00) 00000-0000" /></div>
         </div>
         <div className="flex gap-2">
