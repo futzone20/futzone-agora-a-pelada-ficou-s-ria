@@ -6,7 +6,8 @@ import { getNavItems } from "@/lib/navItems";
 import { Button } from "@/components/ui/button";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Star, ArrowLeft, CheckCircle2, Lock, PartyPopper } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Lock, PartyPopper } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 
@@ -74,6 +75,18 @@ function Avaliar() {
   const [xpModal, setXpModal] = useState<{ bonus: number; totalSessao: number } | null>(null);
   const xpSessaoRef = useRef(0);
   const [jaEnviouVotos, setJaEnviouVotos] = useState(false);
+  // rastreia se a pessoa realmente mexeu em cada slider — como o slider sempre
+  // fica em algum valor de 1 a 5, não dá mais pra usar "valor zerado" como sinal
+  // de "ainda não avaliei". Sem isso, dava pra confirmar sem querer.
+  const [tocados, setTocados] = useState<Record<string, Set<string>>>({});
+  const marcarTocado = (uid: string, campo: string) => {
+    setTocados((prev) => {
+      const atual = new Set(prev[uid] || []);
+      atual.add(campo);
+      return { ...prev, [uid]: atual };
+    });
+  };
+  const foiTocado = (uid: string, campo: string) => tocados[uid]?.has(campo) ?? false;
 
   useEffect(() => {
     (async () => {
@@ -136,16 +149,17 @@ function Avaliar() {
           gols: ex ? ex.gols_confirmados : (stats[uid]?.g || 0),
           passes: ex ? ex.passes_confirmados : (stats[uid]?.p || 0),
           defesas: ex ? ex.defesas_confirmadas : (stats[uid]?.d || 0),
-          // zeradas por padrão — ninguém pode confirmar sem escolher de verdade
-          nota_geral: ex?.nota_geral || 0,
-          nota_comportamento: ex?.nota_comportamento || 0,
-          desempenho: skillMap[uid]?.nota_desempenho_geral || 0,
-          reflexo: exGk?.reflexo || 0,
-          seguranca: exGk?.seguranca || 0,
-          jogo_aereo: exGk?.jogo_aereo || 0,
-          saida_pes: exGk?.saida_pes || 0,
-          posicionamento_gk: exGk?.posicionamento || 0,
-          comando_area: exGk?.comando_area || 0,
+          // padrão neutro (3) — o slider precisa de um valor válido; a trava de
+          // "ainda não avaliei" agora é controlada por `tocados`, não pelo valor
+          nota_geral: ex?.nota_geral || 3,
+          nota_comportamento: ex?.nota_comportamento || 3,
+          desempenho: skillMap[uid]?.nota_desempenho_geral || 3,
+          reflexo: exGk?.reflexo || 3,
+          seguranca: exGk?.seguranca || 3,
+          jogo_aereo: exGk?.jogo_aereo || 3,
+          saida_pes: exGk?.saida_pes || 3,
+          posicionamento_gk: exGk?.posicionamento || 3,
+          comando_area: exGk?.comando_area || 3,
         };
       }));
 
@@ -184,17 +198,18 @@ function Avaliar() {
     if (!user || !pelada) return;
     const j = jogadores.find((x) => x.user_id === uid);
     if (!j) return;
-    if (j.nota_geral < 1 || j.nota_comportamento < 1) {
-      toast.error("Dê pelo menos 1 estrela em cada categoria antes de confirmar.");
+    if (!foiTocado(uid, "nota_geral") || !foiTocado(uid, "nota_comportamento")) {
+      toast.error("Avalie nota geral e comportamento antes de confirmar.");
       return;
     }
     if (j.eh_goleiro) {
-      if (j.reflexo < 1 || j.seguranca < 1 || j.jogo_aereo < 1 || j.saida_pes < 1 || j.posicionamento_gk < 1 || j.comando_area < 1) {
+      const camposGoleiro = ["reflexo", "seguranca", "jogo_aereo", "saida_pes", "posicionamento_gk", "comando_area"];
+      if (camposGoleiro.some((c) => !foiTocado(uid, c))) {
         toast.error("Avalie todas as 6 skills de goleiro antes de confirmar.");
         return;
       }
-    } else if (j.desempenho < 1) {
-      toast.error("Dê pelo menos 1 estrela em cada categoria antes de confirmar.");
+    } else if (!foiTocado(uid, "desempenho")) {
+      toast.error("Avalie o desempenho antes de confirmar.");
       return;
     }
     setConfirmando((m) => ({ ...m, [uid]: true }));
@@ -375,57 +390,57 @@ function Avaliar() {
               ))}
             </div>
 
-            <Stars
+            <SliderRating
               label="Nota geral"
               caption="Como ele jogou no geral: participação, contribuição em ataque e defesa"
               value={j.nota_geral}
+              tocado={foiTocado(j.user_id, "nota_geral")}
               disabled={confirmado}
-              onChange={(v) => upd(j.user_id, { nota_geral: v })}
+              onChange={(v) => { upd(j.user_id, { nota_geral: v }); marcarTocado(j.user_id, "nota_geral"); }}
             />
-            <Stars
+            <SliderRating
               label="Comportamento"
               caption="Fair play: educação e postura com os colegas em quadra"
               value={j.nota_comportamento}
+              tocado={foiTocado(j.user_id, "nota_comportamento")}
               disabled={confirmado}
-              onChange={(v) => upd(j.user_id, { nota_comportamento: v })}
+              onChange={(v) => { upd(j.user_id, { nota_comportamento: v }); marcarTocado(j.user_id, "nota_comportamento"); }}
             />
 
             {j.eh_goleiro ? (
               <div className="space-y-3 rounded-xl border border-border bg-secondary/20 p-3">
                 <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">🧤 Avaliação de goleiro</div>
                 {SKILLS_GOLEIRO.map((sk) => (
-                  <Stars
+                  <SliderRating
                     key={sk.key}
                     label={sk.label}
                     caption={sk.caption}
                     value={(j as any)[sk.key]}
+                    tocado={foiTocado(j.user_id, sk.key)}
                     disabled={confirmado}
-                    onChange={(v) => upd(j.user_id, { [sk.key]: v } as any)}
+                    onChange={(v) => { upd(j.user_id, { [sk.key]: v } as any); marcarTocado(j.user_id, sk.key); }}
                   />
                 ))}
               </div>
             ) : (
-              <div>
-                <div className="text-xs text-muted-foreground">Desempenho na pelada</div>
-                <div className="flex gap-1">
-                  {[1,2,3,4,5].map((n) => (
-                    <button key={n} type="button" disabled={confirmado} onClick={() => upd(j.user_id, { desempenho: n })} className="disabled:cursor-not-allowed">
-                      <Star className={`h-6 w-6 ${n <= j.desempenho ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
-                    </button>
-                  ))}
-                </div>
-                {j.desempenho > 0 && <div className="text-[11px] text-muted-foreground mt-1">{DESEMPENHO_LABELS[j.desempenho]}</div>}
-              </div>
+              <SliderRating
+                label="Desempenho na pelada"
+                caption={foiTocado(j.user_id, "desempenho") ? DESEMPENHO_LABELS[Math.round(j.desempenho)] : undefined}
+                value={j.desempenho}
+                tocado={foiTocado(j.user_id, "desempenho")}
+                disabled={confirmado}
+                onChange={(v) => { upd(j.user_id, { desempenho: v }); marcarTocado(j.user_id, "desempenho"); }}
+              />
             )}
 
             {!confirmado && (
               <Button
                 onClick={() => confirmarJogador(j.user_id)}
                 disabled={
-                  !!confirmando[j.user_id] || j.nota_geral < 1 || j.nota_comportamento < 1 ||
+                  !!confirmando[j.user_id] || !foiTocado(j.user_id, "nota_geral") || !foiTocado(j.user_id, "nota_comportamento") ||
                   (j.eh_goleiro
-                    ? (j.reflexo < 1 || j.seguranca < 1 || j.jogo_aereo < 1 || j.saida_pes < 1 || j.posicionamento_gk < 1 || j.comando_area < 1)
-                    : j.desempenho < 1)
+                    ? ["reflexo", "seguranca", "jogo_aereo", "saida_pes", "posicionamento_gk", "comando_area"].some((c) => !foiTocado(j.user_id, c))
+                    : !foiTocado(j.user_id, "desempenho"))
                 }
                 className="w-full bg-primary font-bold"
               >
@@ -487,17 +502,25 @@ function Avaliar() {
   );
 }
 
-function Stars({ label, caption, value, onChange, disabled }: { label: string; caption?: string; value: number; onChange: (v: number) => void; disabled?: boolean }) {
+function SliderRating({ label, caption, value, tocado, onChange, disabled }: {
+  label: string; caption?: string; value: number; tocado: boolean; onChange: (v: number) => void; disabled?: boolean;
+}) {
   return (
     <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      {caption && <div className="text-[10.5px] text-muted-foreground/70 mb-0.5">{caption}</div>}
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button key={n} onClick={() => onChange(n)} type="button" disabled={disabled} className="disabled:cursor-not-allowed">
-            <Star className={`h-6 w-6 ${n <= value ? "fill-primary text-primary" : "text-muted-foreground"}`} />
-          </button>
-        ))}
+      <div className="flex items-baseline justify-between">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className={`text-sm font-bold tabular-nums ${tocado ? "text-primary" : "text-muted-foreground/50"}`}>
+          {tocado ? value.toFixed(1) : "— avalie"}
+        </span>
+      </div>
+      {caption && <div className="text-[10.5px] text-muted-foreground/70 mb-1">{caption}</div>}
+      <div className={`py-1.5 transition-opacity ${tocado ? "" : "opacity-60"}`}>
+        <Slider
+          min={1} max={5} step={0.5}
+          value={[value]}
+          disabled={disabled}
+          onValueChange={([v]) => onChange(v)}
+        />
       </div>
     </div>
   );
