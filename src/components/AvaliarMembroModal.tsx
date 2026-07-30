@@ -104,9 +104,9 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
               <div key={s.key}>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm">{s.emoji} {s.label}</span>
-                  <span className="font-bold text-primary">{vals[s.key]}</span>
+                  <span className="font-bold text-primary">{vals[s.key].toFixed(1)}</span>
                 </div>
-                <Slider min={1} max={5} step={1} value={[vals[s.key]]}
+                <Slider min={1} max={5} step={0.5} value={[vals[s.key]]}
                   onValueChange={(v) => setVals({ ...vals, [s.key]: v[0] })} />
               </div>
             ))}
