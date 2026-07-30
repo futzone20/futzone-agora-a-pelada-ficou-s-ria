@@ -615,6 +615,88 @@ function PeladaDetail() {
           );
         })()}
 
+        {pelada.status === "em_andamento" && partidaAtual && (() => {
+          const tA = times.find((t) => t.id === partidaAtual.time_a_id);
+          const tB = times.find((t) => t.id === partidaAtual.time_b_id);
+          const partidaMM = Math.floor(tempoRestante / 60).toString().padStart(2, "0");
+          const partidaSS = (tempoRestante % 60).toString().padStart(2, "0");
+          const proximoId: string | undefined = (partidaAtual as any).fila_espera?.[0];
+          const proximoTime = proximoId ? times.find((t) => t.id === proximoId) : null;
+          return (
+            <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-5">
+              <div className="text-center text-[#00FF87] font-bold text-xs uppercase tracking-widest mb-4">Partida Atual</div>
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2" style={{ backgroundColor: tA?.cor, borderColor: tA?.cor }}>
+                    <Shirt className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-white truncate">{tA?.nome}</div>
+                  <div className="text-3xl font-black text-white mt-1">{partidaAtual.placar_a}</div>
+                  {isCapitao && (
+                    <div className="flex justify-center gap-2 mt-2">
+                      <button onClick={() => ajustarPlacar("placar_a", -1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">-</button>
+                      <button onClick={() => ajustarPlacar("placar_a", 1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">+</button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-center px-2 shrink-0">
+                  <div className="text-3xl font-black text-white whitespace-nowrap">
+                    {partidaAtual.placar_a} <span className="text-[#666] text-xl">x</span> {partidaAtual.placar_b}
+                  </div>
+                  <div className="text-xl font-mono font-bold text-white mt-1">{partidaMM}:{partidaSS}</div>
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#00FF87]/15 px-2 py-0.5 text-[9px] font-bold text-[#00FF87]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00FF87] animate-pulse" /> AO VIVO
+                  </span>
+                  {partidaAtual.pausada_em && (
+                    <div className="mt-1 text-[9px] font-bold uppercase tracking-wider text-yellow-400">
+                      ⏸ pausado há {Math.floor(tempoPausadoAtual / 60).toString().padStart(2, "0")}:{(tempoPausadoAtual % 60).toString().padStart(2, "0")}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2" style={{ backgroundColor: tB?.cor, borderColor: tB?.cor }}>
+                    <Shirt className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-white truncate">{tB?.nome}</div>
+                  <div className="text-3xl font-black text-white mt-1">{partidaAtual.placar_b}</div>
+                  {isCapitao && (
+                    <div className="flex justify-center gap-2 mt-2">
+                      <button onClick={() => ajustarPlacar("placar_b", -1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">-</button>
+                      <button onClick={() => ajustarPlacar("placar_b", 1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">+</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {proximoTime && (
+                <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#888]">
+                  <RefreshCw className="h-3.5 w-3.5" /> Próxima: <span className="font-bold" style={{ color: corTextoLegivel(proximoTime.cor) }}>{proximoTime.nome}</span>
+                </div>
+              )}
+
+              {isCapitao && (
+                <div className="mt-5 space-y-2">
+                  <Button onClick={() => navigate({ to: "/peladas/$id/lances", params: { id } })} className="w-full bg-[#00FF87] text-black font-bold h-12 rounded-xl">
+                    <Shield className="mr-2 h-5 w-5" /> Painel de Lances
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    {partidaAtual.pausada_em ? (
+                      <Button onClick={retomarPartida} variant="outline" className="border-[#00FF87] text-[#00FF87] hover:bg-[#00FF87]/10 h-11 rounded-xl">▶ Retomar</Button>
+                    ) : (
+                      <Button onClick={pausarPartida} variant="outline" className="border-[#00FF87] text-[#00FF87] hover:bg-[#00FF87]/10 h-11 rounded-xl">⏸ Pausar Partida</Button>
+                    )}
+                    <Button onClick={encerrarPartida} variant="outline" className="border-[#00FF87] text-[#00FF87] hover:bg-[#00FF87]/10 h-11 rounded-xl">🏁 Encerrar Partida</Button>
+                  </div>
+                  <Button onClick={encerrarPeladaManual} variant="outline" className="w-full border-[#CC0000] text-[#CC0000] hover:bg-[#CC0000]/10 h-10 rounded-xl">🛑 Encerrar Pelada</Button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {times.length > 0 && pelada.status !== "encerrada" && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
           const temRodizio = pelada.sistema_disputa === "rodizio" && times.length >= 3;
@@ -740,87 +822,6 @@ function PeladaDetail() {
           );
         })()}
 
-        {pelada.status === "em_andamento" && partidaAtual && (() => {
-          const tA = times.find((t) => t.id === partidaAtual.time_a_id);
-          const tB = times.find((t) => t.id === partidaAtual.time_b_id);
-          const partidaMM = Math.floor(tempoRestante / 60).toString().padStart(2, "0");
-          const partidaSS = (tempoRestante % 60).toString().padStart(2, "0");
-          const proximoId: string | undefined = (partidaAtual as any).fila_espera?.[0];
-          const proximoTime = proximoId ? times.find((t) => t.id === proximoId) : null;
-          return (
-            <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-5">
-              <div className="text-center text-[#00FF87] font-bold text-xs uppercase tracking-widest mb-4">Partida Atual</div>
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2" style={{ backgroundColor: tA?.cor, borderColor: tA?.cor }}>
-                    <Shirt className="h-7 w-7 text-white" />
-                  </div>
-                  <div className="mt-2 text-sm font-bold text-white truncate">{tA?.nome}</div>
-                  <div className="text-3xl font-black text-white mt-1">{partidaAtual.placar_a}</div>
-                  {isCapitao && (
-                    <div className="flex justify-center gap-2 mt-2">
-                      <button onClick={() => ajustarPlacar("placar_a", -1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">-</button>
-                      <button onClick={() => ajustarPlacar("placar_a", 1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">+</button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="text-center px-2 shrink-0">
-                  <div className="text-3xl font-black text-white whitespace-nowrap">
-                    {partidaAtual.placar_a} <span className="text-[#666] text-xl">x</span> {partidaAtual.placar_b}
-                  </div>
-                  <div className="text-xl font-mono font-bold text-white mt-1">{partidaMM}:{partidaSS}</div>
-                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#00FF87]/15 px-2 py-0.5 text-[9px] font-bold text-[#00FF87]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00FF87] animate-pulse" /> AO VIVO
-                  </span>
-                  {partidaAtual.pausada_em && (
-                    <div className="mt-1 text-[9px] font-bold uppercase tracking-wider text-yellow-400">
-                      ⏸ pausado há {Math.floor(tempoPausadoAtual / 60).toString().padStart(2, "0")}:{(tempoPausadoAtual % 60).toString().padStart(2, "0")}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2" style={{ backgroundColor: tB?.cor, borderColor: tB?.cor }}>
-                    <Shirt className="h-7 w-7 text-white" />
-                  </div>
-                  <div className="mt-2 text-sm font-bold text-white truncate">{tB?.nome}</div>
-                  <div className="text-3xl font-black text-white mt-1">{partidaAtual.placar_b}</div>
-                  {isCapitao && (
-                    <div className="flex justify-center gap-2 mt-2">
-                      <button onClick={() => ajustarPlacar("placar_b", -1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">-</button>
-                      <button onClick={() => ajustarPlacar("placar_b", 1)} className="h-8 w-8 rounded-full border border-[#2A2A2A] text-white">+</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {proximoTime && (
-                <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#888]">
-                  <RefreshCw className="h-3.5 w-3.5" /> Próxima: <span className="font-bold" style={{ color: corTextoLegivel(proximoTime.cor) }}>{proximoTime.nome}</span>
-                </div>
-              )}
-
-              {isCapitao && (
-                <div className="mt-5 space-y-2">
-                  <Button onClick={() => navigate({ to: "/peladas/$id/lances", params: { id } })} className="w-full bg-[#00FF87] text-black font-bold h-12 rounded-xl">
-                    <Shield className="mr-2 h-5 w-5" /> Painel de Lances
-                  </Button>
-                  <div className="grid grid-cols-2 gap-2">
-                    {partidaAtual.pausada_em ? (
-                      <Button onClick={retomarPartida} variant="outline" className="border-[#00FF87] text-[#00FF87] hover:bg-[#00FF87]/10 h-11 rounded-xl">▶ Retomar</Button>
-                    ) : (
-                      <Button onClick={pausarPartida} variant="outline" className="border-[#00FF87] text-[#00FF87] hover:bg-[#00FF87]/10 h-11 rounded-xl">⏸ Pausar Partida</Button>
-                    )}
-                    <Button onClick={encerrarPartida} variant="outline" className="border-[#00FF87] text-[#00FF87] hover:bg-[#00FF87]/10 h-11 rounded-xl">🏁 Encerrar Partida</Button>
-                  </div>
-                  <Button onClick={encerrarPeladaManual} variant="outline" className="w-full border-[#CC0000] text-[#CC0000] hover:bg-[#CC0000]/10 h-10 rounded-xl">🛑 Encerrar Pelada</Button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
         {isCapitao && !pelada.sorteio_feito && pelada.status === "aguardando" && pelada.token_confirmacao && (() => {
           const linkCompleto = `${window.location.origin}/pelada-confirmar/${pelada.token_confirmacao}`;
@@ -906,7 +907,7 @@ function PeladaDetail() {
           </div>
         )}
 
-        {isCapitao && pelada.status !== "encerrada" && pelada.status !== "cancelada" && (
+        {isCapitao && pelada.status !== "encerrada" && pelada.status !== "cancelada" && pelada.status !== "em_andamento" && (
           <button
             onClick={cancelarPelada}
             disabled={acting}
@@ -914,16 +915,6 @@ function PeladaDetail() {
           >
             Cancelar essa pelada
           </button>
-        )}
-
-        {pelada.status === "em_andamento" && (
-          <Link
-            to="/peladas/$id/lances"
-            params={{ id }}
-            className="flex items-center justify-center gap-3 rounded-2xl bg-[#00FF87] px-4 py-5 text-lg font-black uppercase tracking-wide text-black shadow-[0_0_25px_rgba(0,255,135,0.35)] transition hover:bg-[#00FF87]/90"
-          >
-            <Shield className="h-7 w-7" /> Painel de Lances
-          </Link>
         )}
 
         {pelada.status === "encerrada" && (() => {
