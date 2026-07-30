@@ -66,6 +66,7 @@ function LancesPage() {
   const [drawerArtilheiro, setDrawerArtilheiro] = useState<{ timeId: string; timeNome: string; timeCor: string } | null>(null);
   const [pendingGol, setPendingGol] = useState<{ userId: string; tipo: string; timeId: string } | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
   const [isCapitao, setIsCapitao] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
   const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
@@ -225,12 +226,52 @@ function LancesPage() {
   const restanteSec = useMemo(() => {
     if (!partida?.iniciada_em || partida.status !== "em_andamento") return partida ? partida.duracao_minutos * 60 : 0;
     const ini = new Date(partida.iniciada_em).getTime();
-    return Math.max(0, partida.duracao_minutos * 60 - Math.floor((now - ini) / 1000));
+    const fim = ini + partida.duracao_minutos * 60_000 + (partida.tempo_pausado_total_seg || 0) * 1000;
+    const agora = partida.pausada_em ? new Date(partida.pausada_em).getTime() : now;
+    return Math.max(0, Math.floor((fim - agora) / 1000));
   }, [partida, now]);
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   useEffect(() => {
-    if (!ehAuxiliar || !partida || partida.status !== "em_andamento") return;
+    if (!partida?.pausada_em) { setTempoPausadoAtual(0); return; }
+    const calc = () => setTempoPausadoAtual(Math.max(0, Math.floor((Date.now() - new Date(partida.pausada_em).getTime()) / 1000)));
+    calc();
+    const i = setInterval(calc, 1000);
+    return () => clearInterval(i);
+  }, [partida?.pausada_em]);
+
+  const pausarPartida = async () => {
+    if (!partida || partida.pausada_em || !user) return;
+    const agora = new Date().toISOString();
+    const { error } = await supabase.from("partidas").update({ pausada_em: agora } as never).eq("id", partida.id);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("lances").insert({
+      partida_id: partida.id, pelada_id: id, tipo: "outro",
+      descricao: "⏸️ Tempo pausado", user_id: user.id, time_id: partida.time_a_id, marcado_por: user.id,
+    } as never);
+    toast.info("⏸️ Tempo pausado");
+    void load();
+  };
+
+  const retomarPartida = async () => {
+    if (!partida?.pausada_em || !user) return;
+    const segundosPausado = Math.max(0, Math.floor((Date.now() - new Date(partida.pausada_em).getTime()) / 1000));
+    const { error } = await supabase.from("partidas").update({
+      pausada_em: null,
+      tempo_pausado_total_seg: (partida.tempo_pausado_total_seg || 0) + segundosPausado,
+    } as never).eq("id", partida.id);
+    if (error) { toast.error(error.message); return; }
+    const mm = Math.floor(segundosPausado / 60), ss = segundosPausado % 60;
+    await supabase.from("lances").insert({
+      partida_id: partida.id, pelada_id: id, tipo: "outro",
+      descricao: `▶️ Tempo retomado — ficou pausado por ${mm}min ${ss}s`, user_id: user.id, time_id: partida.time_a_id, marcado_por: user.id,
+    } as never);
+    toast.success("▶️ Tempo retomado");
+    void load();
+  };
+
+  useEffect(() => {
+    if (!ehAuxiliar || !partida || partida.status !== "em_andamento" || partida.pausada_em) return;
     if (restanteSec > 0) return;
     void encerrarPartidaAuto();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -557,14 +598,26 @@ function LancesPage() {
           {/* Centro cronômetro + placar */}
           <div className="flex flex-col items-center">
             <div className="text-[10px] font-bold uppercase tracking-wider text-white/60">⏱ Partida</div>
-            <div className="text-[56px] font-black leading-none tabular-nums" style={{ color: "#00FF87" }}>
+            <div className="text-[56px] font-black leading-none tabular-nums" style={{ color: partida.pausada_em ? "#FBBF24" : "#00FF87" }}>
               {fmt(restanteSec)}
             </div>
+            {partida.pausada_em && (
+              <div className="text-[10px] font-bold uppercase tracking-wider text-yellow-400 -mt-1 mb-1">
+                ⏸ pausado há {fmt(tempoPausadoAtual)}
+              </div>
+            )}
             <div className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-black/40 px-5 py-2">
               <span className="text-[44px] font-black leading-none tabular-nums" style={{ color: corTextoLegivel(timeA?.cor || "#888") }}>{partida.placar_a}</span>
               <span className="text-2xl font-bold text-white/40">x</span>
               <span className="text-[44px] font-black leading-none tabular-nums" style={{ color: corTextoLegivel(timeB?.cor || "#888") }}>{partida.placar_b}</span>
             </div>
+            {ehAuxiliar && (
+              partida.pausada_em ? (
+                <button onClick={retomarPartida} className="mt-2 rounded-full border border-[#00FF87] px-4 py-1 text-[11px] font-bold text-[#00FF87]">▶ Retomar</button>
+              ) : (
+                <button onClick={pausarPartida} className="mt-2 rounded-full border border-white/20 px-4 py-1 text-[11px] font-bold text-white/80">⏸ Pausar Partida</button>
+              )
+            )}
           </div>
 
           {/* Time B */}
@@ -724,7 +777,9 @@ function LancesPage() {
                               <span className="text-sm">{icon}</span>
                             </div>
                             <div className="flex-1 min-w-0 text-[12px] leading-tight">
-                              {l.tipo === "outro" ? (
+                              {l.tipo === "outro" && l.descricao ? (
+                                <span className="font-semibold text-yellow-400">{l.descricao}</span>
+                              ) : l.tipo === "outro" ? (
                                 <span className="font-semibold text-white/90">{textoReclamacao(nomeExibido, contarReclamacoes(l.user_id, l.id))}</span>
                               ) : (
                                 <>
