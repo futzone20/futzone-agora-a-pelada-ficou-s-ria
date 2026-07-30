@@ -523,32 +523,32 @@ function PeladaDetail() {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] pb-6">
-      <div className="relative min-h-[180px] w-full p-4" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800')", backgroundSize: "cover", backgroundPosition: "center" }}>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.3))" }} />
-        <div className="relative flex flex-col justify-between h-full">
-          <div className="flex items-center justify-between">
-            <button onClick={() => navigate({ to: "/jogador/peladas" })} className="text-white">
-              <ArrowLeft className="h-6 w-6" />
-            </button>
-            <div className="font-bold text-lg"><span className="text-white">MR</span><span className="text-[#00FF87]">FUT</span></div>
-            <div className="relative">
-              <Bell className="h-6 w-6 text-white" />
-              <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-[#00FF87]" />
-            </div>
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          <button onClick={() => navigate({ to: "/jogador/peladas" })} className="text-white">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+          <div className="relative">
+            <Bell className="h-6 w-6 text-white" />
+            <div className="absolute top-0 right-0 h-2 w-2 rounded-full bg-[#00FF87]" />
           </div>
-          <div className="mt-4">
-            <h1 className="text-3xl font-bold text-white">{pelada.nome_pelada}</h1>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white">
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[#00FF87] bg-[#00FF87]/10">
+            <CircleDot className="h-5 w-5 text-[#00FF87]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold text-white">{pelada.nome_pelada}</h1>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#888]">
               <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {pelada.data.split("-").reverse().join("/")}</span>
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {pelada.horario_inicio.slice(0,5)}</span>
               {quadra && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {quadra.nome}</span>}
             </div>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#00FF87]/40 bg-[#00FF87]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#00FF87]">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF87]" />
-              {pelada.status.replace("_", " ")}
-            </div>
           </div>
-          <Shield className="absolute right-0 top-1/2 h-20 w-20 text-[#00FF87] drop-shadow-[0_0_12px_rgba(0,255,135,0.6)]" strokeWidth={1.5} />
+        </div>
+        <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#00FF87]/40 bg-[#00FF87]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#00FF87]">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF87]" />
+          {pelada.status.replace("_", " ")}
         </div>
       </div>
 
