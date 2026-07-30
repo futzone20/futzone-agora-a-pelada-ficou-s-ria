@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { calcularTabela } from "@/lib/placar";
+import { corTextoLegivel } from "@/lib/sorteio";
 import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/placar/$arena/$quadra")({ component: TVPlacar });
@@ -122,7 +123,7 @@ function TVPlacar() {
                   <div key={l.id} className="flex items-center gap-2 rounded bg-secondary/40 px-2 py-1.5 text-sm">
                     <span className="text-xl">{TIPO_ICON[l.tipo]}</span>
                     <span className="flex-1 font-bold">{profiles[l.user_id]?.nome || "—"}</span>
-                    <span className="text-xs" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
+                    <span className="text-xs" style={{ color: corTextoLegivel(corTime(l.time_id)) }}>{nomeTime(l.time_id)}</span>
                   </div>
                 ))}
               </div>
