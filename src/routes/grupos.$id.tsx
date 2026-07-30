@@ -570,9 +570,9 @@ function SkillsModal({ membro, onDone }: { membro: Membro; onDone: () => void })
         <div key={k}>
           <div className="mb-1 flex items-center justify-between text-sm">
             <span>{labels[k]}</span>
-            <span className="font-bold text-primary">{vals[k]}</span>
+            <span className="font-bold text-primary">{vals[k].toFixed(1)}</span>
           </div>
-          <Slider min={1} max={5} step={1} value={[vals[k]]} onValueChange={([v]) => setVals({ ...vals, [k]: v })} />
+          <Slider min={1} max={5} step={0.5} value={[vals[k]]} onValueChange={([v]) => setVals({ ...vals, [k]: v })} />
         </div>
       ))}
       <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
