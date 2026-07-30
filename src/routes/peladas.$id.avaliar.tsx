@@ -28,6 +28,7 @@ type Ja = {
   nome: string;
   time_nome?: string;
   eh_goleiro: boolean;
+  ehConvidado?: boolean;
   gols: number; passes: number; defesas: number;
   nota_geral: number; nota_comportamento: number;
   desempenho: number;
@@ -82,7 +83,7 @@ function Avaliar() {
       const { data: tj } = await supabase.from("time_jogadores").select("user_id,time_id,eh_goleiro").eq("pelada_id", id);
       const uids = Array.from(new Set((tj || []).map((x: any) => x.user_id))).filter((u) => u !== user.id);
       const timeIds = Array.from(new Set((tj || []).map((x: any) => x.time_id)));
-      const [{ data: profs }, { data: times }, { data: lances }, { data: existentes }, { data: existentesSkill }, { data: existentesGoleiro }, { data: mvpExistente }, { data: resenhaExistente }] = await Promise.all([
+      const [{ data: profs }, { data: times }, { data: lances }, { data: existentes }, { data: existentesSkill }, { data: existentesGoleiro }, { data: mvpExistente }, { data: resenhaExistente }, { data: convidados }] = await Promise.all([
         supabase.from("profiles").select("user_id,nome").in("user_id", uids.length ? uids : ["00000000-0000-0000-0000-000000000000"]),
         supabase.from("times").select("id,nome").in("id", timeIds.length ? timeIds : ["00000000-0000-0000-0000-000000000000"]),
         supabase.from("lances").select("user_id,tipo").eq("pelada_id", id),
@@ -91,6 +92,7 @@ function Avaliar() {
         (supabase as any).from("avaliacoes_goleiro_pos_pelada").select("avaliado_id,reflexo,seguranca,jogo_aereo,saida_pes,posicionamento,comando_area").eq("pelada_id", id).eq("avaliador_id", user.id),
         supabase.from("mvp_votos").select("votado_id").eq("pelada_id", id).eq("votante_id", user.id).maybeSingle(),
         (supabase as any).from("resenha_votos").select("categoria,votado_id").eq("pelada_id", id).eq("votante_id", user.id),
+        supabase.from("pelada_convidados").select("id,nome").eq("pelada_id", id),
       ]);
       if (mvpExistente) setMvp((mvpExistente as any).votado_id);
       if (resenhaExistente?.length) {
@@ -101,6 +103,8 @@ function Avaliar() {
       if (mvpExistente || resenhaExistente?.length) setJaEnviouVotos(true);
       const pMap: Record<string, string> = {};
       (profs || []).forEach((p: any) => { pMap[p.user_id] = p.nome; });
+      const convidadosMap: Record<string, boolean> = {};
+      (convidados || []).forEach((c: any) => { pMap[c.id] = c.nome; convidadosMap[c.id] = true; });
       const tMap: Record<string, string> = {};
       (times || []).forEach((t: any) => { tMap[t.id] = t.nome; });
       const userTime: Record<string, string> = {};
@@ -128,6 +132,7 @@ function Avaliar() {
           nome: pMap[uid] || "Jogador",
           time_nome: userTime[uid],
           eh_goleiro: !!goleiroMap[uid],
+          ehConvidado: !!convidadosMap[uid],
           gols: ex ? ex.gols_confirmados : (stats[uid]?.g || 0),
           passes: ex ? ex.passes_confirmados : (stats[uid]?.p || 0),
           defesas: ex ? ex.defesas_confirmadas : (stats[uid]?.d || 0),
@@ -205,7 +210,30 @@ function Avaliar() {
       return;
     }
 
-    if (j.eh_goleiro) {
+    if (j.ehConvidado) {
+      // "Convidado" não tem conta — não existe skills dele pra atualizar (seria
+      // um insert perdido, sem efeito nenhum). Em vez disso, guardamos a nota
+      // e atualizamos o nível dele nessa mesma pelada com a média de quem avaliou.
+      const notaRepresentativa = j.eh_goleiro
+        ? Math.round((j.reflexo + j.seguranca + j.jogo_aereo + j.saida_pes + j.posicionamento_gk + j.comando_area) / 6)
+        : j.desempenho;
+      const { error: e2 } = await (supabase as any).from("avaliacoes_skill_membro").insert({
+        avaliador_id: user.id, avaliado_id: uid, grupo_id: pelada.grupo_id,
+        tipo: "pos_pelada", pelada_id: id, conhece_jogador: true,
+        nota_desempenho_geral: notaRepresentativa,
+      });
+      if (e2) toast.error(e2.message);
+      else {
+        const { data: notas } = await (supabase as any)
+          .from("avaliacoes_skill_membro")
+          .select("nota_desempenho_geral")
+          .eq("avaliado_id", uid).eq("pelada_id", id).eq("tipo", "pos_pelada");
+        if (notas?.length) {
+          const media = Math.round(notas.reduce((a: number, n: any) => a + (n.nota_desempenho_geral || 0), 0) / notas.length);
+          await supabase.from("pelada_convidados").update({ nivel_geral: media } as never).eq("id", uid);
+        }
+      }
+    } else if (j.eh_goleiro) {
       const { error: e2 } = await (supabase as any).from("avaliacoes_goleiro_pos_pelada").insert({
         avaliador_id: user.id, avaliado_id: uid, pelada_id: id,
         reflexo: j.reflexo, seguranca: j.seguranca, jogo_aereo: j.jogo_aereo,
@@ -318,6 +346,11 @@ function Avaliar() {
               <div>
                 <div className="font-bold flex items-center gap-1.5">
                   {j.eh_goleiro && <span title="Jogou de goleiro">🧤</span>}
+                  {j.ehConvidado && (
+                    <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground" title="Jogador avulso, sem conta no app">
+                      Convidado
+                    </span>
+                  )}
                   {j.nome}
                   {confirmado && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                 </div>
