@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TenteASuaSorteRouteImport } from './routes/tente-a-sua-sorte'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ParceiroRouteImport } from './routes/parceiro'
@@ -78,6 +79,11 @@ import { Route as PeladasIdAvaliarRouteImport } from './routes/peladas.$id.avali
 import { Route as JogadorParceirosSlugRouteImport } from './routes/jogador.parceiros.$slug'
 import { Route as GoleirosPerfilUserIdRouteImport } from './routes/goleiros.perfil.$userId'
 
+const TenteASuaSorteRoute = TenteASuaSorteRouteImport.update({
+  id: '/tente-a-sua-sorte',
+  path: '/tente-a-sua-sorte',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -431,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/parceiro': typeof ParceiroRouteWithChildren
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tente-a-sua-sorte': typeof TenteASuaSorteRoute
   '/admin/ads': typeof AdminAdsRoute
   '/admin/aparencia': typeof AdminAparenciaRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
@@ -496,6 +503,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tente-a-sua-sorte': typeof TenteASuaSorteRoute
   '/admin/ads': typeof AdminAdsRoute
   '/admin/aparencia': typeof AdminAparenciaRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
@@ -567,6 +575,7 @@ export interface FileRoutesById {
   '/parceiro': typeof ParceiroRouteWithChildren
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tente-a-sua-sorte': typeof TenteASuaSorteRoute
   '/admin/ads': typeof AdminAdsRoute
   '/admin/aparencia': typeof AdminAparenciaRoute
   '/admin/comunicacao': typeof AdminComunicacaoRoute
@@ -639,6 +648,7 @@ export interface FileRouteTypes {
     | '/parceiro'
     | '/recuperar-senha'
     | '/reset-password'
+    | '/tente-a-sua-sorte'
     | '/admin/ads'
     | '/admin/aparencia'
     | '/admin/comunicacao'
@@ -704,6 +714,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/reset-password'
+    | '/tente-a-sua-sorte'
     | '/admin/ads'
     | '/admin/aparencia'
     | '/admin/comunicacao'
@@ -774,6 +785,7 @@ export interface FileRouteTypes {
     | '/parceiro'
     | '/recuperar-senha'
     | '/reset-password'
+    | '/tente-a-sua-sorte'
     | '/admin/ads'
     | '/admin/aparencia'
     | '/admin/comunicacao'
@@ -845,6 +857,7 @@ export interface RootRouteChildren {
   ParceiroRoute: typeof ParceiroRouteWithChildren
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  TenteASuaSorteRoute: typeof TenteASuaSorteRoute
   ConviteCodigoRoute: typeof ConviteCodigoRoute
   GoleirosIdRoute: typeof GoleirosIdRoute
   GoleirosMeuPerfilRoute: typeof GoleirosMeuPerfilRoute
@@ -867,6 +880,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tente-a-sua-sorte': {
+      id: '/tente-a-sua-sorte'
+      path: '/tente-a-sua-sorte'
+      fullPath: '/tente-a-sua-sorte'
+      preLoaderRoute: typeof TenteASuaSorteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -1480,6 +1500,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParceiroRoute: ParceiroRouteWithChildren,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  TenteASuaSorteRoute: TenteASuaSorteRoute,
   ConviteCodigoRoute: ConviteCodigoRoute,
   GoleirosIdRoute: GoleirosIdRoute,
   GoleirosMeuPerfilRoute: GoleirosMeuPerfilRoute,
