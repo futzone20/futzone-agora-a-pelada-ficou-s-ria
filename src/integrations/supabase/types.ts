@@ -3582,14 +3582,23 @@ export type Database = {
           indicador_nome: string
         }[]
       }
-      buscar_info_grupo: {
-        Args: { _codigo?: string; _grupo_id?: string }
-        Returns: {
-          criado_por: string
-          id: string
-          nome: string
-        }[]
-      }
+      buscar_info_grupo:
+        | {
+            Args: { _codigo: string }
+            Returns: {
+              criado_por: string
+              id: string
+              nome: string
+            }[]
+          }
+        | {
+            Args: { _codigo?: string; _grupo_id?: string }
+            Returns: {
+              criado_por: string
+              id: string
+              nome: string
+            }[]
+          }
       cancelar_peladas_nao_iniciadas: { Args: never; Returns: undefined }
       check_selos: { Args: { _user_id: string }; Returns: undefined }
       convidar_auxiliares_pelada: {

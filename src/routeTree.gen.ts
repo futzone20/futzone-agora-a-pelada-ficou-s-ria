@@ -69,7 +69,9 @@ import { Route as PeladasIdIndexRouteImport } from './routes/peladas.$id.index'
 import { Route as JogadorParceirosIndexRouteImport } from './routes/jogador.parceiros.index'
 import { Route as PlacarArenaQuadraRouteImport } from './routes/placar.$arena.$quadra'
 import { Route as PeladasIdSorteioRouteImport } from './routes/peladas.$id.sorteio'
+import { Route as PeladasIdResumoJogadorRouteImport } from './routes/peladas.$id.resumo-jogador'
 import { Route as PeladasIdLancesRouteImport } from './routes/peladas.$id.lances'
+import { Route as PeladasIdEditarTimesRouteImport } from './routes/peladas.$id.editar-times'
 import { Route as PeladasIdControleRouteImport } from './routes/peladas.$id.controle'
 import { Route as PeladasIdCardRouteImport } from './routes/peladas.$id.card'
 import { Route as PeladasIdAvaliarRouteImport } from './routes/peladas.$id.avaliar'
@@ -376,9 +378,19 @@ const PeladasIdSorteioRoute = PeladasIdSorteioRouteImport.update({
   path: '/peladas/$id/sorteio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PeladasIdResumoJogadorRoute = PeladasIdResumoJogadorRouteImport.update({
+  id: '/peladas/$id/resumo-jogador',
+  path: '/peladas/$id/resumo-jogador',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PeladasIdLancesRoute = PeladasIdLancesRouteImport.update({
   id: '/peladas/$id/lances',
   path: '/peladas/$id/lances',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PeladasIdEditarTimesRoute = PeladasIdEditarTimesRouteImport.update({
+  id: '/peladas/$id/editar-times',
+  path: '/peladas/$id/editar-times',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PeladasIdControleRoute = PeladasIdControleRouteImport.update({
@@ -469,7 +481,9 @@ export interface FileRoutesByFullPath {
   '/peladas/$id/avaliar': typeof PeladasIdAvaliarRoute
   '/peladas/$id/card': typeof PeladasIdCardRoute
   '/peladas/$id/controle': typeof PeladasIdControleRoute
+  '/peladas/$id/editar-times': typeof PeladasIdEditarTimesRoute
   '/peladas/$id/lances': typeof PeladasIdLancesRoute
+  '/peladas/$id/resumo-jogador': typeof PeladasIdResumoJogadorRoute
   '/peladas/$id/sorteio': typeof PeladasIdSorteioRoute
   '/placar/$arena/$quadra': typeof PlacarArenaQuadraRoute
   '/jogador/parceiros/': typeof JogadorParceirosIndexRoute
@@ -532,7 +546,9 @@ export interface FileRoutesByTo {
   '/peladas/$id/avaliar': typeof PeladasIdAvaliarRoute
   '/peladas/$id/card': typeof PeladasIdCardRoute
   '/peladas/$id/controle': typeof PeladasIdControleRoute
+  '/peladas/$id/editar-times': typeof PeladasIdEditarTimesRoute
   '/peladas/$id/lances': typeof PeladasIdLancesRoute
+  '/peladas/$id/resumo-jogador': typeof PeladasIdResumoJogadorRoute
   '/peladas/$id/sorteio': typeof PeladasIdSorteioRoute
   '/placar/$arena/$quadra': typeof PlacarArenaQuadraRoute
   '/jogador/parceiros': typeof JogadorParceirosIndexRoute
@@ -601,7 +617,9 @@ export interface FileRoutesById {
   '/peladas/$id/avaliar': typeof PeladasIdAvaliarRoute
   '/peladas/$id/card': typeof PeladasIdCardRoute
   '/peladas/$id/controle': typeof PeladasIdControleRoute
+  '/peladas/$id/editar-times': typeof PeladasIdEditarTimesRoute
   '/peladas/$id/lances': typeof PeladasIdLancesRoute
+  '/peladas/$id/resumo-jogador': typeof PeladasIdResumoJogadorRoute
   '/peladas/$id/sorteio': typeof PeladasIdSorteioRoute
   '/placar/$arena/$quadra': typeof PlacarArenaQuadraRoute
   '/jogador/parceiros/': typeof JogadorParceirosIndexRoute
@@ -671,7 +689,9 @@ export interface FileRouteTypes {
     | '/peladas/$id/avaliar'
     | '/peladas/$id/card'
     | '/peladas/$id/controle'
+    | '/peladas/$id/editar-times'
     | '/peladas/$id/lances'
+    | '/peladas/$id/resumo-jogador'
     | '/peladas/$id/sorteio'
     | '/placar/$arena/$quadra'
     | '/jogador/parceiros/'
@@ -734,7 +754,9 @@ export interface FileRouteTypes {
     | '/peladas/$id/avaliar'
     | '/peladas/$id/card'
     | '/peladas/$id/controle'
+    | '/peladas/$id/editar-times'
     | '/peladas/$id/lances'
+    | '/peladas/$id/resumo-jogador'
     | '/peladas/$id/sorteio'
     | '/placar/$arena/$quadra'
     | '/jogador/parceiros'
@@ -802,7 +824,9 @@ export interface FileRouteTypes {
     | '/peladas/$id/avaliar'
     | '/peladas/$id/card'
     | '/peladas/$id/controle'
+    | '/peladas/$id/editar-times'
     | '/peladas/$id/lances'
+    | '/peladas/$id/resumo-jogador'
     | '/peladas/$id/sorteio'
     | '/placar/$arena/$quadra'
     | '/jogador/parceiros/'
@@ -833,7 +857,9 @@ export interface RootRouteChildren {
   PeladasIdAvaliarRoute: typeof PeladasIdAvaliarRoute
   PeladasIdCardRoute: typeof PeladasIdCardRoute
   PeladasIdControleRoute: typeof PeladasIdControleRoute
+  PeladasIdEditarTimesRoute: typeof PeladasIdEditarTimesRoute
   PeladasIdLancesRoute: typeof PeladasIdLancesRoute
+  PeladasIdResumoJogadorRoute: typeof PeladasIdResumoJogadorRoute
   PeladasIdSorteioRoute: typeof PeladasIdSorteioRoute
   PlacarArenaQuadraRoute: typeof PlacarArenaQuadraRoute
   PeladasIdIndexRoute: typeof PeladasIdIndexRoute
@@ -1261,11 +1287,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PeladasIdSorteioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/peladas/$id/resumo-jogador': {
+      id: '/peladas/$id/resumo-jogador'
+      path: '/peladas/$id/resumo-jogador'
+      fullPath: '/peladas/$id/resumo-jogador'
+      preLoaderRoute: typeof PeladasIdResumoJogadorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/peladas/$id/lances': {
       id: '/peladas/$id/lances'
       path: '/peladas/$id/lances'
       fullPath: '/peladas/$id/lances'
       preLoaderRoute: typeof PeladasIdLancesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/peladas/$id/editar-times': {
+      id: '/peladas/$id/editar-times'
+      path: '/peladas/$id/editar-times'
+      fullPath: '/peladas/$id/editar-times'
+      preLoaderRoute: typeof PeladasIdEditarTimesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/peladas/$id/controle': {
@@ -1452,7 +1492,9 @@ const rootRouteChildren: RootRouteChildren = {
   PeladasIdAvaliarRoute: PeladasIdAvaliarRoute,
   PeladasIdCardRoute: PeladasIdCardRoute,
   PeladasIdControleRoute: PeladasIdControleRoute,
+  PeladasIdEditarTimesRoute: PeladasIdEditarTimesRoute,
   PeladasIdLancesRoute: PeladasIdLancesRoute,
+  PeladasIdResumoJogadorRoute: PeladasIdResumoJogadorRoute,
   PeladasIdSorteioRoute: PeladasIdSorteioRoute,
   PlacarArenaQuadraRoute: PlacarArenaQuadraRoute,
   PeladasIdIndexRoute: PeladasIdIndexRoute,
@@ -1460,3 +1502,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
