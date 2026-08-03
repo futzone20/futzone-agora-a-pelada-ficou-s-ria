@@ -34,13 +34,28 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
   const media = SKILLS.reduce((a, s) => a + (vals[s.key] || 0), 0) / SKILLS.length;
   const initials = (avaliado.nome || "U").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
+  const buscarExistente = async () => {
+    if (!user) return null;
+    const { data } = await supabase
+      .from("avaliacoes_skill_membro")
+      .select("id")
+      .eq("avaliador_id", user.id)
+      .eq("avaliado_id", avaliado.user_id)
+      .eq("grupo_id", grupoId)
+      .eq("tipo", "conhecimento_previo")
+      .is("pelada_id", null)
+      .maybeSingle();
+    return (data as any)?.id || null;
+  };
+
   const naoConheco = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("avaliacoes_skill_membro").insert({
-      avaliador_id: user.id, avaliado_id: avaliado.user_id, grupo_id: grupoId,
-      tipo: "conhecimento_previo", conhece_jogador: false,
-    } as never);
+    const existenteId = await buscarExistente();
+    const payload = { avaliador_id: user.id, avaliado_id: avaliado.user_id, grupo_id: grupoId, tipo: "conhecimento_previo", conhece_jogador: false };
+    const { error } = existenteId
+      ? await supabase.from("avaliacoes_skill_membro").update(payload as never).eq("id", existenteId)
+      : await supabase.from("avaliacoes_skill_membro").insert(payload as never);
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Marcamos para avaliar depois");
@@ -50,14 +65,15 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
   const enviar = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("avaliacoes_skill_membro").insert({
-      avaliador_id: user.id, avaliado_id: avaliado.user_id, grupo_id: grupoId,
-      tipo: "conhecimento_previo", conhece_jogador: true, ...vals,
-    } as never);
+    const existenteId = await buscarExistente();
+    const payload = { avaliador_id: user.id, avaliado_id: avaliado.user_id, grupo_id: grupoId, tipo: "conhecimento_previo", conhece_jogador: true, ...vals };
+    const { error } = existenteId
+      ? await supabase.from("avaliacoes_skill_membro").update(payload as never).eq("id", existenteId)
+      : await supabase.from("avaliacoes_skill_membro").insert(payload as never);
     if (error) { setSaving(false); return toast.error(error.message); }
-    // O crédito de XP já acontece sozinho via trigger no banco (dispara na
-    // hora que essa linha é inserida) — aqui só lemos de volta o valor real
-    // pra mostrar certinho no toast, sem chutar um número fixo.
+    // O crédito de XP já acontece sozinho via trigger no banco, só na primeira
+    // vez (reavaliar não credita XP de novo) — aqui só lemos de volta o valor
+    // real pra mostrar certinho no toast, sem chutar um número fixo.
     const { data: hist } = await supabase
       .from("pontos_historico")
       .select("valor_pontos")
@@ -68,7 +84,7 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
       .maybeSingle();
     const xp = (hist as any)?.valor_pontos;
     setSaving(false);
-    toast.success(`Avaliação enviada!${xp ? ` +${xp} XP` : ""}`);
+    toast.success(existenteId ? "Avaliação atualizada!" : `Avaliação enviada!${xp ? ` +${xp} XP` : ""}`);
     onDone?.(); onClose();
   };
 
