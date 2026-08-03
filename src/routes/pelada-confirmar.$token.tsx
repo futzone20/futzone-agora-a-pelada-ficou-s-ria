@@ -39,8 +39,7 @@ function PeladaConfirmarPage() {
         .maybeSingle();
       if (!pel) { setCarregando(false); return; }
 
-      const { data: grupoRows } = await (supabase as any).rpc("buscar_info_grupo", { _grupo_id: (pel as any).grupo_id } as never);
-      const grupoData = Array.isArray(grupoRows) ? (grupoRows as any[])[0] : grupoRows;
+      const { data: grupoData } = await supabase.from("grupos").select("id, nome, criado_por").eq("id", (pel as any).grupo_id).maybeSingle();
       const { data: capProf } = grupoData
         ? await supabase.from("profiles").select("nome").eq("user_id", (grupoData as any).criado_por).maybeSingle()
         : { data: null };
