@@ -289,14 +289,20 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
   const [skillsMembro, setSkillsMembro] = useState<Membro | null>(null);
   const [avaliarMembro, setAvaliarMembro] = useState<Membro | null>(null);
   const [jaAvaliados, setJaAvaliados] = useState<Set<string>>(new Set());
+  const [minhasNotas, setMinhasNotas] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       const { data } = await supabase.from("avaliacoes_skill_membro")
-        .select("avaliado_id")
+        .select("avaliado_id, velocidade, drible, passe, chute, resistencia, posicionamento, conhece_jogador")
         .eq("avaliador_id", user.id).eq("grupo_id", grupo.id).eq("tipo", "conhecimento_previo");
       setJaAvaliados(new Set((data || []).map((x: any) => x.avaliado_id)));
+      const notas: Record<string, number> = {};
+      (data || []).forEach((x: any) => {
+        if (x.conhece_jogador) notas[x.avaliado_id] = mediaSkill(x as SkillRow);
+      });
+      setMinhasNotas(notas);
     })();
   }, [user?.id, grupo.id, membros.length]);
 
@@ -424,6 +430,14 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
                   </Button>
                 )}
               </div>
+              {!pendente && (
+                <div className="mt-1.5 flex items-center gap-3 text-[10.5px] text-muted-foreground">
+                  <span>{(m.skill as any)?.total_avaliacoes_recebidas || 0} avaliaç{((m.skill as any)?.total_avaliacoes_recebidas || 0) === 1 ? "ão" : "ões"}</span>
+                  {minhasNotas[m.user_id] != null && (
+                    <span className="font-bold text-foreground/80">Sua nota: <span className="text-primary">{minhasNotas[m.user_id].toFixed(1)}</span></span>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
