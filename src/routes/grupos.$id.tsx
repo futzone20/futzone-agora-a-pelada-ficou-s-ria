@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Sparkles, Info, BookOpen, FolderPlus, PiggyBank, ChevronRight, Trophy } from "lucide-react";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Info, BookOpen, FolderPlus, PiggyBank, ChevronRight, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -286,7 +285,6 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
   const confirm = useConfirm();
   const [convidarOpen, setConvidarOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
-  const [skillsMembro, setSkillsMembro] = useState<Membro | null>(null);
   const [avaliarMembro, setAvaliarMembro] = useState<Membro | null>(null);
   const [jaAvaliados, setJaAvaliados] = useState<Set<string>>(new Set());
   const [minhasNotas, setMinhasNotas] = useState<Record<string, number>>({});
@@ -384,9 +382,6 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
                 </div>
                 {isCapitao && m.papel !== "capitao" && (
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setSkillsMembro(m)} title="Definir Skills">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => setPapel(m, m.papel === "auxiliar" ? "jogador" : "auxiliar")} title={m.papel === "auxiliar" ? "Remover auxiliar" : "Tornar auxiliar"}>
                       <UserCog className="h-4 w-4" />
                     </Button>
@@ -466,13 +461,6 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
           <AdicionarMembroManualModal grupoId={grupo.id} onDone={() => { setManualOpen(false); onChange(); }} />
         </DialogContent>
       </Dialog>
-
-      <Dialog open={!!skillsMembro} onOpenChange={(o) => !o && setSkillsMembro(null)}>
-        <DialogContent className="bg-card">
-          <DialogHeader><DialogTitle>Skills — {skillsMembro?.profile?.nome}</DialogTitle></DialogHeader>
-          {skillsMembro && <SkillsModal membro={skillsMembro} onDone={() => { setSkillsMembro(null); onChange(); }} />}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -546,59 +534,6 @@ function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros:
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function SkillsModal({ membro, onDone }: { membro: Membro; onDone: () => void }) {
-  const base = membro.skill || { velocidade: 3, drible: 3, passe: 3, chute: 3, resistencia: 3, posicionamento: 3 };
-  const [vals, setVals] = useState<Record<string, number>>({
-    velocidade: base.velocidade, drible: base.drible, passe: base.passe,
-    chute: base.chute, resistencia: base.resistencia, posicionamento: base.posicionamento,
-  });
-  const [saving, setSaving] = useState(false);
-  const media = SKILL_KEYS.reduce((a, k) => a + (vals[k] || 0), 0) / SKILL_KEYS.length;
-
-  const labels: Record<string, string> = {
-    velocidade: "⚡ Velocidade", drible: "🎯 Drible", passe: "🤝 Passe",
-    chute: "👟 Chute", resistencia: "🛡️ Marcação", posicionamento: "📍 Posicionamento",
-  };
-
-  const salvar = async () => {
-    setSaving(true);
-    const payload: any = {
-      user_id: membro.user_id,
-      ...vals,
-      origem_ultima_atualizacao: "capitao",
-      atualizado_em: new Date().toISOString(),
-    };
-    const { error } = await supabase.from("skills").upsert(payload as never, { onConflict: "user_id" });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Skills salvas!");
-    onDone();
-  };
-
-  return (
-    <div className="space-y-3">
-      {SKILL_KEYS.map((k) => (
-        <div key={k}>
-          <div className="mb-1 flex items-center justify-between text-sm">
-            <span>{labels[k]}</span>
-            <span className="font-bold text-primary">{vals[k].toFixed(1)}</span>
-          </div>
-          <Slider min={1} max={5} step={0.5} value={[vals[k]]} onValueChange={([v]) => setVals({ ...vals, [k]: v })} />
-        </div>
-      ))}
-      <div className="rounded-xl border border-border bg-secondary/40 p-3 text-center">
-        <div className="text-xs text-muted-foreground">Nível geral</div>
-        <div className="text-2xl font-bold text-primary">⭐ {media.toFixed(1)}</div>
-      </div>
-      <DialogFooter>
-        <Button onClick={salvar} disabled={saving} className="w-full bg-primary text-primary-foreground font-bold hover:bg-primary/90">
-          {saving ? "Salvando..." : "Salvar Skills"}
-        </Button>
-      </DialogFooter>
     </div>
   );
 }
