@@ -26,7 +26,8 @@ function ConvitePage() {
 
   useEffect(() => {
     void (async () => {
-      const { data: rows } = await (supabase as any).rpc("buscar_info_grupo", { _codigo: codigo } as never);
+      const { data: rows, error } = await (supabase as any).rpc("buscar_info_grupo", { _codigo: codigo } as never);
+      if (error) { console.error("[convite] erro ao buscar grupo:", error); toast.error(`Erro ao validar convite: ${error.message}`); return; }
       const data = Array.isArray(rows) ? (rows as any[])[0] : rows;
       if (!data) return;
       setGrupo(data as any);
