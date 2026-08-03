@@ -80,8 +80,9 @@ function GrupoPage() {
     });
     if (!ok) return;
     const novo = "FZ-" + Math.random().toString(36).slice(2, 6).toUpperCase();
-    const { error } = await supabase.from("grupos").update({ codigo_convite: novo } as never).eq("id", id);
+    const { data, error } = await supabase.from("grupos").update({ codigo_convite: novo } as never).eq("id", id).select().maybeSingle();
     if (error) return toast.error(error.message);
+    if (!data) return toast.error("Não foi possível atualizar o link — você precisa ser capitão desse grupo.");
     toast.success("Link revogado — novo link gerado!");
     void load();
   };
