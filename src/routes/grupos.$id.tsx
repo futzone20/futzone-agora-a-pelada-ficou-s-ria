@@ -418,9 +418,9 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
                     <span className="w-12 text-right text-xs font-bold text-primary">⭐ {media.toFixed(1)}</span>
                   </>
                 )}
-                {user && m.user_id !== user.id && !jaAvaliados.has(m.user_id) && (
+                {user && m.user_id !== user.id && (
                   <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={() => setAvaliarMembro(m)}>
-                    Aguardando sua avaliação
+                    {jaAvaliados.has(m.user_id) ? "Reavaliar" : "Aguardando sua avaliação"}
                   </Button>
                 )}
               </div>
@@ -1236,6 +1236,18 @@ function ConfigTab({ grupo, membros, isCapitao, souCapitaoExato, peladas, onChan
     toast.success("Grupo excluído"); onDeleted();
   };
 
+  const zerarAvaliacoes = async () => {
+    if (!(await confirm({
+      title: "Zerar avaliações do grupo",
+      description: "Isso apaga as avaliações de nível inicial de TODOS os membros e devolve as skills pro padrão (3) — cada um pode ser reavaliado do zero. Não afeta avaliações de peladas já jogadas.",
+      variant: "destructive",
+      confirmLabel: "Zerar avaliações",
+    }))) return;
+    const { error } = await (supabase as any).rpc("zerar_avaliacoes_grupo", { _grupo_id: grupo.id });
+    if (error) return toast.error(error.message);
+    toast.success("Avaliações zeradas — todo mundo pode ser reavaliado agora."); onChange();
+  };
+
   if (!isCapitao) return <EmptyState icon={Settings} title="Apenas o capitão pode editar" />;
 
   return (
@@ -1248,6 +1260,15 @@ function ConfigTab({ grupo, membros, isCapitao, souCapitaoExato, peladas, onChan
         <div className="text-sm font-bold">Código de convite</div>
         <div className="font-mono text-sm">{grupo.codigo_convite}</div>
         <Button variant="secondary" onClick={regen}>Regenerar código</Button>
+      </div>
+      <div className="rounded-2xl border border-destructive/30 bg-card p-4 space-y-2">
+        <div className="text-sm font-bold">Zerar avaliações do grupo</div>
+        <p className="text-xs text-muted-foreground">
+          Apaga o nível inicial (skills) que já foi dado por avaliação de todo mundo, permitindo que cada membro seja reavaliado do zero. Útil pra virada de temporada ou depois de mudanças no sistema de avaliação.
+        </p>
+        <Button variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={zerarAvaliacoes}>
+          Zerar avaliações
+        </Button>
       </div>
       {souCapitaoExato && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
