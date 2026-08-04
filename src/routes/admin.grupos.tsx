@@ -80,7 +80,7 @@ function AdminGrupos() {
     const { data, error } = await (supabase as any)
       .from("avaliacoes_skill_membro")
       .select("id, criado_em, velocidade, drible, passe, chute, resistencia, posicionamento, avaliador_id")
-      .eq("avaliado_id", m.user_id).eq("grupo_id", grupo.id)
+      .eq("avaliado_id", m.user_id)
       .eq("tipo", "conhecimento_previo").eq("conhece_jogador", true)
       .order("criado_em", { ascending: false });
     if (error) { toast.error(error.message); setLoading(false); return; }
@@ -172,6 +172,7 @@ function AdminGrupos() {
         <div className="space-y-2">
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
             <span className="font-bold">{membro?.perfil?.nome}</span> — {avaliacoes.length} avaliaç{avaliacoes.length === 1 ? "ão" : "ões"}
+            <p className="mt-1 text-xs font-normal text-muted-foreground">O nível do jogador é único pra pessoa (não muda por grupo) — se ele estiver em mais de um grupo, avaliações de qualquer um deles aparecem aqui.</p>
           </div>
           {avaliacoes.map((a) => (
             <Card key={a.id} className="p-4">
