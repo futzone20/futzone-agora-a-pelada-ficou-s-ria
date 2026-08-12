@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { calcularResumoCarreira, type ResumoCarreira } from "@/lib/resumoJogadorPelada";
 
 export const Route = createFileRoute("/p/$id")({
   component: PublicProfile,
@@ -25,7 +26,8 @@ function PublicProfile() {
         ? await supabase.from("selos").select("*").in("id", seloIds)
         : { data: [] } as any;
       const { data: posts } = await supabase.from("feed_posts").select("*").eq("user_id", id).order("criado_em", { ascending: false }).limit(10);
-      setData({ profile, skills, ofensiva, stats, selos: selos || [], posts: posts || [] });
+      const carreira = await calcularResumoCarreira(id);
+      setData({ profile, skills, ofensiva, stats, selos: selos || [], posts: posts || [], carreira });
     })();
   }, [id]);
 
@@ -74,6 +76,38 @@ function PublicProfile() {
             <Stat label="Maior ofensiva" value={data.ofensiva?.maior_sequencia || 0} />
           </div>
         </section>
+
+        {data.carreira && (data.carreira as ResumoCarreira).totalPeladas > 0 && (() => {
+          const c = data.carreira as ResumoCarreira;
+          const horas = Math.floor(c.minutosJogados / 60);
+          const minutosResto = c.minutosJogados % 60;
+          return (
+            <section className="rounded-2xl border border-primary/30 bg-card p-5 space-y-4">
+              <h2 className="font-bold text-primary">Resumo da carreira</h2>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <Stat label="Peladas" value={c.totalPeladas} />
+                <div className="rounded-lg bg-secondary/40 p-3">
+                  <div className="text-xs text-muted-foreground">Tempo jogado</div>
+                  <div className="text-lg font-bold">{horas > 0 ? `${horas}h${minutosResto.toString().padStart(2, "0")}` : `${minutosResto}min`}</div>
+                </div>
+                <Stat label="Gols" value={c.gols} />
+              </div>
+              <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary/40 p-3 text-center">
+                <div><div className="text-lg font-extrabold text-green-500">{c.vitorias}</div><div className="text-[10px] uppercase text-muted-foreground">Vitórias</div></div>
+                <div><div className="text-lg font-extrabold text-yellow-500">{c.empates}</div><div className="text-[10px] uppercase text-muted-foreground">Empates</div></div>
+                <div><div className="text-lg font-extrabold text-red-500">{c.derrotas}</div><div className="text-[10px] uppercase text-muted-foreground">Derrotas</div></div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <Stat label="Passes decisivos" value={c.passes} />
+                <Stat label="Defesas" value={c.defesas} />
+                <div className="rounded-lg bg-secondary/40 p-3">
+                  <div className="text-xs text-muted-foreground">Nota média ({c.totalAvaliacoes})</div>
+                  <div className="text-lg font-bold">{c.notaMedia != null ? `⭐ ${c.notaMedia.toFixed(1)}` : "—"}</div>
+                </div>
+              </div>
+            </section>
+          );
+        })()}
 
         {data.selos.length > 0 && (
           <section className="rounded-2xl border border-border bg-card p-5">
