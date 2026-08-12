@@ -369,12 +369,14 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
           return (
             <div key={m.id} className="rounded-xl border border-border bg-card p-3">
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  {m.profile?.foto_url ? <AvatarImage src={m.profile.foto_url} /> : null}
-                  <AvatarFallback className="bg-secondary">{initials}</AvatarFallback>
-                </Avatar>
+                <Link to="/p/$id" params={{ id: m.user_id }} className="shrink-0">
+                  <Avatar className="h-10 w-10">
+                    {m.profile?.foto_url ? <AvatarImage src={m.profile.foto_url} /> : null}
+                    <AvatarFallback className="bg-secondary">{initials}</AvatarFallback>
+                  </Avatar>
+                </Link>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold truncate">{nome}</div>
+                  <Link to="/p/$id" params={{ id: m.user_id }} className="text-sm font-bold truncate block hover:underline">{nome}</Link>
                   <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
                     {m.papel === "capitao" && <Crown className="h-3 w-3 text-primary" />}
                     <span>{t.emoji} {t.label}</span>
