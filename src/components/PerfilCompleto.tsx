@@ -626,8 +626,80 @@ function HistoricoPeladasBox({ userId }: { userId: string | undefined }) {
     pontos: resumos[p.id]?.pontosRanking ?? 0,
   }));
 
+  const totalPeladas = peladas.length;
+  const carreira = Object.values(resumos).reduce(
+    (acc, r) => {
+      if (!r) return acc;
+      acc.minutos += r.minutosJogados;
+      acc.gols += r.gols;
+      acc.passes += r.passes;
+      acc.defesas += r.defesas;
+      acc.frangos += r.frangos;
+      acc.vitorias += r.vitorias;
+      acc.empates += r.empates;
+      acc.derrotas += r.derrotas;
+      if (r.notaAvaliacoes != null) { acc.somaNotas += r.notaAvaliacoes * r.totalAvaliacoes; acc.totalAvaliacoes += r.totalAvaliacoes; }
+      return acc;
+    },
+    { minutos: 0, gols: 0, passes: 0, defesas: 0, frangos: 0, vitorias: 0, empates: 0, derrotas: 0, somaNotas: 0, totalAvaliacoes: 0 }
+  );
+  const notaMediaCarreira = carreira.totalAvaliacoes > 0 ? carreira.somaNotas / carreira.totalAvaliacoes : null;
+  const horas = Math.floor(carreira.minutos / 60);
+  const minutosResto = carreira.minutos % 60;
+
   return (
     <div className="space-y-4">
+      <div className="rounded-2xl border border-primary/30 bg-card p-5 space-y-4">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-primary">Resumo da carreira</h3>
+          <p className="text-xs text-muted-foreground">Tudo somado, de todas as peladas que você já jogou.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <div className="text-xl font-black">{totalPeladas}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Peladas</div>
+          </div>
+          <div>
+            <div className="text-xl font-black">{horas > 0 ? `${horas}h${minutosResto.toString().padStart(2, "0")}` : `${minutosResto}min`}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Tempo jogado</div>
+          </div>
+          <div>
+            <div className="text-xl font-black text-primary">{carreira.gols}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Gols</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary/40 p-3 text-center">
+          <div>
+            <div className="text-lg font-extrabold text-green-500">{carreira.vitorias}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Vitórias</div>
+          </div>
+          <div>
+            <div className="text-lg font-extrabold text-yellow-500">{carreira.empates}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Empates</div>
+          </div>
+          <div>
+            <div className="text-lg font-extrabold text-red-500">{carreira.derrotas}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Derrotas</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <div className="text-base font-bold">{carreira.passes}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Passes decisivos</div>
+          </div>
+          <div>
+            <div className="text-base font-bold">{carreira.defesas}</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Defesas</div>
+          </div>
+          <div>
+            <div className="text-base font-bold flex items-center justify-center gap-1">
+              {notaMediaCarreira != null ? <>⭐ {notaMediaCarreira.toFixed(1)}</> : "—"}
+            </div>
+            <div className="text-[10px] uppercase text-muted-foreground">Nota média ({carreira.totalAvaliacoes})</div>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Minha Carreira</h3>
         <p className="text-xs text-muted-foreground">Sua evolução de pontuação (a mesma do Ranking) pelada após pelada. Só você vê isso.</p>
