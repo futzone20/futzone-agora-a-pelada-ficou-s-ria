@@ -9,6 +9,9 @@ export type ResumoJogadorPelada = {
   passes: number;
   defesas: number;
   frangos: number;
+  vitorias: number;
+  empates: number;
+  derrotas: number;
   /** Pontuação de ranking dessa pelada (mesma fórmula usada na tela de Ranking e na "Minha
    *  Carreira") — sem bônus de capitão, e a avaliação nunca desconta, só soma a partir de 4. */
   pontosRanking: number;
@@ -36,6 +39,7 @@ export async function calcularResumoJogadorPelada(peladaId: string, userId: stri
   const timeId = (tj as any).time_id;
 
   let minutos = 0;
+  let vitorias = 0, empates = 0, derrotas = 0;
   ((partidas as any[]) || []).forEach((p) => {
     if (p.time_a_id !== timeId && p.time_b_id !== timeId) return;
     let dur: number;
@@ -48,6 +52,12 @@ export async function calcularResumoJogadorPelada(peladaId: string, userId: stri
       dur = p.duracao_minutos || 0;
     }
     minutos += dur;
+
+    const meuPlacar = p.time_a_id === timeId ? p.placar_a : p.placar_b;
+    const outroPlacar = p.time_a_id === timeId ? p.placar_b : p.placar_a;
+    if (meuPlacar > outroPlacar) vitorias++;
+    else if (meuPlacar === outroPlacar) empates++;
+    else derrotas++;
   });
 
   const contagens: Record<string, number> = {};
@@ -90,6 +100,9 @@ export async function calcularResumoJogadorPelada(peladaId: string, userId: stri
     passes: contagens.passe_decisivo || 0,
     defesas: contagens.defesa || 0,
     frangos: contagens.frango || 0,
+    vitorias,
+    empates,
+    derrotas,
     pontosRanking: pontosLances + pontosAvaliacao,
   };
 }
