@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ArrowLeft } from "lucide-react";
 import { calcularResumoCarreira, type ResumoCarreira } from "@/lib/resumoJogadorPelada";
 
 export const Route = createFileRoute("/p/$id")({
@@ -41,6 +42,9 @@ function PublicProfile() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-2xl space-y-6 p-6">
+        <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </button>
         <header className="flex items-center gap-4">
           <Avatar className="h-20 w-20"><AvatarFallback className="bg-primary/20 text-2xl font-bold">{p.nome?.[0]?.toUpperCase()}</AvatarFallback></Avatar>
           <div>
