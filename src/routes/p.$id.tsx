@@ -14,11 +14,10 @@ function PublicProfile() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: profile }, { data: skills }, { data: ofensiva }, { data: stats }] = await Promise.all([
+      const [{ data: profile }, { data: skills }, { data: ofensiva }] = await Promise.all([
         supabase.from("profiles").select("user_id,nome,cidade,estado,pontos_total").eq("user_id", id).maybeSingle(),
         supabase.from("skills").select("*").eq("user_id", id).maybeSingle(),
         supabase.from("ofensivas").select("*").eq("user_id", id).maybeSingle(),
-        supabase.rpc("user_stats", { _user_id: id }),
       ]);
       const { data: us } = await supabase.from("usuario_selos").select("selo_id").eq("user_id", id);
       const seloIds = (us || []).map((x: any) => x.selo_id);
@@ -27,7 +26,7 @@ function PublicProfile() {
         : { data: [] } as any;
       const { data: posts } = await supabase.from("feed_posts").select("*").eq("user_id", id).order("criado_em", { ascending: false }).limit(10);
       const carreira = await calcularResumoCarreira(id);
-      setData({ profile, skills, ofensiva, stats, selos: selos || [], posts: posts || [], carreira });
+      setData({ profile, skills, ofensiva, selos: selos || [], posts: posts || [], carreira });
     })();
   }, [id]);
 
@@ -38,7 +37,6 @@ function PublicProfile() {
     ["Velocidade", s.velocidade || 3], ["Drible", s.drible || 3], ["Passe", s.passe || 3],
     ["Chute", s.chute || 3], ["Marcação", s.resistencia || 3], ["Posicionamento", s.posicionamento || 3],
   ];
-  const stats = data.stats || {};
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -66,12 +64,8 @@ function PublicProfile() {
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-bold">Estatísticas</h2>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <Stat label="Peladas" value={stats.peladas_total || 0} />
-            <Stat label="Gols" value={stats.gols_total || 0} />
-            <Stat label="Passes" value={stats.passes_total || 0} />
-            <Stat label="Defesas" value={stats.defesas_total || 0} />
+          <h2 className="mb-3 font-bold">Ofensiva</h2>
+          <div className="grid grid-cols-2 gap-3 text-center">
             <Stat label="Ofensiva atual" value={data.ofensiva?.sequencia_atual || 0} />
             <Stat label="Maior ofensiva" value={data.ofensiva?.maior_sequencia || 0} />
           </div>
