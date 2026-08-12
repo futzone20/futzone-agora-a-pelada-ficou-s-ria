@@ -106,3 +106,56 @@ export async function calcularResumoJogadorPelada(peladaId: string, userId: stri
     pontosRanking: pontosLances + pontosAvaliacao,
   };
 }
+
+export type ResumoCarreira = {
+  totalPeladas: number;
+  minutosJogados: number;
+  gols: number;
+  passes: number;
+  defesas: number;
+  frangos: number;
+  vitorias: number;
+  empates: number;
+  derrotas: number;
+  notaMedia: number | null;
+  totalAvaliacoes: number;
+};
+
+/**
+ * Resumo de carreira somado — todas as peladas encerradas em que o jogador
+ * participou, tudo agregado (tempo jogado, gols, V/E/D, nota média etc).
+ * Usado tanto na tela privada "Minha Carreira" quanto no perfil público.
+ */
+export async function calcularResumoCarreira(userId: string): Promise<ResumoCarreira> {
+  const vazio: ResumoCarreira = {
+    totalPeladas: 0, minutosJogados: 0, gols: 0, passes: 0, defesas: 0, frangos: 0,
+    vitorias: 0, empates: 0, derrotas: 0, notaMedia: null, totalAvaliacoes: 0,
+  };
+
+  const { data: tj } = await supabase.from("time_jogadores").select("pelada_id").eq("user_id", userId);
+  const peladaIds = Array.from(new Set((tj || []).map((x: any) => x.pelada_id as string)));
+  if (!peladaIds.length) return vazio;
+
+  const { data: ps } = await supabase.from("peladas").select("id").in("id", peladaIds).eq("status", "encerrada");
+  const idsEncerradas = (ps || []).map((p: any) => p.id as string);
+  if (!idsEncerradas.length) return vazio;
+
+  const resumos = await Promise.all(idsEncerradas.map((pid) => calcularResumoJogadorPelada(pid, userId)));
+
+  let somaNotas = 0;
+  const acc = resumos.reduce((acc, r) => {
+    if (!r) return acc;
+    acc.minutosJogados += r.minutosJogados;
+    acc.gols += r.gols;
+    acc.passes += r.passes;
+    acc.defesas += r.defesas;
+    acc.frangos += r.frangos;
+    acc.vitorias += r.vitorias;
+    acc.empates += r.empates;
+    acc.derrotas += r.derrotas;
+    if (r.notaAvaliacoes != null) { somaNotas += r.notaAvaliacoes * r.totalAvaliacoes; acc.totalAvaliacoes += r.totalAvaliacoes; }
+    return acc;
+  }, { ...vazio, totalPeladas: idsEncerradas.length });
+
+  return { ...acc, notaMedia: acc.totalAvaliacoes > 0 ? somaNotas / acc.totalAvaliacoes : null };
+}
