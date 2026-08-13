@@ -467,6 +467,23 @@ function PostBody({ tipo, c }: { tipo: string; c: any }) {
       return <div><div className="text-lg font-bold">⭐ {c.nome} foi eleito MVP!</div><div className="text-xs text-muted-foreground">{c.gols} gol(s) · {c.passes} passe(s) decisivo(s) · {c.pelada_nome}</div></div>;
     case "artilheiro":
       return <div><div className="text-lg font-bold">🥇 {c.nome} foi o artilheiro!</div><div className="text-xs text-muted-foreground">{c.gols} gols · {c.pelada_nome}</div></div>;
+    case "ranking_compartilhado":
+      return (
+        <div>
+          <div className="text-lg font-bold">🏆 {c.titulo}{c.contexto ? ` · ${c.contexto}` : ""}</div>
+          {Array.isArray(c.top3) && c.top3.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {c.top3.map((t: any, i: number) => (
+                <div key={t.user_id} className="flex items-center gap-2 text-sm">
+                  <span>{["🥇", "🥈", "🥉"][i] || `${i + 1}º`}</span>
+                  <span className="flex-1 truncate font-semibold">{t.nome}</span>
+                  <span className="text-xs text-muted-foreground">{t.valor} {t.sufixo}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
     case "resenha_premio": {
       const premio = PREMIOS[c.categoria] || { titulo: "recebeu um prêmio da resenha!", emoji: "🏅", cor: "text-primary" };
       return (
