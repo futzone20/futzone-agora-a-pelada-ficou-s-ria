@@ -217,6 +217,29 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
   const [openPicker, setOpenPicker] = useState(false);
   const [openComents, setOpenComents] = useState(false);
   const [respondendoPara, setRespondendoPara] = useState<Comentario | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Fecha o seletor de reação e a lista de comentários ao clicar fora do
+  // post, ou apertando Esc — antes ficava preso aberto, sem nenhum jeito
+  // de sair.
+  useEffect(() => {
+    if (!openPicker && !openComents) return;
+    const aoClicarFora = (e: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setOpenPicker(false);
+        setOpenComents(false);
+      }
+    };
+    const aoApertarEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setOpenPicker(false); setOpenComents(false); }
+    };
+    document.addEventListener("mousedown", aoClicarFora);
+    document.addEventListener("keydown", aoApertarEsc);
+    return () => {
+      document.removeEventListener("mousedown", aoClicarFora);
+      document.removeEventListener("keydown", aoApertarEsc);
+    };
+  }, [openPicker, openComents]);
 
   const c = post.conteudo || {};
   const counts: Record<string, number> = {};
@@ -294,7 +317,7 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
   );
 
   return (
-    <div id={`post-${post.id}`} className="rounded-2xl border border-border bg-card p-4 space-y-3 transition-all">
+    <div ref={cardRef} id={`post-${post.id}`} className="rounded-2xl border border-border bg-card p-4 space-y-3 transition-all">
       <div className="flex items-center gap-2">
         {mostrarAvatar && (
           <Avatar className="h-8 w-8 shrink-0">
@@ -327,21 +350,27 @@ function PostCard({ post, grupoNome, membros, profilesMap, onLocalChange }: {
       </div>
 
       {openPicker && (
-        <div className="flex gap-2 rounded-xl bg-secondary/40 p-2">
+        <div className="flex items-center gap-2 rounded-xl bg-secondary/40 p-2">
           {REACOES.map((r) => (
             <button key={r.tipo} onClick={() => toggleReact(r.tipo)}
               className={`text-2xl transition ${minhas.has(r.tipo) ? "scale-125" : "opacity-70 hover:opacity-100"}`}>
               {r.icon}
             </button>
           ))}
+          <button onClick={() => setOpenPicker(false)} className="ml-auto text-sm font-bold text-muted-foreground hover:text-foreground">✕</button>
         </div>
       )}
 
       {(openComents || raizes.length > 0) && (
         <div className="space-y-1 border-t border-border pt-3">
-          {!openComents && raizes.length > 2 && (
-            <button onClick={() => setOpenComents(true)} className="text-xs text-primary">Ver todos os {totalComentarios} comentários</button>
-          )}
+          <div className="flex items-center justify-between">
+            {!openComents && raizes.length > 2 ? (
+              <button onClick={() => setOpenComents(true)} className="text-xs text-primary">Ver todos os {totalComentarios} comentários</button>
+            ) : <span />}
+            {openComents && (
+              <button onClick={() => setOpenComents(false)} className="text-xs font-bold text-muted-foreground hover:text-foreground">▲ Recolher</button>
+            )}
+          </div>
           {raizesMostradas.map((cm) => (
             <div key={cm.id}>
               {renderComentario(cm, false)}
