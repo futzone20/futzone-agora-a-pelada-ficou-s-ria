@@ -71,6 +71,8 @@ function PeladaDetail() {
   const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
   const [avisoAluguelOpen, setAvisoAluguelOpen] = useState(false);
   const [graceSec, setGraceSec] = useState(180);
+  const [aviso5minOpen, setAviso5minOpen] = useState(false);
+  const [aviso5minDispensado, setAviso5minDispensado] = useState(false);
 
   const minutosAtraso = useMemo(() => {
     if (!pelada?.data || !pelada?.horario_inicio) return 0;
@@ -239,10 +241,28 @@ function PeladaDetail() {
     if (!isCapitao) return;
     const tempoLocado = pelada.tempo_locado_minutos ?? 60;
     const fimAluguel = new Date(pelada.aluguel_iniciado_em).getTime() + tempoLocado * 60_000;
-    const jaVenceu = Date.now() >= fimAluguel;
-    if (!jaVenceu) { if (avisoAluguelOpen) setAvisoAluguelOpen(false); return; }
+    const faltamMs = fimAluguel - Date.now();
+    const jaVenceu = faltamMs <= 0;
+    const partidaRolando = !!partidaAtual && partidaAtual.status === "em_andamento";
+
+    // Aviso prévio — dispara faltando 5min, só uma vez por prazo (reseta
+    // sozinho se o prazo for adiado com "+Xmin", pra poder avisar de novo
+    // antes do NOVO horário acabar).
+    if (!jaVenceu && faltamMs <= 5 * 60_000 && !aviso5minDispensado) {
+      if (!aviso5minOpen) setAviso5minOpen(true);
+    } else if (aviso5minOpen && (jaVenceu || faltamMs > 5 * 60_000)) {
+      setAviso5minOpen(false);
+    }
+
+    // Aviso pós-vencimento — nunca abre (nem conta o prazo de tolerância)
+    // enquanto tiver uma partida rolando; a pelada só é forçada a encerrar
+    // depois que a partida atual realmente terminar.
+    if (!jaVenceu || partidaRolando) {
+      if (avisoAluguelOpen) setAvisoAluguelOpen(false);
+      return;
+    }
     if (!avisoAluguelOpen) setAvisoAluguelOpen(true);
-  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos, loading, isCapitao, avisoAluguelOpen]);
+  }, [tempoAluguelSec, pelada?.status, pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos, loading, isCapitao, avisoAluguelOpen, aviso5minOpen, aviso5minDispensado, partidaAtual?.status]);
 
   useEffect(() => {
     if (!avisoAluguelOpen || !pelada?.aluguel_iniciado_em) return;
@@ -252,13 +272,13 @@ function PeladaDetail() {
       const vencidoSec = Math.floor((Date.now() - fimAluguel) / 1000);
       const restante = Math.max(0, TOLERANCIA_SEC - vencidoSec);
       setGraceSec(restante);
-      if (restante <= 0) void encerrarPeladaAuto();
+      if (restante <= 0 && !(partidaAtual && partidaAtual.status === "em_andamento")) void encerrarPeladaAuto();
     };
     calc();
     const i = setInterval(calc, 1000);
     return () => clearInterval(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avisoAluguelOpen, pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos]);
+  }, [avisoAluguelOpen, pelada?.aluguel_iniciado_em, pelada?.tempo_locado_minutos, partidaAtual?.status]);
 
 
   const registrarAtrasoAluguel = async (minutos: number) => {
@@ -266,6 +286,8 @@ function PeladaDetail() {
     const { error } = await supabase.from("peladas").update({ tempo_locado_minutos: (pelada.tempo_locado_minutos ?? 60) + minutos } as never).eq("id", id);
     if (error) { console.error("Erro ao registrar atraso:", error); toast.error(`Erro ao registrar atraso: ${error.message} (código: ${error.code})`); return; }
     setAvisoAluguelOpen(false);
+    setAviso5minOpen(false);
+    setAviso5minDispensado(false); // libera um novo aviso de 5min pro prazo novo
     toast.success(`+${minutos}min adicionados ao aluguel da quadra`);
     void load();
   };
@@ -1062,6 +1084,29 @@ function PeladaDetail() {
 
 
 
+      <AlertDialog open={aviso5minOpen} onOpenChange={(v) => { if (!v) { setAviso5minOpen(false); setAviso5minDispensado(true); } }}>
+        <AlertDialogContent className="bg-[#0D0D0D] border-[#00FF87] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">⏰ Faltam menos de 5 minutos!</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-[#CCC]">
+                <p>O tempo da quadra está quase acabando. Quer continuar jogando mais um pouco?</p>
+                <p className="text-xs text-muted-foreground">Não se preocupa — nenhuma partida em andamento é interrompida, não importa o que você escolher.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="grid grid-cols-2 gap-2 sm:grid-cols-2">
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(15)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 15 min</AlertDialogAction>
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(30)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 30 min</AlertDialogAction>
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(45)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 45 min</AlertDialogAction>
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(60)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 60 min</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setAviso5minDispensado(true)} className="col-span-2 w-full bg-transparent text-[#888] hover:bg-white/5 border border-[#2A2A2A]">
+              Não, vou encerrar no horário
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={avisoAluguelOpen} onOpenChange={(v) => { if (!v) setAvisoAluguelOpen(false); }}>
         <AlertDialogContent className="bg-[#0D0D0D] border-[#CC0000] text-white">
           <AlertDialogHeader>
@@ -1075,14 +1120,12 @@ function PeladaDetail() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
-            <AlertDialogAction onClick={() => registrarAtrasoAluguel(15)} className="w-full bg-white/10 text-white hover:bg-white/20">
-              + 15 min de atraso
-            </AlertDialogAction>
-            <AlertDialogAction onClick={() => registrarAtrasoAluguel(30)} className="w-full bg-white/10 text-white hover:bg-white/20">
-              + 30 min de atraso
-            </AlertDialogAction>
-            <AlertDialogCancel onClick={encerrarPeladaAuto} className="w-full bg-[#CC0000] text-white hover:bg-[#AA0000] border-0">
+          <AlertDialogFooter className="grid grid-cols-2 gap-2 sm:grid-cols-2">
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(15)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 15 min</AlertDialogAction>
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(30)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 30 min</AlertDialogAction>
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(45)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 45 min</AlertDialogAction>
+            <AlertDialogAction onClick={() => registrarAtrasoAluguel(60)} className="w-full bg-white/10 text-white hover:bg-white/20">+ 60 min</AlertDialogAction>
+            <AlertDialogCancel onClick={encerrarPeladaAuto} className="col-span-2 w-full bg-[#CC0000] text-white hover:bg-[#AA0000] border-0">
               Encerrar pelada agora
             </AlertDialogCancel>
           </AlertDialogFooter>
