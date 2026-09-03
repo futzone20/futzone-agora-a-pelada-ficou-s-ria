@@ -41,7 +41,7 @@ export type SkillRow = {
 };
 
 export function mediaSkill(s?: SkillRow | null): number {
-  if (!s) return 3;
+  if (!s) return 5.5;
   return SKILL_KEYS.reduce((acc, k) => acc + (s[k] || 0), 0) / SKILL_KEYS.length;
 }
 
@@ -106,6 +106,32 @@ export function sortear(
 }
 
 
+/**
+ * Sorteio por POTE: o capitão já separou os jogadores em potes (nível 1 =
+ * melhores, nível 2 = medianos, etc — o critério é dele). Cada pote precisa
+ * ter exatamente `numTimes` jogadores. O sorteio pega 1 jogador aleatório de
+ * cada pote pra cada time, garantindo que todo time fique com 1 jogador de
+ * cada "nível" que o capitão definiu.
+ */
+export function sortearPorPote(
+  jogadoresPorPote: Record<number, Jogador[]>,
+  numTimes: number,
+  goleirosForaDoPote: Jogador[] = [],
+): { jogadores: Jogador[][]; goleiros: Jogador[][] } {
+  const shuffle = <T,>(arr: T[]) => arr.map(v => [Math.random(), v] as const).sort((a, b) => a[0] - b[0]).map(([, v]) => v);
+  const times: Jogador[][] = Array.from({ length: numTimes }, () => []);
+  const numPotes = Object.keys(jogadoresPorPote).length;
+
+  for (let p = 1; p <= numPotes; p++) {
+    const grupo = shuffle(jogadoresPorPote[p] || []);
+    grupo.forEach((j, idx) => { if (times[idx]) times[idx].push(j); });
+  }
+
+  return {
+    jogadores: times,
+    goleiros: distribuirGoleiros(goleirosForaDoPote, times),
+  };
+}
 export function mediaTime(t: Jogador[]): number {
   if (!t.length) return 0;
   return t.reduce((a, j) => a + j.media, 0) / t.length;
