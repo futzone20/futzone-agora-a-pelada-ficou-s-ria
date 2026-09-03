@@ -96,7 +96,7 @@ function PublicProfile() {
                 <div><div className="text-lg font-extrabold text-red-500">{c.derrotas}</div><div className="text-[10px] uppercase text-muted-foreground">Derrotas</div></div>
               </div>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <Stat label="Passes decisivos" value={c.passes} />
+                <Stat label="Assistências" value={c.passes} />
                 <Stat label="Defesas" value={c.defesas} />
                 <div className="rounded-lg bg-secondary/40 p-3">
                   <div className="text-xs text-muted-foreground">Nota média ({c.totalAvaliacoes})</div>
