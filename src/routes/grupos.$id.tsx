@@ -148,12 +148,12 @@ function GrupoPage() {
   // "Nível do grupo" e "XP total" são derivados — ainda não existiam antes, calculados aqui
   // a partir da força média dos membros e da quantidade de peladas já realizadas.
   const mediaGrupo = useMemo(() => {
-    if (!membros.length) return 3;
-    const soma = membros.reduce((acc, m) => acc + (m.skill ? mediaSkill(m.skill) : 3), 0);
+    if (!membros.length) return 5.5;
+    const soma = membros.reduce((acc, m) => acc + (m.skill ? mediaSkill(m.skill) : 5.5), 0);
     return soma / membros.length;
   }, [membros]);
-  const nivelGrupo = mediaGrupo >= 4.5 ? "Elite" : mediaGrupo >= 4 ? "Avançado" : mediaGrupo >= 3 ? "Intermediário" : mediaGrupo >= 2 ? "Em evolução" : "Iniciante";
-  const pctNivel = Math.min(100, (mediaGrupo / 5) * 100);
+  const nivelGrupo = mediaGrupo >= 9 ? "Elite" : mediaGrupo >= 8 ? "Avançado" : mediaGrupo >= 6 ? "Intermediário" : mediaGrupo >= 4 ? "Em evolução" : "Iniciante";
+  const pctNivel = Math.min(100, (mediaGrupo / 10) * 100);
   const xpTotal = peladas.filter((p) => p.status === "encerrada").length * 100;
 
   if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
@@ -416,7 +416,7 @@ function MembrosTab({ grupo, membros, pendentes, isCapitao, souCapitaoExato, onC
                 ) : (
                   <>
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
-                      <div className={`h-full ${media >= 4 ? "bg-green-500" : media >= 2.5 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${(media / 5) * 100}%` }} />
+                      <div className={`h-full ${media >= 8 ? "bg-green-500" : media >= 5 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${(media / 10) * 100}%` }} />
                     </div>
                     <span className="w-12 text-right text-xs font-bold text-primary">⭐ {media.toFixed(1)}</span>
                   </>
