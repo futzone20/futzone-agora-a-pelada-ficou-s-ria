@@ -13,6 +13,7 @@ import { ConviteAuxiliarCard } from "@/components/ConviteAuxiliarCard";
 import { CircleDot, ArrowLeft, Calendar, Clock, MapPin, Trophy, User, Shuffle, Users, RefreshCw, Bell, Shield, Info, Check, X, Star, BarChart3, Dice5, Play, ClipboardList, Shirt, Hand, ChevronRight, ChevronDown, Crown, Copy, MessageCircle, Target } from "lucide-react";
 import { calcularTabela } from "@/lib/placar";
 import { toast } from "sonner";
+import { mensagemErroAmigavel } from "@/lib/erroAmigavel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, rolePath } from "@/lib/auth";
 import { getNavItems } from "@/lib/navItems";
@@ -224,10 +225,14 @@ function PeladaDetail() {
   const encerrarPeladaAuto = async () => {
     const { error: errP } = await supabase.from("partidas").update({ status: "encerrada", encerrada_em: new Date().toISOString() } as never).eq("pelada_id", id).eq("status", "em_andamento");
     if (errP) { console.error("Erro ao encerrar partidas da pelada:", errP); toast.error(`Erro ao encerrar partidas: ${errP.message} (código: ${errP.code})`); return; }
-    const { error: errPel } = await supabase.from("peladas").update({ status: "encerrada" } as never).eq("id", id);
+    const { data: peladaAtualizada, error: errPel } = await supabase.from("peladas").update({ status: "encerrada", encerrada_manualmente_em: new Date().toISOString() } as never).eq("id", id).select().maybeSingle();
     if (errPel) { console.error("Erro ao encerrar pelada:", errPel); toast.error(`Erro ao encerrar pelada: ${errPel.message} (código: ${errPel.code})`); return; }
+    if (!peladaAtualizada) {
+      toast.error("Não foi possível encerrar — você precisa ser capitão (ou auxiliar) desse grupo pra fazer isso.");
+      return;
+    }
     void notificarVencedoresPelada(id);
-    toast.success("⏱ Tempo de aluguel encerrado! Pelada finalizada.");
+    toast.success("✅ Pelada encerrada com sucesso!");
     setAvisoAluguelOpen(false);
     void load();
   };
@@ -527,11 +532,35 @@ function PeladaDetail() {
   const encerrarPeladaManual = async () => {
     if (!isCapitao) return;
     const restMin = Math.floor(tempoAluguelSec / 60);
-    if (!(await confirm({ title: "Encerrar pelada", description: `Tem certeza que deseja encerrar a pelada? Ainda restam ${restMin}min de aluguel.`, variant: "destructive", confirmLabel: "Encerrar" }))) return;
+    if (!(await confirm({
+      title: "Encerrar a pelada?",
+      description: `Você deseja realmente encerrar o horário da pelada agora?${restMin > 0 ? ` Ainda restam ${restMin}min de aluguel.` : ""} Depois de encerrar, você tem até 15 minutos pra desfazer, se mudar de ideia.`,
+      variant: "destructive",
+      confirmLabel: "Sim, encerrar",
+    }))) return;
     await encerrarPeladaAuto();
   };
 
 
+
+  const cancelarEncerramento = async () => {
+    if (!pelada?.encerrada_manualmente_em) return;
+    const passouMs = Date.now() - new Date(pelada.encerrada_manualmente_em).getTime();
+    if (passouMs > 15 * 60_000) { toast.error("Já passou de 15 minutos — não dá mais pra desfazer."); return; }
+    const { error: e1 } = await supabase.from("peladas").update({ status: "em_andamento", encerrada_manualmente_em: null } as never).eq("id", id);
+    if (e1) return toast.error(mensagemErroAmigavel(e1));
+    // reabre só as partidas que foram encerradas junto (no mesmo instante da pelada)
+    const { data: partidasDaPelada } = await supabase.from("partidas").select("id, encerrada_em").eq("pelada_id", id).eq("status", "encerrada");
+    const encerradaEmMs = new Date(pelada.encerrada_manualmente_em).getTime();
+    const idsParaReabrir = (partidasDaPelada || [])
+      .filter((p: any) => p.encerrada_em && Math.abs(new Date(p.encerrada_em).getTime() - encerradaEmMs) < 5000)
+      .map((p: any) => p.id);
+    if (idsParaReabrir.length) {
+      await supabase.from("partidas").update({ status: "em_andamento", encerrada_em: null } as never).in("id", idsParaReabrir);
+    }
+    toast.success("↩️ Encerramento desfeito — a pelada voltou a ficar em andamento.");
+    void load();
+  };
 
   const ajustarPlacar = async (campo: "placar_a" | "placar_b", delta: number) => {
     if (!partidaAtual) return;
@@ -575,6 +604,22 @@ function PeladaDetail() {
       </div>
 
       <div className="mt-4 space-y-4 px-4">
+        {isCapitao && pelada.status === "encerrada" && pelada.encerrada_manualmente_em && (Date.now() - new Date(pelada.encerrada_manualmente_em).getTime() < 15 * 60_000) && (() => {
+          const restanteMs = 15 * 60_000 - (Date.now() - new Date(pelada.encerrada_manualmente_em).getTime());
+          const restanteMin = Math.max(0, Math.ceil(restanteMs / 60_000));
+          return (
+            <div className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-4 space-y-3">
+              <div>
+                <div className="font-bold text-yellow-400">Essa pelada acabou de ser encerrada</div>
+                <div className="text-xs text-[#CCC]">Você ainda tem {restanteMin}min pra desfazer, se foi sem querer ou mudou de ideia.</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={cancelarEncerramento} variant="outline" className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10">↩️ Cancelar encerramento</Button>
+                <Button onClick={async () => { await cancelarEncerramento(); await registrarAtrasoAluguel(15); }} variant="outline" className="border-[#00FF87] text-[#00FF87] hover:bg-[#00FF87]/10">+ 15min e continuar</Button>
+              </div>
+            </div>
+          );
+        })()}
         <ConviteAuxiliarCard peladaId={id} onChange={load} />
 
         {times.length === 0 && pelada.status !== "encerrada" && (
