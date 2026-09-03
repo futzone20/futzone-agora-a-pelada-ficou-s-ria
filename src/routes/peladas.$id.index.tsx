@@ -764,6 +764,22 @@ function PeladaDetail() {
           );
         })()}
 
+        {pelada.status === "em_andamento" && !partidaAtual && (
+          <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-5 space-y-3">
+            <div className="text-center text-sm text-[#888]">
+              Nenhuma partida rolando agora. Você pode iniciar a próxima pelo Painel de Lances, ou encerrar a pelada se já acabou por hoje.
+            </div>
+            {isCapitao && (
+              <div className="space-y-2">
+                <Button onClick={() => navigate({ to: "/peladas/$id/lances", params: { id } })} className="w-full bg-[#00FF87] text-black font-bold h-12 rounded-xl">
+                  <Shield className="mr-2 h-5 w-5" /> Painel de Lances
+                </Button>
+                <Button onClick={encerrarPeladaManual} variant="outline" className="w-full border-[#CC0000] text-[#CC0000] hover:bg-[#CC0000]/10 h-10 rounded-xl">🛑 Encerrar Pelada</Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {times.length > 0 && pelada.status !== "encerrada" && (() => {
           const meuTime = times.find((t) => t.membros.some((m) => m.user_id === user?.id));
           const temRodizio = pelada.sistema_disputa === "rodizio" && times.length >= 3;
