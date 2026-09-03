@@ -14,7 +14,7 @@ export type LinhaRankingPelada = {
  * Calcula o ranking de TODOS os jogadores que jogaram uma pelada específica.
  *
  * Pontuação:
- *  - Gol: +7 · Passe decisivo: +5 · Defesa de GOLEIRO: +6 · Defesa de LINHA: +3
+ *  - Gol: +7 · Assistência: +5 · Defesa de GOLEIRO: +6 · Defesa de LINHA: +3
  *  - Frango: -5 · Falta: -3 · Cartão amarelo: -8 · Cartão vermelho: -15
  *  - "Entrada forte" não vale ponto.
  *  - Avaliação dos colegas: nota 5 = +20, nota 4 = +10, nota 1-3 = 0 (nunca desconta).
