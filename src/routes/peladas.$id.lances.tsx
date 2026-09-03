@@ -66,6 +66,7 @@ function LancesPage() {
   const [drawerGoleiro, setDrawerGoleiro] = useState<{ goleiroTimeId: string; goleiroTimeNome: string; goleiroTimeCor: string } | null>(null);
   const [drawerArtilheiro, setDrawerArtilheiro] = useState<{ timeId: string; timeNome: string; timeCor: string } | null>(null);
   const [pendingGol, setPendingGol] = useState<{ userId: string; tipo: string; timeId: string } | null>(null);
+  const [pendingEncerrarPartida, setPendingEncerrarPartida] = useState(false);
   const [drawerAssistencia, setDrawerAssistencia] = useState<{ etapa: "perguntar" | "escolher"; scorerId: string; timeId: string; timeNome: string; timeCor: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
@@ -405,16 +406,19 @@ function LancesPage() {
       const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
       if (partidaAtualizada) setPartida(partidaAtualizada);
 
+      let vaiEncerrar = false;
       if (partidaAtualizada) {
         const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
         if (pel?.gols_para_encerrar && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
-          void encerrarPartidaAuto();
-          return;
+          vaiEncerrar = true;
         }
       }
 
-      // pergunta se teve assistência antes de perguntar o goleiro
+      // pergunta se teve assistência antes de perguntar o goleiro — mesmo que esse
+      // seja o gol que encerra a partida, o encerramento só acontece DEPOIS desse
+      // fluxo (senão a pergunta de assistência nunca chegava a aparecer).
       const timeDoGol = times.find((t: any) => t.id === timeId);
+      setPendingEncerrarPartida(vaiEncerrar);
       if (timeDoGol) {
         setPendingGol({ userId, tipo, timeId });
         setDrawerAssistencia({ etapa: "perguntar", scorerId: userId, timeId, timeNome: timeDoGol.nome, timeCor: timeDoGol.cor });
@@ -496,6 +500,7 @@ function LancesPage() {
       setDrawerGoleiro({ goleiroTimeId: timeAdversarioId, goleiroTimeNome: timeAdversario.nome, goleiroTimeCor: timeAdversario.cor });
     } else {
       setPendingGol(null);
+      if (pendingEncerrarPartida) { setPendingEncerrarPartida(false); void encerrarPartidaAuto(); }
     }
   };
 
@@ -541,6 +546,7 @@ function LancesPage() {
     setDrawerGoleiro(null);
     setPendingGol(null);
     void load();
+    if (pendingEncerrarPartida) { setPendingEncerrarPartida(false); void encerrarPartidaAuto(); }
   };
 
   const marcarArtilheiro = async (userId: string | null) => {
