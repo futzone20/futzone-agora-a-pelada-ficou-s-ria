@@ -567,7 +567,7 @@ function fraseXp(h: any): string {
     case "cancelou_tarde": return `XP descontado por cancelar em cima da hora${naPelada}`;
     case "jogou_pelada": return `XP por jogar${naPelada}`;
     case "marcou_gol": return `XP por fazer um gol${naPelada}`;
-    case "deu_passe_decisivo": return `XP por dar um passe decisivo${naPelada}`;
+    case "deu_passe_decisivo": return `XP por dar uma assistência${naPelada}`;
     case "fez_defesa": return `XP por fazer uma defesa${naPelada}`;
     case "foi_auxiliar": return `XP por ser auxiliar${naPelada}`;
     case "foi_mvp": return `XP por ser eleito MVP${naPelada}`;
@@ -685,7 +685,7 @@ function HistoricoPeladasBox({ userId }: { userId: string | undefined }) {
         <div className="grid grid-cols-3 gap-3 text-center">
           <div>
             <div className="text-base font-bold">{carreira.passes}</div>
-            <div className="text-[10px] uppercase text-muted-foreground">Passes decisivos</div>
+            <div className="text-[10px] uppercase text-muted-foreground">Assistências</div>
           </div>
           <div>
             <div className="text-base font-bold">{carreira.defesas}</div>
