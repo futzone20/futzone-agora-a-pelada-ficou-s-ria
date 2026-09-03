@@ -60,7 +60,7 @@ function PublicProfile() {
             {skillsArr.map(([n, v]) => (
               <div key={n as string} className="flex items-center gap-2 text-sm">
                 <span className="w-32">{n}</span>
-                <div className="flex-1 h-2 rounded bg-secondary overflow-hidden"><div className="h-full bg-primary" style={{ width: `${((v as number) / 5) * 100}%` }} /></div>
+                <div className="flex-1 h-2 rounded bg-secondary overflow-hidden"><div className="h-full bg-primary" style={{ width: `${((v as number) / 10) * 100}%` }} /></div>
                 <span className="w-8 text-right">{v as number}</span>
               </div>
             ))}
