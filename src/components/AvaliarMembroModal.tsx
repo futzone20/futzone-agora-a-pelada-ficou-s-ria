@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -31,8 +31,41 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
     velocidade: 5.5, drible: 5.5, passe: 5.5, chute: 5.5, resistencia: 5.5, posicionamento: 5.5,
   });
   const [saving, setSaving] = useState(false);
+  const [loadingExistente, setLoadingExistente] = useState(false);
   const media = SKILLS.reduce((a, s) => a + (vals[s.key] || 0), 0) / SKILLS.length;
   const initials = (avaliado.nome || "U").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
+  // Ao abrir o modal, busca se já existe uma avaliação sua desse jogador — se
+  // tiver, carrega os valores reais nos sliders (em vez de sempre mostrar o
+  // padrão 5.5, que fazia parecer que a avaliação tinha "resetado" e corria o
+  // risco de sobrescrever ela sem querer).
+  useEffect(() => {
+    if (!open || !user) return;
+    setStep("escolha");
+    setVals({ velocidade: 5.5, drible: 5.5, passe: 5.5, chute: 5.5, resistencia: 5.5, posicionamento: 5.5 });
+    setLoadingExistente(true);
+    (async () => {
+      const { data } = await supabase
+        .from("avaliacoes_skill_membro")
+        .select("velocidade, drible, passe, chute, resistencia, posicionamento, conhece_jogador")
+        .eq("avaliador_id", user.id)
+        .eq("avaliado_id", avaliado.user_id)
+        .eq("grupo_id", grupoId)
+        .eq("tipo", "conhecimento_previo")
+        .is("pelada_id", null)
+        .maybeSingle();
+      if (data && (data as any).conhece_jogador) {
+        const d = data as any;
+        setVals({
+          velocidade: d.velocidade ?? 5.5, drible: d.drible ?? 5.5, passe: d.passe ?? 5.5,
+          chute: d.chute ?? 5.5, resistencia: d.resistencia ?? 5.5, posicionamento: d.posicionamento ?? 5.5,
+        });
+        setStep("skills");
+      }
+      setLoadingExistente(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, avaliado.user_id]);
 
   const buscarExistente = async () => {
     if (!user) return null;
@@ -116,6 +149,7 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
 
         {step === "skills" && (
           <div className="space-y-4">
+            {loadingExistente && <p className="text-center text-xs text-muted-foreground">Carregando sua avaliação anterior, se tiver...</p>}
             {SKILLS.map((s) => (
               <div key={s.key}>
                 <div className="flex justify-between mb-1">
@@ -130,8 +164,8 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
               <div className="text-xs text-muted-foreground">Nível geral</div>
               <div className="text-3xl font-extrabold text-primary">{media.toFixed(1)}</div>
             </div>
-            <Button onClick={enviar} disabled={saving} className="w-full bg-primary text-primary-foreground font-bold">
-              {saving ? "Enviando..." : "Enviar Avaliação"}
+            <Button onClick={enviar} disabled={saving || loadingExistente} className="w-full bg-primary text-primary-foreground font-bold">
+              {saving ? "Enviando..." : loadingExistente ? "Carregando..." : "Enviar Avaliação"}
             </Button>
           </div>
         )}
