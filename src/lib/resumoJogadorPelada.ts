@@ -80,7 +80,7 @@ export async function calcularResumoJogadorPelada(peladaId: string, userId: stri
 
   // Pontuação de ranking: mesma fórmula da tela de Ranking (sem clamp, sem bônus de capitão,
   // avaliação nunca desconta — só soma a partir da nota 4).
-  const pontosAvaliacao = notasAvals.reduce((acc, n) => acc + (n === 5 ? 20 : n === 4 ? 10 : 0), 0);
+  const pontosAvaliacao = notasAvals.reduce((acc, n) => acc + (n >= 5 ? n * 2 : 0), 0);
   const pontosLances =
     (contagens.gol || 0) * 7 +
     (contagens.passe_decisivo || 0) * 5 +
