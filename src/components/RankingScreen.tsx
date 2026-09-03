@@ -127,7 +127,7 @@ export function RankingScreen() {
             </button>
           </PopoverTrigger>
           <PopoverContent className="max-w-xs text-xs text-muted-foreground space-y-1.5">
-            <p><b>Geral:</b> gol +7, passe decisivo +5, defesa de goleiro +6, defesa de linha +3, frango -5, falta -3, amarelo -8, vermelho -15. Avaliação (1-10): a partir da nota 5, cada ponto de nota vale o dobro em pontos (nota 5 = +10, nota 10 = +20). Nota abaixo de 5 nunca desconta. +1 por vitória do time, +5 se foi campeão da pelada.</p>
+            <p><b>Geral:</b> gol +7, assistência +5, defesa de goleiro +6, defesa de linha +3, frango -5, falta -3, amarelo -8, vermelho -15. Avaliação (1-10): a partir da nota 5, cada ponto de nota vale o dobro em pontos (nota 5 = +10, nota 10 = +20). Nota abaixo de 5 nunca desconta. +1 por vitória do time, +5 se foi campeão da pelada.</p>
             <p><b>Artilharia:</b> só a contagem de gols.</p>
             <p><b>Goleiros:</b> média de gols sofridos por partida (menor é melhor).</p>
           </PopoverContent>
