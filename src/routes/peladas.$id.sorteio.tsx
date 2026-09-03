@@ -279,7 +279,17 @@ function SorteioPage() {
         <button onClick={() => setModo("avaliacao")} className={`rounded-xl border py-3 text-sm font-bold ${modo === "avaliacao" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
           ⭐ Por avaliação
         </button>
-        <button onClick={() => setModo("pote")} className={`rounded-xl border py-3 text-sm font-bold ${modo === "pote" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+        <button
+          onClick={() => {
+            const necessarios = (pelada?.jogadores_por_time || 0) * numTimes;
+            if (jogadoresParaPote.length < necessarios) {
+              toast.error(`Não dá pra sortear por pote: precisa de pelo menos ${necessarios} jogador(es) de linha confirmados (tem ${jogadoresParaPote.length}).`);
+              return;
+            }
+            setModo("pote");
+          }}
+          className={`rounded-xl border py-3 text-sm font-bold ${modo === "pote" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+        >
           🎱 Por pote
         </button>
       </div>
@@ -370,15 +380,26 @@ function SorteioPage() {
                   {potes[j.user_id] && <span className="text-xs font-bold text-primary">Pote {potes[j.user_id]}</span>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {Array.from({ length: numPotes }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPotes((prev) => ({ ...prev, [j.user_id]: p }))}
-                      className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${potes[j.user_id] === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
-                    >
-                      Pote {p}
-                    </button>
-                  ))}
+                  {Array.from({ length: numPotes }, (_, i) => i + 1).map((p) => {
+                    const jaEstaNesse = potes[j.user_id] === p;
+                    const poteCheio = !jaEstaNesse && (contagemPorPote[p] || 0) >= numTimes;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          if (poteCheio) {
+                            toast.error(`Pote ${p} já está completo (${numTimes}/${numTimes}). Tire alguém desse pote antes de colocar mais gente nele.`);
+                            return;
+                          }
+                          setPotes((prev) => ({ ...prev, [j.user_id]: p }));
+                        }}
+                        disabled={poteCheio}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${jaEstaNesse ? "border-primary bg-primary/10 text-primary" : poteCheio ? "border-border/50 text-muted-foreground/40 cursor-not-allowed" : "border-border text-muted-foreground"}`}
+                      >
+                        Pote {p}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
