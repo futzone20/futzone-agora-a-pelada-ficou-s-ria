@@ -16,7 +16,7 @@ const STADIUM_BG = "https://images.unsplash.com/photo-1579952363873-27f3bade9f55
 
 const TIPOS = [
   { v: "gol", label: "Gol", icon: "⚽", color: "#FFFFFF" },
-  { v: "passe_decisivo", label: "Passe", icon: "🤝", color: "#00FF87" },
+  { v: "gol_contra", label: "Gol Contra", icon: "🙈", color: "#F87171" },
   { v: "defesa", label: "Defesa", icon: "🧤", color: "#FB923C" },
   { v: "falta", label: "Falta", icon: "🟨", color: "#FACC15" },
   { v: "entrada_forte", label: "Entrada", icon: "⚡", color: "#FACC15" },
@@ -28,7 +28,8 @@ const TIPOS = [
 
 const TIPO_LABEL_COR: Record<string, { label: string; color: string }> = {
   gol: { label: "Gol", color: "#FFFFFF" },
-  passe_decisivo: { label: "Passe", color: "#00FF87" },
+  gol_contra: { label: "Gol Contra", color: "#F87171" },
+  passe_decisivo: { label: "Assistência", color: "#00FF87" },
   defesa: { label: "Defesa", color: "#FB923C" },
   falta: { label: "Falta", color: "#FACC15" },
   entrada_forte: { label: "Entrada", color: "#FACC15" },
@@ -65,6 +66,7 @@ function LancesPage() {
   const [drawerGoleiro, setDrawerGoleiro] = useState<{ goleiroTimeId: string; goleiroTimeNome: string; goleiroTimeCor: string } | null>(null);
   const [drawerArtilheiro, setDrawerArtilheiro] = useState<{ timeId: string; timeNome: string; timeCor: string } | null>(null);
   const [pendingGol, setPendingGol] = useState<{ userId: string; tipo: string; timeId: string } | null>(null);
+  const [drawerAssistencia, setDrawerAssistencia] = useState<{ etapa: "perguntar" | "escolher"; scorerId: string; timeId: string; timeNome: string; timeCor: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [tempoPausadoAtual, setTempoPausadoAtual] = useState(0);
   const [isCapitao, setIsCapitao] = useState(false);
@@ -411,17 +413,41 @@ function LancesPage() {
         }
       }
 
-      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
-      const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
-      const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
-
-      if (jogadoresAdversario.length > 0 && timeAdversario) {
+      // pergunta se teve assistência antes de perguntar o goleiro
+      const timeDoGol = times.find((t: any) => t.id === timeId);
+      if (timeDoGol) {
         setPendingGol({ userId, tipo, timeId });
-        setDrawerGoleiro({
-          goleiroTimeId: timeAdversarioId,
-          goleiroTimeNome: timeAdversario.nome,
-          goleiroTimeCor: timeAdversario.cor,
-        });
+        setDrawerAssistencia({ etapa: "perguntar", scorerId: userId, timeId, timeNome: timeDoGol.nome, timeCor: timeDoGol.cor });
+      } else {
+        abrirDrawerGoleiroAdversario(timeId);
+      }
+      return;
+    }
+
+    if (tipo === "gol_contra") {
+      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo: "gol_contra", user_id: userId, time_id: timeId, marcado_por: user.id,
+      } as never);
+      if (error) { toast.error(error.message); return; }
+      // o trigger do banco só soma gol pro time_id quando tipo='gol' — aqui o gol é
+      // contra, então soma manualmente pro time ADVERSÁRIO (quem se beneficia).
+      const campo = timeAdversarioId === partida.time_a_id ? "placar_a" : "placar_b";
+      const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+      const novoPlacar = (partidaAtualizada?.[campo] || 0) + 1;
+      await supabase.from("partidas").update({ [campo]: novoPlacar } as never).eq("id", partida.id);
+      toast.success("Gol contra registrado 🙈");
+      setDrawer(null);
+      void load();
+      const { data: partidaFinal }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+      if (partidaFinal) setPartida(partidaFinal);
+
+      // pergunta qual goleiro DO PRÓPRIO TIME (o time que sofreu o gol contra) levou
+      const timeDoGol = times.find((t: any) => t.id === timeId);
+      const jogadoresDoProprioTime = timeJogadores.filter((j: any) => j.time_id === timeId);
+      if (jogadoresDoProprioTime.length > 0 && timeDoGol) {
+        setPendingGol({ userId, tipo: "gol_contra", timeId });
+        setDrawerGoleiro({ goleiroTimeId: timeId, goleiroTimeNome: timeDoGol.nome, goleiroTimeCor: timeDoGol.cor });
       }
       return;
     }
@@ -460,6 +486,44 @@ function LancesPage() {
     const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
     if (partidaAtualizada) setPartida(partidaAtualizada);
   };
+
+  const abrirDrawerGoleiroAdversario = (timeId: string) => {
+    if (!partida) return;
+    const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+    const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
+    const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
+    if (jogadoresAdversario.length > 0 && timeAdversario) {
+      setDrawerGoleiro({ goleiroTimeId: timeAdversarioId, goleiroTimeNome: timeAdversario.nome, goleiroTimeCor: timeAdversario.cor });
+    } else {
+      setPendingGol(null);
+    }
+  };
+
+  const responderAssistencia = (teve: boolean) => {
+    if (!drawerAssistencia) return;
+    if (!teve) {
+      setDrawerAssistencia(null);
+      abrirDrawerGoleiroAdversario(drawerAssistencia.timeId);
+      return;
+    }
+    setDrawerAssistencia({ ...drawerAssistencia, etapa: "escolher" });
+  };
+
+  const marcarAssistencia = async (assistenciaUserId: string | null) => {
+    if (!partida || !user || !drawerAssistencia) return;
+    if (assistenciaUserId) {
+      const { error } = await supabase.from("lances").insert({
+        partida_id: partida.id, pelada_id: id, tipo: "passe_decisivo", user_id: assistenciaUserId, time_id: drawerAssistencia.timeId, marcado_por: user.id,
+      } as never);
+      if (error) toast.error(error.message);
+      else toast.success("Assistência registrada 🤝");
+      void load();
+    }
+    const timeId = drawerAssistencia.timeId;
+    setDrawerAssistencia(null);
+    abrirDrawerGoleiroAdversario(timeId);
+  };
+
 
   const marcarGoleiro = async (goleiroUserId: string | null) => {
     if (!partida || !user || !drawerGoleiro) return;
@@ -784,8 +848,8 @@ function LancesPage() {
                               ) : (
                                 <>
                                   <span className="font-bold text-white">{nomeExibido}</span>
-                                  <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : "fez"} </span>
-                                  <span className="font-semibold" style={{ color: info.color }}>{info.label}</span>
+                                  <span className="text-white/70"> {l.tipo === "frango" ? "levou um" : l.tipo === "gol_contra" ? "fez um" : "fez"} </span>
+                                  <span className="font-semibold" style={{ color: info.color }}>{info.label}{l.tipo === "gol_contra" ? " 🙈" : ""}</span>
                                   <span className="text-white/50"> — </span>
                                   <span className="font-medium" style={{ color: corTime(l.time_id) }}>{nomeTime(l.time_id)}</span>
                                 </>
@@ -880,6 +944,55 @@ function LancesPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Drawer assistência (pergunta, depois escolhe quem deu) */}
+      {drawerAssistencia && drawerAssistencia.etapa === "perguntar" && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => responderAssistencia(false)}>
+          <div className="w-full rounded-t-2xl bg-[#1A1A1A] p-4 shadow-xl" style={{ maxWidth: 480, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white">Teve assistência? 🤝</h3>
+              <button onClick={() => responderAssistencia(false)} className="text-white/60"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => responderAssistencia(true)} className="h-12 rounded-lg bg-[#00FF87] font-bold text-black active:scale-95">Sim</button>
+              <button onClick={() => responderAssistencia(false)} className="h-12 rounded-lg border border-[#2A2A2A] font-bold text-white active:scale-95">Não</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {drawerAssistencia && drawerAssistencia.etapa === "escolher" && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => marcarAssistencia(null)}>
+          <div className="w-full rounded-t-2xl bg-[#1A1A1A] p-4 shadow-xl" style={{ maxWidth: 480, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Quem deu a assistência? 🤝</h3>
+                <p className="text-xs text-white/60 mt-0.5">
+                  Jogador do <span className="font-bold" style={{ color: drawerAssistencia.timeCor }}>{drawerAssistencia.timeNome}</span>
+                </p>
+              </div>
+              <button onClick={() => marcarAssistencia(null)} className="text-white/60"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-[40vh] overflow-y-auto">
+              {jogadoresDoTime(drawerAssistencia.timeId)
+                .filter((j: any) => j.user_id !== drawerAssistencia.scorerId)
+                .map((j: any) => (
+                  <button
+                    key={j.user_id}
+                    onClick={() => marcarAssistencia(j.user_id)}
+                    className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
+                  >
+                    <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
+                  </button>
+                ))
+              }
+            </div>
+            <button onClick={() => marcarAssistencia(null)} className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60">
+              Pular — sem assistência
+            </button>
           </div>
         </div>
       )}
