@@ -767,7 +767,7 @@ function PeladaDetail() {
                         Força <span className="font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</span>
                       </div>
                       <div className="mt-1.5 h-1 w-full rounded-full bg-white/10 overflow-hidden">
-                        <div className="h-full" style={{ width: `${(mediaTime(t.membros) / 5) * 100}%`, backgroundColor: t.cor }} />
+                        <div className="h-full" style={{ width: `${(mediaTime(t.membros) / 10) * 100}%`, backgroundColor: t.cor }} />
                       </div>
                     </div>
                   ))}
@@ -805,7 +805,7 @@ function PeladaDetail() {
                     </div>
                   </div>
                   <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: meuTime.cor, opacity: 0.3 }} />
-                  <div className="absolute bottom-0 left-0 h-1 transition-all" style={{ width: `${(mediaTime(meuTime.membros) / 5) * 100}%`, backgroundColor: meuTime.cor }} />
+                  <div className="absolute bottom-0 left-0 h-1 transition-all" style={{ width: `${(mediaTime(meuTime.membros) / 10) * 100}%`, backgroundColor: meuTime.cor }} />
                 </div>
               )}
 
@@ -832,7 +832,7 @@ function PeladaDetail() {
                           <div className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</div>
                         </div>
                         <div className="absolute bottom-0 left-0 h-1" style={{ width: "100%", backgroundColor: t.cor, opacity: 0.2 }} />
-                        <div className="absolute bottom-0 left-0 h-1" style={{ width: `${(mediaTime(t.membros) / 5) * 100}%`, backgroundColor: t.cor }} />
+                        <div className="absolute bottom-0 left-0 h-1" style={{ width: `${(mediaTime(t.membros) / 10) * 100}%`, backgroundColor: t.cor }} />
                       </div>
                     ))}
                   </div>
