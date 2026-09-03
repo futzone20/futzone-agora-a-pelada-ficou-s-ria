@@ -31,8 +31,8 @@ const SKILL_LABELS: Record<typeof SKILL_KEYS[number], string> = {
 type SkillKey = typeof SKILL_KEYS[number];
 type Secao = "dados" | "skills" | "ofensiva" | "pontos" | "whatsapp" | "indicar" | "conta" | "historico" | "carteira" | null;
 
-const skillColor = (v: number) => v >= 4 ? "bg-green-500" : v >= 2.5 ? "bg-yellow-500" : "bg-red-500";
-const nivelLabel = (m: number) => m >= 4.5 ? "Elite" : m >= 4 ? "Acima da média" : m >= 3 ? "Bom" : m >= 2 ? "Em evolução" : "Iniciante";
+const skillColor = (v: number) => v >= 8 ? "bg-green-500" : v >= 5 ? "bg-yellow-500" : "bg-red-500";
+const nivelLabel = (m: number) => m >= 9 ? "Elite" : m >= 8 ? "Acima da média" : m >= 6 ? "Bom" : m >= 4 ? "Em evolução" : "Iniciante";
 
 function maskPhone(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -264,7 +264,7 @@ export function PerfilCompleto() {
                 <div key={k} className="rounded-lg bg-secondary/30 p-2">
                   <div className="flex justify-between text-xs"><span>{SKILL_LABELS[k]}</span><span className="font-bold">{skills[k]}</span></div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
-                    <div className={`h-full ${skillColor(skills[k])}`} style={{ width: `${(skills[k] / 5) * 100}%` }} />
+                    <div className={`h-full ${skillColor(skills[k])}`} style={{ width: `${(skills[k] / 10) * 100}%` }} />
                   </div>
                 </div>
               ))}
