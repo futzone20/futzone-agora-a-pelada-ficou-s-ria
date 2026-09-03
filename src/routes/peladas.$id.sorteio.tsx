@@ -98,7 +98,7 @@ function SorteioPage() {
     const listaConvidados: JogadorSorteio[] = (convs || []).map((c: any) => ({
       user_id: c.id,
       nome: `${c.nome} (convidado)`,
-      media: c.nivel_geral || 3,
+      media: c.nivel_geral || 5.5,
       eh_goleiro: c.posicao === "goleiro",
       convidado: true,
     }));
@@ -277,7 +277,7 @@ function SorteioPage() {
             <div key={j.user_id} className="flex items-center gap-3">
               <span className="flex-1 text-sm">{j.nome}{j.eh_goleiro ? " 🧤" : ""}</span>
               <div className="h-1.5 w-24 overflow-hidden rounded-full bg-secondary">
-                <div className="h-full bg-primary" style={{ width: `${(j.media / 5) * 100}%` }} />
+                <div className="h-full bg-primary" style={{ width: `${(j.media / 10) * 100}%` }} />
               </div>
               <span className="w-8 text-right text-xs font-bold text-primary">{j.media.toFixed(1)}</span>
             </div>
