@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { getNavItems } from "@/lib/navItems";
-import { CORES_TIMES, type Jogador, mediaSkill, mediaTime, sortear } from "@/lib/sorteio";
+import { CORES_TIMES, type Jogador, mediaSkill, mediaTime, sortear, sortearPorPote } from "@/lib/sorteio";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useConfirm } from "@/components/ConfirmProvider";
 
@@ -41,6 +41,9 @@ function SorteioPage() {
   const [times, setTimes] = useState<TimeUI[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmacaoOpen, setConfirmacaoOpen] = useState(false);
+  const [modo, setModo] = useState<"avaliacao" | "pote">("avaliacao");
+  const [incluirGoleirosPote, setIncluirGoleirosPote] = useState(false);
+  const [potes, setPotes] = useState<Record<string, number>>({});
 
   const load = async () => {
     setLoading(true);
@@ -148,6 +151,42 @@ function SorteioPage() {
 
   const pendentes = (confirmados as any[]).filter((c) => c.skills_pendentes);
 
+  // ============ sorteio por pote ============
+  const numPotes = pelada ? pelada.jogadores_por_time : 0;
+  const jogadoresParaPote = confirmados.filter((c) => incluirGoleirosPote || !c.eh_goleiro);
+  const goleirosForaDoPote = confirmados.filter((c) => c.eh_goleiro && !incluirGoleirosPote);
+
+  const contagemPorPote = useMemo(() => {
+    const contagem: Record<number, number> = {};
+    for (let p = 1; p <= numPotes; p++) contagem[p] = 0;
+    jogadoresParaPote.forEach((j) => {
+      const p = potes[j.user_id];
+      if (p) contagem[p] = (contagem[p] || 0) + 1;
+    });
+    return contagem;
+  }, [potes, jogadoresParaPote, numPotes]);
+
+  const semPote = jogadoresParaPote.filter((j) => !potes[j.user_id]);
+  const potesCompletos = numTimes > 0 && numPotes > 0 && semPote.length === 0 &&
+    Array.from({ length: numPotes }, (_, i) => i + 1).every((p) => contagemPorPote[p] === numTimes);
+
+  const gerarPorPoteInterno = () => {
+    if (!pelada || !potesCompletos) return;
+    const jogadoresPorPote: Record<number, Jogador[]> = {};
+    for (let p = 1; p <= numPotes; p++) {
+      jogadoresPorPote[p] = jogadoresParaPote.filter((j) => potes[j.user_id] === p);
+    }
+    const { jogadores, goleiros } = sortearPorPote(jogadoresPorPote, numTimes, goleirosForaDoPote);
+    const cores = CORES_TIMES[numTimes] || [];
+    const ui: TimeUI[] = Array.from({ length: numTimes }, (_, i) => ({
+      nome: times[i]?.nome || cores[i]?.nome || `Time ${i + 1}`,
+      cor: times[i]?.cor || cores[i]?.cor || "#666666",
+      jogadores: jogadores[i] || [],
+      goleiros: goleiros[i] || [],
+    }));
+    setTimes(ui);
+  };
+
   const gerarInterno = () => {
     if (!pelada) return;
     const modalidade = ((pelada as any).modalidade_goleiro || "fixo") as "fixo" | "sorteado";
@@ -164,11 +203,16 @@ function SorteioPage() {
 
   const gerar = async () => {
     if (!pelada) return;
+    if (modo === "pote") {
+      if (times.length === 0) { setConfirmacaoOpen(true); return; }
+      gerarPorPoteInterno();
+      return;
+    }
     if (pendentes.length > 0) {
       const nomes = pendentes.map((p) => p.nome).join(", ");
       if (!(await confirm({
         title: "Jogadores sem skills",
-        description: `⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 3.0). Continuar mesmo assim?`,
+        description: `⚠️ ${pendentes.length} jogador(es) ainda não têm skills definidas: ${nomes}.\n\nO sorteio será menos preciso (média neutra 5.5). Continuar mesmo assim?`,
         confirmLabel: "Continuar mesmo assim",
       }))) return;
     }
@@ -231,6 +275,15 @@ function SorteioPage() {
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => setModo("avaliacao")} className={`rounded-xl border py-3 text-sm font-bold ${modo === "avaliacao" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+          ⭐ Por avaliação
+        </button>
+        <button onClick={() => setModo("pote")} className={`rounded-xl border py-3 text-sm font-bold ${modo === "pote" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+          🎱 Por pote
+        </button>
+      </div>
+
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Sorteio — {pelada.nome_pelada}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -265,31 +318,90 @@ function SorteioPage() {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <div className="font-bold">{pendentes.length} jogador(es) sem skills definidas</div>
-            <div className="text-xs opacity-90">{pendentes.map((p: any) => p.nome).join(", ")}. Receberão média neutra 3.0 no sorteio.</div>
+            <div className="text-xs opacity-90">{pendentes.map((p: any) => p.nome).join(", ")}. Receberão média neutra 5.5 no sorteio.</div>
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">Confirmados</h3>
-        <div className="grid gap-2">
-          {confirmados.map((j) => (
-            <div key={j.user_id} className="flex items-center gap-3">
-              <span className="flex-1 text-sm">{j.nome}{j.eh_goleiro ? " 🧤" : ""}</span>
-              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-secondary">
-                <div className="h-full bg-primary" style={{ width: `${(j.media / 10) * 100}%` }} />
+      {modo === "avaliacao" ? (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">Confirmados</h3>
+          <div className="grid gap-2">
+            {confirmados.map((j) => (
+              <div key={j.user_id} className="flex items-center gap-3">
+                <span className="flex-1 text-sm">{j.nome}{j.eh_goleiro ? " 🧤" : ""}</span>
+                <div className="h-1.5 w-24 overflow-hidden rounded-full bg-secondary">
+                  <div className="h-full bg-primary" style={{ width: `${(j.media / 10) * 100}%` }} />
+                </div>
+                <span className="w-8 text-right text-xs font-bold text-primary">{j.media.toFixed(1)}</span>
               </div>
-              <span className="w-8 text-right text-xs font-bold text-primary">{j.media.toFixed(1)}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Separar em potes</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {numPotes} potes (1 por jogador de linha em cada time) · cada pote precisa ter exatamente <b>{numTimes}</b> jogador(es).
+              </p>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={incluirGoleirosPote} onChange={(e) => { setIncluirGoleirosPote(e.target.checked); setPotes({}); }} className="h-4 w-4" />
+            Incluir goleiros nos potes também (por padrão eles ficam de fora e são distribuídos separado)
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: numPotes }, (_, i) => i + 1).map((p) => (
+              <span key={p} className={`rounded-full border px-3 py-1 text-xs font-bold ${contagemPorPote[p] === numTimes ? "border-green-500 text-green-500" : "border-yellow-500 text-yellow-500"}`}>
+                Pote {p}: {contagemPorPote[p] || 0}/{numTimes}
+              </span>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            {jogadoresParaPote.map((j) => (
+              <div key={j.user_id} className="rounded-xl border border-border p-2.5">
+                <div className="mb-1.5 flex items-center justify-between text-sm">
+                  <span className="font-bold">{j.nome}{j.eh_goleiro ? " 🧤" : ""}</span>
+                  {potes[j.user_id] && <span className="text-xs font-bold text-primary">Pote {potes[j.user_id]}</span>}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from({ length: numPotes }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPotes((prev) => ({ ...prev, [j.user_id]: p }))}
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${potes[j.user_id] === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+                    >
+                      Pote {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {goleirosForaDoPote.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              🧤 {goleirosForaDoPote.map((g) => g.nome).join(", ")} — fica(m) de fora dos potes, distribuído(s) automaticamente entre os times.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-2">
-        <Button onClick={gerar} disabled={!minimoOk} className="flex-1 bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+        <Button onClick={gerar} disabled={modo === "pote" ? !potesCompletos : !minimoOk} className="flex-1 bg-primary text-primary-foreground font-bold hover:bg-primary/90">
           <Shuffle className="mr-2 h-4 w-4" />{times.length ? "Regerar" : "Gerar Sorteio"}
         </Button>
       </div>
+      {modo === "pote" && !potesCompletos && (
+        <p className="text-center text-xs text-yellow-500">
+          {semPote.length > 0 ? `Falta colocar ${semPote.length} jogador(es) num pote.` : "Ajuste os potes até cada um ter exatamente a quantidade certa de jogadores."}
+        </p>
+      )}
 
       <AlertDialog open={confirmacaoOpen} onOpenChange={setConfirmacaoOpen}>
         <AlertDialogContent>
@@ -315,7 +427,7 @@ function SorteioPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setConfirmacaoOpen(false); gerarInterno(); }}>Sortear</AlertDialogAction>
+            <AlertDialogAction onClick={() => { setConfirmacaoOpen(false); modo === "pote" ? gerarPorPoteInterno() : gerarInterno(); }}>Sortear</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
