@@ -54,7 +54,7 @@ export async function calcularRankingPelada(peladaId: string): Promise<LinhaRank
 
   const avalPontos: Record<string, number> = {};
   ((avals as any[]) || []).forEach((a) => {
-    const p = a.nota_geral === 5 ? 20 : a.nota_geral === 4 ? 10 : 0;
+    const p = a.nota_geral >= 5 ? a.nota_geral * 2 : 0;
     avalPontos[a.avaliado_id] = (avalPontos[a.avaliado_id] || 0) + p;
   });
 
