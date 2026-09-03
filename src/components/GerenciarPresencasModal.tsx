@@ -197,7 +197,7 @@ export function GerenciarPresencasModal({ open, onOpenChange, peladaId, grupoId,
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <div className="h-1.5 w-16 rounded-full bg-secondary overflow-hidden">
-                          <div className="h-full bg-primary" style={{ width: `${(skill / 5) * 100}%` }} />
+                          <div className="h-full bg-primary" style={{ width: `${(skill / 10) * 100}%` }} />
                         </div>
                         <span className="text-muted-foreground">{Number(skill).toFixed(1)}</span>
                       </div>
@@ -254,7 +254,7 @@ function ConvidadosTab({ peladaId, grupoId, convidados, setConvidados }: { pelad
   const [nome, setNome] = useState("");
   const [wpp, setWpp] = useState("");
   const [posicao, setPosicao] = useState<"linha" | "goleiro">("linha");
-  const [nivel, setNivel] = useState(3);
+  const [nivel, setNivel] = useState(5.5);
   const [saving, setSaving] = useState(false);
   const [nivelAnteriorInfo, setNivelAnteriorInfo] = useState<string | null>(null);
 
@@ -290,7 +290,7 @@ function ConvidadosTab({ peladaId, grupoId, convidados, setConvidados }: { pelad
     if (error) return toast.error(error.message);
     toast.success("Convidado adicionado");
     if (data) setConvidados((prev) => [...prev, data]);
-    setNome(""); setWpp(""); setNivel(3); setPosicao("linha"); setNivelAnteriorInfo(null);
+    setNome(""); setWpp(""); setNivel(5.5); setPosicao("linha"); setNivelAnteriorInfo(null);
   };
 
   const remove = async (id: string) => {
@@ -317,7 +317,7 @@ function ConvidadosTab({ peladaId, grupoId, convidados, setConvidados }: { pelad
         </div>
         <div>
           <Label className="text-xs">Nível: <span className="font-bold text-primary">{nivel}</span></Label>
-          <Slider value={[nivel]} min={1} max={5} step={1} onValueChange={(v) => setNivel(v[0])} />
+          <Slider value={[nivel]} min={1} max={10} step={0.5} onValueChange={(v) => setNivel(v[0])} />
         </div>
         <Button onClick={add} disabled={saving} className="w-full bg-primary text-primary-foreground"><UserPlus className="mr-2 h-4 w-4" />Adicionar Convidado</Button>
       </div>
