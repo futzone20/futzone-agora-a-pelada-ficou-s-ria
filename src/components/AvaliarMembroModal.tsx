@@ -28,7 +28,7 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
   const { user } = useAuth();
   const [step, setStep] = useState<"escolha" | "skills">("escolha");
   const [vals, setVals] = useState<Record<string, number>>({
-    velocidade: 3, drible: 3, passe: 3, chute: 3, resistencia: 3, posicionamento: 3,
+    velocidade: 5.5, drible: 5.5, passe: 5.5, chute: 5.5, resistencia: 5.5, posicionamento: 5.5,
   });
   const [saving, setSaving] = useState(false);
   const media = SKILLS.reduce((a, s) => a + (vals[s.key] || 0), 0) / SKILLS.length;
@@ -122,7 +122,7 @@ export function AvaliarMembroModal({ open, onClose, avaliado, grupoId, onDone }:
                   <span className="text-sm">{s.emoji} {s.label}</span>
                   <span className="font-bold text-primary">{vals[s.key].toFixed(1)}</span>
                 </div>
-                <Slider min={1} max={5} step={0.5} value={[vals[s.key]]}
+                <Slider min={1} max={10} step={0.5} value={[vals[s.key]]}
                   onValueChange={(v) => setVals({ ...vals, [s.key]: v[0] })} />
               </div>
             ))}
