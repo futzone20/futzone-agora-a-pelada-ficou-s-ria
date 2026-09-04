@@ -38,9 +38,13 @@ export async function calcularArtilharia(peladaIds: string[]): Promise<LinhaArti
 
   const uids = Object.keys(contagem);
   if (!uids.length) return [];
-  const { data: profs } = await supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", uids);
+  const [{ data: profs }, { data: convs }] = await Promise.all([
+    supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", uids),
+    supabase.from("pelada_convidados").select("id, nome").in("id", uids),
+  ]);
   const map: Record<string, any> = {};
   (profs || []).forEach((p: any) => { map[p.user_id] = p; });
+  (convs || []).forEach((c: any) => { if (!map[c.id]) map[c.id] = { nome: `${c.nome} (convidado)`, foto_url: null }; });
 
   return uids
     .map((uid) => ({ user_id: uid, nome: map[uid]?.nome || "Jogador", foto_url: map[uid]?.foto_url || null, gols: contagem[uid] }))
@@ -72,9 +76,13 @@ export async function calcularMenosVazado(peladaIds: string[]): Promise<LinhaGol
 
   const uids = Object.keys(acc);
   if (!uids.length) return [];
-  const { data: profs } = await supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", uids);
+  const [{ data: profs }, { data: convs }] = await Promise.all([
+    supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", uids),
+    supabase.from("pelada_convidados").select("id, nome").in("id", uids),
+  ]);
   const map: Record<string, any> = {};
   (profs || []).forEach((p: any) => { map[p.user_id] = p; });
+  (convs || []).forEach((c: any) => { if (!map[c.id]) map[c.id] = { nome: `${c.nome} (convidado)`, foto_url: null }; });
 
   return uids
     .map((uid) => {
