@@ -465,7 +465,7 @@ export function StatsPeladaModal({
                                     return (
                                       <div key={l.id} className={`flex justify-between ${souEu ? "font-bold text-white" : "text-white/80"}`}>
                                         <span>
-                                          {l.tipo === "gol" ? "⚽" : l.tipo === "passe_decisivo" ? "🎯" : l.tipo === "frango" ? "🧤" : "•"}{" "}
+                                          {l.tipo === "gol" ? "⚽" : l.tipo === "passe_decisivo" ? "🎯" : l.tipo === "frango" ? "🧤" : l.tipo === "gol_contra" ? "🙈" : l.tipo === "outro" ? "🤬" : "•"}{" "}
                                           {profiles[l.user_id] || "Jogador"} ({timeNome(l.time_id)})
                                           {souEu && <span className="ml-1.5 text-[10px] font-semibold text-primary">(você)</span>}
                                         </span>
