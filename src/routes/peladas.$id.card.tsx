@@ -67,16 +67,21 @@ function Card() {
       const { data: time } = venc ? await supabase.from("times").select("*").eq("id", venc).maybeSingle() : { data: null } as any;
       const { data: tj } = venc ? await supabase.from("time_jogadores").select("user_id").eq("time_id", venc) : { data: [] } as any;
       const uids = (tj || []).map((x: any) => x.user_id);
-      const { data: profs } = uids.length
-        ? await supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", uids)
-        : { data: [] } as any;
+      const [{ data: profs }, { data: convs }] = uids.length
+        ? await Promise.all([
+            supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", uids),
+            supabase.from("pelada_convidados").select("id, nome").in("id", uids),
+          ])
+        : [{ data: [] }, { data: [] }] as any;
+      const convsComoProfile = (convs || []).map((c: any) => ({ user_id: c.id, nome: `${c.nome} (convidado)`, foto_url: null }));
+      const todosProfs = [...(profs || []), ...convsComoProfile];
 
       const { data: lances } = await supabase.from("lances").select("user_id,tipo").eq("pelada_id", id);
       const gols: Record<string, number> = {};
       (lances || []).forEach((l: any) => { if (l.tipo === "gol") gols[l.user_id] = (gols[l.user_id] || 0) + 1; });
       const artilheiroUid = Object.keys(gols).sort((a, b) => gols[b] - gols[a])[0];
 
-      let listaProfs = [...(profs || [])];
+      let listaProfs = [...todosProfs];
       if (artilheiroUid) {
         listaProfs.sort((a: any, b: any) => (a.user_id === artilheiroUid ? -1 : b.user_id === artilheiroUid ? 1 : 0));
       }
