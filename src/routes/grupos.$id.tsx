@@ -597,6 +597,17 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${v.cls}`}>{v.label}</span>;
 }
 
+// Soma minutos a um horário "HH:MM" e devolve o resultado também em "HH:MM".
+function calcularHorarioFim(inicio: string, minutos: number): string {
+  if (!inicio || !minutos) return inicio || "";
+  const [h, m] = inicio.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return inicio;
+  const totalMin = (h * 60 + m + minutos) % (24 * 60);
+  const hh = Math.floor(totalMin / 60).toString().padStart(2, "0");
+  const mm = (totalMin % 60).toString().padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (peladaId?: string) => void }) {
   const { user } = useAuth();
   const [tipo, setTipo] = useState<"publica" | "cliente">("publica");
@@ -605,7 +616,7 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
   const [novaQuadra, setNovaQuadra] = useState(false);
   const [novaQ, setNovaQ] = useState({ nome: "", endereco: "", cidade: "", estado: "", tipo_superficie: "society" as const, capacidade_total: 14 });
   const [form, setForm] = useState({
-    nome_pelada: "", data: "", horario_inicio: "20:00", horario_fim: "22:00",
+    nome_pelada: "", data: "", horario_inicio: "20:00", horario_fim: calcularHorarioFim("20:00", 60),
     duracao_partida_minutos: 10,
     tempo_locado_minutos: 60,
     tempo_locado_custom: false,
@@ -721,15 +732,21 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
 
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Data</Label><Input type="date" required value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></div>
-        <div><Label>Início</Label><Input type="time" required value={form.horario_inicio} onChange={(e) => setForm({ ...form, horario_inicio: e.target.value })} /></div>
-        <div><Label>Fim</Label><Input type="time" required value={form.horario_fim} onChange={(e) => setForm({ ...form, horario_fim: e.target.value })} /></div>
+        <div>
+          <Label>Início</Label>
+          <Input type="time" required value={form.horario_inicio} onChange={(e) => {
+            const novoInicio = e.target.value;
+            setForm({ ...form, horario_inicio: novoInicio, horario_fim: calcularHorarioFim(novoInicio, form.tempo_locado_minutos) });
+          }} />
+        </div>
         <div>
           <Label>Tempo locado da quadra</Label>
           <Select
             value={form.tempo_locado_custom ? "custom" : String(form.tempo_locado_minutos)}
             onValueChange={(v) => {
-              if (v === "custom") setForm({ ...form, tempo_locado_custom: true });
-              else setForm({ ...form, tempo_locado_custom: false, tempo_locado_minutos: +v });
+              if (v === "custom") { setForm({ ...form, tempo_locado_custom: true }); return; }
+              const minutos = +v;
+              setForm({ ...form, tempo_locado_custom: false, tempo_locado_minutos: minutos, horario_fim: calcularHorarioFim(form.horario_inicio, minutos) });
             }}
           >
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -743,10 +760,33 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
             </SelectContent>
           </Select>
           {form.tempo_locado_custom && (
-            <Input className="mt-2" type="number" min={10} value={form.tempo_locado_minutos} onChange={(e) => setForm({ ...form, tempo_locado_minutos: Math.max(10, +e.target.value || 10) })} placeholder="minutos" />
+            <Input
+              className="mt-2" type="number" min={10} value={form.tempo_locado_minutos}
+              onChange={(e) => {
+                const v = e.target.value;
+                const minutos = v === "" ? 0 : +v;
+                setForm({ ...form, tempo_locado_minutos: minutos, horario_fim: calcularHorarioFim(form.horario_inicio, minutos) });
+              }}
+              onBlur={(e) => {
+                const minutos = Math.max(10, +e.target.value || 10);
+                setForm({ ...form, tempo_locado_minutos: minutos, horario_fim: calcularHorarioFim(form.horario_inicio, minutos) });
+              }}
+              placeholder="minutos"
+            />
           )}
         </div>
-        <div><Label>Duração de cada partida (min)</Label><Input type="number" min={1} value={form.duracao_partida_minutos} onChange={(e) => setForm({ ...form, duracao_partida_minutos: Math.max(1, +e.target.value || 1) })} /></div>
+        <div>
+          <Label>Fim <span className="text-muted-foreground font-normal">(calculado — pode ajustar)</span></Label>
+          <Input type="time" required value={form.horario_fim} onChange={(e) => setForm({ ...form, horario_fim: e.target.value })} />
+        </div>
+        <div>
+          <Label>Duração de cada partida (min)</Label>
+          <Input
+            type="number" min={1} value={form.duracao_partida_minutos}
+            onChange={(e) => { const v = e.target.value; setForm({ ...form, duracao_partida_minutos: v === "" ? 0 : +v }); }}
+            onBlur={(e) => setForm({ ...form, duracao_partida_minutos: Math.max(1, +e.target.value || 1) })}
+          />
+        </div>
         <div>
           <Label>Nº de times</Label>
           <Select value={String(form.numero_times)} onValueChange={(v) => setForm({ ...form, numero_times: +v })}>
@@ -756,10 +796,21 @@ function CriarPeladaForm({ grupoId, onCreated }: { grupoId: string; onCreated: (
             </SelectContent>
           </Select>
         </div>
-        <div><Label>Jogadores de linha/time</Label><Input type="number" min={1} value={form.jogadores_linha_por_time} onChange={(e) => setForm({ ...form, jogadores_linha_por_time: Math.max(1, +e.target.value || 1) })} /></div>
+        <div>
+          <Label>Jogadores de linha/time</Label>
+          <Input
+            type="number" min={1} value={form.jogadores_linha_por_time}
+            onChange={(e) => { const v = e.target.value; setForm({ ...form, jogadores_linha_por_time: v === "" ? 0 : +v }); }}
+            onBlur={(e) => setForm({ ...form, jogadores_linha_por_time: Math.max(1, +e.target.value || 1) })}
+          />
+        </div>
         <div>
           <Label>Goleiros/time</Label>
-          <Input type="number" min={0} value={form.goleiros_por_time} onChange={(e) => setForm({ ...form, goleiros_por_time: +e.target.value })} />
+          <Input
+            type="number" min={0} value={form.goleiros_por_time}
+            onChange={(e) => { const v = e.target.value; setForm({ ...form, goleiros_por_time: v === "" ? 0 : +v }); }}
+            onBlur={(e) => setForm({ ...form, goleiros_por_time: Math.max(0, +e.target.value || 0) })}
+          />
           <p className="mt-1 text-xs text-muted-foreground">Total por time: {totalPorTime}</p>
         </div>
         <div>
