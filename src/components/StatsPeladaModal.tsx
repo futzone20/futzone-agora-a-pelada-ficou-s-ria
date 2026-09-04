@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { corTextoLegivel } from "@/lib/sorteio";
 import html2canvas from "html2canvas";
 import {
   X,
@@ -426,7 +427,7 @@ export function StatsPeladaModal({
                         const empate = p.placar_a === p.placar_b;
                         const aWin = p.placar_a > p.placar_b;
                         const resultado = empate ? "Empate" : `Vitória ${timeNome(aWin ? p.time_a_id : p.time_b_id)}`;
-                        const corVencedor = empate ? undefined : timeCor(aWin ? p.time_a_id : p.time_b_id);
+                        const corVencedor = empate ? undefined : corTextoLegivel(timeCor(aWin ? p.time_a_id : p.time_b_id));
                         const expanded = expandedPartida === p.id;
                         const lancesP = lances.filter((l) => l.partida_id === p.id);
                         return (
