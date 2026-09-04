@@ -6,7 +6,7 @@ export type ProximaPartidaPreview = {
   saidas: { entrouEm: "A" | "B"; timeQueSaiu: string }[]; numeroPartida: number; empateSorteio: boolean;
 };
 
-export async function calcularProximaPartida(peladaId: string, pelada: any): Promise<ProximaPartidaPreview | null> {
+export async function calcularProximaPartida(peladaId: string, pelada: any, escolhaManualEmpateTimeId?: string): Promise<ProximaPartidaPreview | null> {
   if (!pelada) return null;
   const { data: ultima } = await supabase
     .from("partidas")
@@ -51,23 +51,34 @@ export async function calcularProximaPartida(peladaId: string, pelada: any): Pro
       ? u.fila_espera
       : (u.time_fora_id ? [u.time_fora_id] : (tms as any[]).filter((t: any) => t.id !== u.time_a_id && t.id !== u.time_b_id).map((t: any) => t.id));
 
-    const resultado = proximaRodada({
-      timeAId: u.time_a_id,
-      timeBId: u.time_b_id,
-      filaAtual,
-      placarA: u.placar_a,
-      placarB: u.placar_b,
-      numeroPartida: u.numero_partida,
-      regraEmpate: (pelada as any).regra_empate_rodizio || "time_atual_sai",
-    });
-    if (!resultado) return null;
+    if (u.numero_partida === 1 && u.placar_a === u.placar_b && escolhaManualEmpateTimeId) {
+      const fica = escolhaManualEmpateTimeId;
+      const sai = fica === u.time_a_id ? u.time_b_id : u.time_a_id;
+      timeAId = fica;
+      timeBId = filaAtual[0];
+      novaFila = [sai, ...filaAtual.slice(1)];
+      timeForaId = novaFila[0] ?? null;
+      saidas = [{ entrouEm: "B", timeQueSaiu: sai }];
+      empateSorteio = false;
+    } else {
+      const resultado = proximaRodada({
+        timeAId: u.time_a_id,
+        timeBId: u.time_b_id,
+        filaAtual,
+        placarA: u.placar_a,
+        placarB: u.placar_b,
+        numeroPartida: u.numero_partida,
+        regraEmpate: (pelada as any).regra_empate_rodizio || "time_atual_sai",
+      });
+      if (!resultado) return null;
 
-    timeAId = resultado.novoA;
-    timeBId = resultado.novoB;
-    novaFila = resultado.novaFila;
-    timeForaId = novaFila[0] ?? null;
-    saidas = resultado.saidas;
-    empateSorteio = !!resultado.empateResolvidoPorSorteio;
+      timeAId = resultado.novoA;
+      timeBId = resultado.novoB;
+      novaFila = resultado.novaFila;
+      timeForaId = novaFila[0] ?? null;
+      saidas = resultado.saidas;
+      empateSorteio = !!resultado.empateResolvidoPorSorteio;
+    }
   }
 
   return {
