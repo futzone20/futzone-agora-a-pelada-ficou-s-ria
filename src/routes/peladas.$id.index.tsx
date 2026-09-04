@@ -384,6 +384,15 @@ function PeladaDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pelada?.status, times, id]);
 
+  useEffect(() => {
+    if (times.length > 2 && pelada?.sorteio_feito && pelada.status !== "em_andamento" && timesIniciaisEscolhidos.length === 0) {
+      const idsComGoleiro = new Set(times.filter((t) => t.membros.some((m) => m.eh_goleiro)).map((t) => t.id));
+      const { jogam } = escolherTimesIniciais(times, idsComGoleiro);
+      setTimesIniciaisEscolhidos(jogam.map((t) => t.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [times, pelada?.sorteio_feito, pelada?.status]);
+
   if (loading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!pelada) return <EmptyState icon={CircleDot} title="Pelada não encontrada" />;
 
@@ -473,14 +482,6 @@ function PeladaDetail() {
     void load();
   };
 
-
-  useEffect(() => {
-    if (times.length > 2 && pelada?.sorteio_feito && pelada.status !== "em_andamento" && timesIniciaisEscolhidos.length === 0) {
-      const idsComGoleiro = new Set(times.filter((t) => t.membros.some((m) => m.eh_goleiro)).map((t) => t.id));
-      const { jogam } = escolherTimesIniciais(times, idsComGoleiro);
-      setTimesIniciaisEscolhidos(jogam.map((t) => t.id));
-    }
-  }, [times, pelada?.sorteio_feito, pelada?.status]);
 
   const toggleTimeInicial = (timeId: string) => {
     setTimesIniciaisEscolhidos((prev) => {
