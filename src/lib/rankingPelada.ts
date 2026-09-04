@@ -34,9 +34,14 @@ export async function calcularRankingPelada(peladaId: string): Promise<LinhaRank
   const escalados = (tj as any[]) || [];
   if (!escalados.length) return [];
 
-  const { data: profs } = await supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", Array.from(new Set(escalados.map((x) => x.user_id))));
+  const uidsEscalados = Array.from(new Set(escalados.map((x) => x.user_id as string)));
+  const [{ data: profs }, { data: convs }] = await Promise.all([
+    supabase.from("profiles").select("user_id, nome, foto_url").in("user_id", uidsEscalados),
+    supabase.from("pelada_convidados").select("id, nome").in("id", uidsEscalados),
+  ]);
   const perfilMap: Record<string, { nome: string; foto_url: string | null }> = {};
   (profs || []).forEach((p: any) => { perfilMap[p.user_id] = { nome: p.nome, foto_url: p.foto_url }; });
+  (convs || []).forEach((c: any) => { if (!perfilMap[c.id]) perfilMap[c.id] = { nome: `${c.nome} (convidado)`, foto_url: null }; });
 
   const ehGoleiroMap: Record<string, boolean> = {};
   const timeDoJogador: Record<string, string> = {};
