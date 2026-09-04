@@ -74,6 +74,7 @@ function LancesPage() {
   const [encerrando, setEncerrando] = useState(false);
   const [proximaPreview, setProximaPreview] = useState<ProximaPartidaPreview | null>(null);
   const [confirmandoProxima, setConfirmandoProxima] = useState(false);
+  const [empateP1Aberto, setEmpateP1Aberto] = useState<{ timeAId: string; timeBId: string; escolhendo?: boolean } | null>(null);
   const [acordiaoOverride, setAcordiaoOverride] = useState<Record<string, boolean>>({});
 
   // Apito de fim de partida — som configurado pelo super admin (Aparência > Sons).
@@ -283,9 +284,26 @@ function LancesPage() {
   useEffect(() => {
     if (!pelada || pelada.status !== "em_andamento") { setProximaPreview(null); return; }
     if (partida) { setProximaPreview(null); return; }
-    if (proximaPreview) return;
-    void calcularProximaPartida(id, pelada).then((p) => { if (p) setProximaPreview(p); });
-  }, [pelada?.status, partida, proximaPreview, id]);
+    if (proximaPreview || empateP1Aberto) return;
+    void (async () => {
+      const { data: ultima } = await supabase.from("partidas").select("numero_partida, time_a_id, time_b_id, placar_a, placar_b")
+        .eq("pelada_id", id).order("numero_partida", { ascending: false }).limit(1).maybeSingle();
+      const u: any = ultima;
+      if (u && u.numero_partida === 1 && u.placar_a === u.placar_b && times.length > 2) {
+        setEmpateP1Aberto({ timeAId: u.time_a_id, timeBId: u.time_b_id });
+        return;
+      }
+      const p = await calcularProximaPartida(id, pelada);
+      if (p) setProximaPreview(p);
+    })();
+  }, [pelada?.status, partida, proximaPreview, empateP1Aberto, id, times.length]);
+
+  const resolverEmpateP1 = async (escolhaTimeId?: string) => {
+    if (!empateP1Aberto) return;
+    setEmpateP1Aberto(null);
+    const p = await calcularProximaPartida(id, pelada, escolhaTimeId);
+    if (p) setProximaPreview(p);
+  };
 
   const confirmarProximaPartida = async () => {
     if (!proximaPreview || confirmandoProxima) return;
@@ -576,7 +594,27 @@ function LancesPage() {
     return (
       <div className="min-h-screen bg-[#0D0D0D] p-4 space-y-3" style={{ maxWidth: 480, margin: "0 auto" }}>
         <Link to="/peladas/$id" params={{ id }} className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Voltar</Link>
-        {proximaPreview ? (
+        {empateP1Aberto ? (
+          <div className="rounded-2xl border border-yellow-500/40 bg-[#111111] p-6 text-center space-y-4">
+            <div className="text-5xl">🤝</div>
+            <div className="text-xl font-black text-white">Empate na 1ª partida!</div>
+            <p className="text-sm text-white/70">Como você quer decidir qual time fica?</p>
+            <div className="grid gap-2">
+              <button onClick={() => resolverEmpateP1()} className="rounded-xl bg-[#00FF87] py-3 font-bold text-black">🎲 Sortear</button>
+              <button onClick={() => setEmpateP1Aberto({ ...empateP1Aberto, escolhendo: true })} className="rounded-xl border border-[#2A2A2A] py-3 font-bold text-white">✋ Escolher manualmente</button>
+            </div>
+            {empateP1Aberto.escolhendo && (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => resolverEmpateP1(empateP1Aberto.timeAId)} className="rounded-xl border border-[#2A2A2A] p-3 font-bold" style={{ color: corTextoLegivel(times.find((t) => t.id === empateP1Aberto.timeAId)?.cor || "#888") }}>
+                  {times.find((t) => t.id === empateP1Aberto.timeAId)?.nome}
+                </button>
+                <button onClick={() => resolverEmpateP1(empateP1Aberto.timeBId)} className="rounded-xl border border-[#2A2A2A] p-3 font-bold" style={{ color: corTextoLegivel(times.find((t) => t.id === empateP1Aberto.timeBId)?.cor || "#888") }}>
+                  {times.find((t) => t.id === empateP1Aberto.timeBId)?.nome}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : proximaPreview ? (
           <div className="rounded-2xl border border-[#1F1F1F] bg-[#111111] p-6 text-center space-y-4">
             <div className="text-5xl">🏁</div>
             <div className="text-xl font-black text-white">Partida encerrada!</div>
