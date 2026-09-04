@@ -50,6 +50,7 @@ function PeladaDetail() {
   const [profilesMap, setProfilesMap] = useState<Record<string, { nome: string }>>({});
   const [skillsMap, setSkillsMap] = useState<Record<string, any>>({});
   const [times, setTimes] = useState<{ id: string; nome: string; cor: string; ordem: number; membros: Jogador[] }[]>([]);
+  const [timesIniciaisEscolhidos, setTimesIniciaisEscolhidos] = useState<string[]>([]);
   const [isCapitao, setIsCapitao] = useState(false);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
@@ -473,6 +474,33 @@ function PeladaDetail() {
   };
 
 
+  useEffect(() => {
+    if (times.length > 2 && pelada?.sorteio_feito && pelada.status !== "em_andamento" && timesIniciaisEscolhidos.length === 0) {
+      const idsComGoleiro = new Set(times.filter((t) => t.membros.some((m) => m.eh_goleiro)).map((t) => t.id));
+      const { jogam } = escolherTimesIniciais(times, idsComGoleiro);
+      setTimesIniciaisEscolhidos(jogam.map((t) => t.id));
+    }
+  }, [times, pelada?.sorteio_feito, pelada?.status]);
+
+  const toggleTimeInicial = (timeId: string) => {
+    setTimesIniciaisEscolhidos((prev) => {
+      if (prev.includes(timeId)) return prev.filter((t) => t !== timeId);
+      if (prev.length >= 2) return [prev[1], timeId];
+      return [...prev, timeId];
+    });
+  };
+
+  const moverGoleiroParaTime = async (deTimeId: string, paraTimeId: string) => {
+    const timeDe = times.find((t) => t.id === deTimeId);
+    const goleiro = timeDe?.membros.find((m) => m.eh_goleiro);
+    if (!goleiro) return;
+    const { error } = await supabase.from("time_jogadores").update({ time_id: paraTimeId } as never)
+      .eq("pelada_id", id).eq("user_id", goleiro.user_id).eq("time_id", deTimeId);
+    if (error) return toast.error(mensagemErroAmigavel(error));
+    toast.success(`🧤 Goleiro movido pro ${times.find((t) => t.id === paraTimeId)?.nome}`);
+    void load();
+  };
+
   const iniciarPelada = async (comAtraso: boolean = false) => {
     if (!pelada || !isCapitao || acting) return;
     setActing(true);
@@ -494,7 +522,14 @@ function PeladaDetail() {
 
     const { data: tjGoleiros } = await supabase.from("time_jogadores").select("time_id").eq("pelada_id", id).eq("eh_goleiro", true);
     const idsComGoleiro = new Set((tjGoleiros || []).map((x: any) => x.time_id));
-    const { jogam, fila } = escolherTimesIniciais(tms as any[], idsComGoleiro);
+
+    let jogam: any[]; let fila: any[];
+    if (tms.length > 2 && timesIniciaisEscolhidos.length === 2) {
+      jogam = timesIniciaisEscolhidos.map((tid) => tms.find((t: any) => t.id === tid)).filter(Boolean);
+      fila = tms.filter((t: any) => !timesIniciaisEscolhidos.includes(t.id));
+    } else {
+      ({ jogam, fila } = escolherTimesIniciais(tms as any[], idsComGoleiro));
+    }
     const filaIds = fila.map((t: any) => t.id);
 
     const { error: errPartida } = await supabase.from("partidas").insert({
@@ -963,8 +998,45 @@ function PeladaDetail() {
               <Button onClick={() => navigate({ to: "/peladas/$id/sorteio", params: { id } })} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Dice5 className="mr-2 h-5 w-5" /> Sortear Times</Button>
             )}
 
+            {isCapitao && pelada.sorteio_feito && times.length > 2 && (
+              <div className="col-span-2 rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4 space-y-3">
+                <div className="text-sm font-bold text-white">🏁 Quem começa jogando? <span className="font-normal text-[#888]">(escolha 2)</span></div>
+                <div className="grid grid-cols-1 gap-2">
+                  {times.map((t) => {
+                    const temGoleiro = t.membros.some((m) => m.eh_goleiro);
+                    const selecionado = timesIniciaisEscolhidos.includes(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => toggleTimeInicial(t.id)}
+                        className={`flex items-center justify-between rounded-xl border p-3 transition ${selecionado ? "border-[#00FF87] bg-[#00FF87]/10" : "border-[#2A2A2A]"}`}
+                      >
+                        <span className="flex items-center gap-2 text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>
+                          <span className="h-3 w-3 rounded-full" style={{ background: t.cor }} /> {t.nome}
+                        </span>
+                        <span className="text-[10px] text-[#888]">{temGoleiro ? "🧤 tem goleiro" : "sem goleiro"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {timesIniciaisEscolhidos.length === 2 && (() => {
+                  const semGoleiro = timesIniciaisEscolhidos.filter((tid) => !times.find((t) => t.id === tid)?.membros.some((m) => m.eh_goleiro));
+                  const foraComGoleiro = times.filter((t) => !timesIniciaisEscolhidos.includes(t.id) && t.membros.some((m) => m.eh_goleiro));
+                  if (!semGoleiro.length || !foraComGoleiro.length) return null;
+                  return semGoleiro.map((tid) => (
+                    <div key={tid} className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-400">
+                      {times.find((t) => t.id === tid)?.nome} vai começar sem goleiro.
+                      <button onClick={() => moverGoleiroParaTime(foraComGoleiro[0].id, tid)} className="ml-1 font-bold underline">
+                        Mover goleiro do {foraComGoleiro[0].nome} pra cá
+                      </button>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+
             {isCapitao && pelada.sorteio_feito && (
-              <Button onClick={() => iniciarPelada(false)} disabled={acting} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
+              <Button onClick={() => iniciarPelada(false)} disabled={acting || (times.length > 2 && timesIniciaisEscolhidos.length !== 2)} className="col-span-2 bg-[#00FF87] text-black font-bold uppercase tracking-wide h-13 rounded-xl"><Play className="mr-2 h-5 w-5" /> Iniciar Pelada</Button>
             )}
 
             {isCapitao && (
