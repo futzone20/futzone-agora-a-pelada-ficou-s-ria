@@ -10,6 +10,7 @@ import {
   Users,
   CalendarDays,
   Hand,
+  Handshake,
   Shield,
   Play,
   Share2,
@@ -31,11 +32,12 @@ type Partida = {
 };
 type Lance = { id: string; tipo: string; user_id: string; time_id: string; partida_id: string; criado_em: string };
 
-type TabId = "times" | "artilheiros" | "partidas" | "goleiros" | "jogadores";
+type TabId = "times" | "artilheiros" | "assistencias" | "partidas" | "goleiros" | "jogadores";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "times", label: "Times", icon: <Users className="h-5 w-5" /> },
   { id: "artilheiros", label: "Artilheiros", icon: <SoccerBallIcon className="h-5 w-5" /> },
+  { id: "assistencias", label: "Assistências", icon: <Handshake className="h-5 w-5" /> },
   { id: "partidas", label: "Partidas", icon: <CalendarDays className="h-5 w-5" /> },
   { id: "goleiros", label: "Goleiros", icon: <Hand className="h-5 w-5" /> },
   { id: "jogadores", label: "Jogadores", icon: <Clock className="h-5 w-5" /> },
@@ -44,6 +46,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 const FOOTER_TEXT: Record<TabId, string> = {
   times: "Acompanhe o desempenho dos times e a disputa pela vitória!",
   artilheiros: "Acompanhe os artilheiros da pelada e quem está decidindo os jogos!",
+  assistencias: "Quem está armando as jogadas e dando assistência pros gols!",
   partidas: "Reviva os confrontos e o resultado de cada partida da pelada!",
   goleiros: "Acompanhe o desempenho dos goleiros e quem segura (ou não) a bronca!",
   jogadores: "Minutos jogados e as notas de cada jogador nessa pelada.",
@@ -83,7 +86,7 @@ export function StatsPeladaModal({
   const [times, setTimes] = useState<Time[]>([]);
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [lances, setLances] = useState<Lance[]>([]);
-  const [timeJogadores, setTimeJogadores] = useState<{ time_id: string; user_id: string }[]>([]);
+  const [timeJogadores, setTimeJogadores] = useState<{ time_id: string; user_id: string; eh_goleiro?: boolean }[]>([]);
   const [avaliacoesPos, setAvaliacoesPos] = useState<{ avaliado_id: string; nota_geral: number }[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [peladaInfo, setPeladaInfo] = useState<{ nome: string; data: string } | null>(null);
@@ -107,7 +110,7 @@ export function StatsPeladaModal({
         supabase.from("partidas").select("*").eq("pelada_id", peladaId).eq("status", "encerrada").order("numero_partida"),
         supabase.from("lances").select("*").eq("pelada_id", peladaId),
         supabase.from("peladas").select("nome_pelada, data").eq("id", peladaId).single(),
-        supabase.from("time_jogadores").select("time_id, user_id").eq("pelada_id", peladaId),
+        supabase.from("time_jogadores").select("time_id, user_id, eh_goleiro").eq("pelada_id", peladaId),
         supabase.from("avaliacoes_pos_pelada").select("avaliado_id, nota_geral").eq("pelada_id", peladaId),
       ]);
       setTimes((t as any) || []);
@@ -175,6 +178,18 @@ export function StatsPeladaModal({
       .sort((a, b) => b.gols - a.gols);
   }, [lances, profiles]);
 
+  const assistencias = useMemo(() => {
+    const assistPorUser: Record<string, number> = {};
+    lances
+      .filter((l) => l.tipo === "passe_decisivo" && l.user_id)
+      .forEach((l) => {
+        assistPorUser[l.user_id] = (assistPorUser[l.user_id] || 0) + 1;
+      });
+    return Object.entries(assistPorUser)
+      .map(([uid, assists]) => ({ uid, nome: profiles[uid] || "Jogador", assists }))
+      .sort((a, b) => b.assists - a.assists);
+  }, [lances, profiles]);
+
   const goleiros = useMemo(() => {
     const sofridosPorUser: Record<string, number> = {};
     lances
@@ -218,16 +233,17 @@ export function StatsPeladaModal({
       });
 
       const c = contagensPorUser[tj.user_id] || {};
-      let nota = 3
-        + (c.gol || 0) * 0.3
-        + (c.passe_decisivo || 0) * 0.2
-        + (c.defesa || 0) * 0.2
-        + (c.entrada_forte || 0) * 0.1
-        - (c.frango || 0) * 0.3
-        - (c.falta || 0) * 0.15
-        - (c.cartao_amarelo || 0) * 0.4
-        - (c.cartao_vermelho || 0) * 0.8;
-      nota = Math.max(0, Math.min(5, nota));
+      let nota = 5.5
+        + (c.gol || 0) * 0.6
+        + (c.passe_decisivo || 0) * 0.4
+        + (c.defesa || 0) * 0.4
+        + (c.entrada_forte || 0) * 0.2
+        - (c.gol_contra || 0) * 0.6
+        - (c.frango || 0) * 0.6
+        - (c.falta || 0) * 0.3
+        - (c.cartao_amarelo || 0) * 0.8
+        - (c.cartao_vermelho || 0) * 1.6;
+      nota = Math.max(1, Math.min(10, nota));
 
       const notasAval = avaliacoesPorUser[tj.user_id] || [];
       const notaAvaliacoes = notasAval.length ? notasAval.reduce((a, b) => a + b, 0) / notasAval.length : null;
@@ -239,8 +255,14 @@ export function StatsPeladaModal({
         notaLances: Math.round(nota * 10) / 10,
         notaAvaliacoes: notaAvaliacoes != null ? Math.round(notaAvaliacoes * 10) / 10 : null,
         totalAvaliacoes: notasAval.length,
+        ehGoleiro: !!tj.eh_goleiro,
+        gols: c.gol || 0,
+        assistencias: c.passe_decisivo || 0,
+        golsContra: c.gol_contra || 0,
+        defesas: c.defesa || 0,
+        golsSofridos: c.frango || 0,
       };
-    }).sort((a, b) => b.minutos - a.minutos);
+    }).sort((a, b) => b.notaLances - a.notaLances);
   }, [timeJogadores, partidas, lances, avaliacoesPos, profiles]);
 
   const timeNome = (id: string) => times.find((t) => t.id === id)?.nome || "Time";
@@ -418,6 +440,45 @@ export function StatsPeladaModal({
                     </div>
                   ))}
 
+                {tab === "assistencias" &&
+                  (assistencias.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhuma assistência registrada.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {assistencias.map((a, i) => {
+                        const souEu = a.uid === user?.id;
+                        return (
+                          <div
+                            key={a.uid}
+                            className={`flex items-center justify-between rounded-xl px-4 py-3 ${
+                              i === 0
+                                ? "border border-primary/60 bg-primary/10 shadow-[0_0_18px_rgba(0,255,135,0.22)]"
+                                : souEu
+                                  ? "border border-white/20 bg-white/[0.07]"
+                                  : "bg-white/5"
+                            }`}
+                          >
+                            <span className="flex items-center gap-3">
+                              <span className={`font-bold ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>{i + 1}º</span>
+                              {i === 0 && (
+                                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/60 bg-primary/10">
+                                  <Handshake className="h-4 w-4 text-primary" />
+                                </span>
+                              )}
+                              <span className={i === 0 ? "font-bold text-white" : souEu ? "font-bold text-white" : "font-medium text-white/90"}>
+                                {a.nome}
+                                {souEu && <span className="ml-1.5 text-[10px] font-semibold text-primary">(você)</span>}
+                              </span>
+                            </span>
+                            <span className={`text-lg font-extrabold ${i === 0 ? "text-primary" : "text-white"}`}>
+                              {a.assists} <span className="text-xs font-normal text-muted-foreground">{a.assists === 1 ? "assistência" : "assistências"}</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+
                 {tab === "partidas" &&
                   (partidas.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Sem partidas encerradas.</p>
@@ -577,11 +638,50 @@ export function StatsPeladaModal({
                                 </div>
                               </div>
                             </div>
+                            <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                              {r.ehGoleiro ? (
+                                <>
+                                  <div className="rounded-lg bg-black/30 p-1.5">
+                                    <div className="text-base">🧤</div>
+                                    <div className="text-sm font-bold text-white">{r.defesas}</div>
+                                    <div className="text-[8px] uppercase tracking-wide text-muted-foreground">Defesas</div>
+                                  </div>
+                                  <div className="rounded-lg bg-black/30 p-1.5">
+                                    <div className="text-base">⚽</div>
+                                    <div className="text-sm font-bold text-white">{r.gols}</div>
+                                    <div className="text-[8px] uppercase tracking-wide text-muted-foreground">Gols feitos</div>
+                                  </div>
+                                  <div className="rounded-lg bg-black/30 p-1.5">
+                                    <div className="text-base">🥅</div>
+                                    <div className="text-sm font-bold text-white">{r.golsSofridos}</div>
+                                    <div className="text-[8px] uppercase tracking-wide text-muted-foreground">Gols sofridos</div>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="rounded-lg bg-black/30 p-1.5">
+                                    <div className="text-base">⚽</div>
+                                    <div className="text-sm font-bold text-white">{r.gols}</div>
+                                    <div className="text-[8px] uppercase tracking-wide text-muted-foreground">Gols</div>
+                                  </div>
+                                  <div className="rounded-lg bg-black/30 p-1.5">
+                                    <div className="text-base">🤝</div>
+                                    <div className="text-sm font-bold text-white">{r.assistencias}</div>
+                                    <div className="text-[8px] uppercase tracking-wide text-muted-foreground">Assistências</div>
+                                  </div>
+                                  <div className="rounded-lg bg-black/30 p-1.5">
+                                    <div className="text-base">🙈</div>
+                                    <div className="text-sm font-bold text-white">{r.golsContra}</div>
+                                    <div className="text-[8px] uppercase tracking-wide text-muted-foreground">Gols contra</div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
                       <p className="pt-1 text-center text-[10px] text-muted-foreground">
-                        "Nota (lances)" é calculada com base nos gols, passes, defesas e faltas registrados durante o jogo.
+                        "Nota (lances)" é numa escala de 1 a 10, calculada com base nos gols, assistências, defesas, faltas, cartões e gol contra registrados durante o jogo.
                       </p>
                     </div>
                   ))}
