@@ -124,11 +124,13 @@ export function StatsPeladaModal({
         ...(((tj as any) || []).map((x: any) => x.user_id).filter(Boolean)),
       ])) as string[];
       if (uids.length) {
-        const { data: prs } = await supabase.from("profiles").select("user_id, nome").in("user_id", uids);
+        const [{ data: prs }, { data: convs }] = await Promise.all([
+          supabase.from("profiles").select("user_id, nome").in("user_id", uids),
+          supabase.from("pelada_convidados").select("id, nome").in("id", uids),
+        ]);
         const map: Record<string, string> = {};
-        (prs || []).forEach((x: any) => {
-          map[x.user_id] = x.nome || "Jogador";
-        });
+        (prs || []).forEach((x: any) => { map[x.user_id] = x.nome || "Jogador"; });
+        (convs || []).forEach((x: any) => { if (!map[x.id]) map[x.id] = `${x.nome} (convidado)`; });
         setProfiles(map);
       }
       setLoading(false);
