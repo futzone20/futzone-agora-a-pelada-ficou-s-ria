@@ -86,9 +86,10 @@ export function CriarPeladaWizard({ grupoId, onCreated }: { grupoId: string; onC
     setStep(destino);
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
+  // Chamado só pelo clique explícito no botão "Criar Pelada" (nunca por submit
+  // nativo do form — ver comentário na tag <div> logo abaixo do porquê disso).
+  const criarPelada = async () => {
+    if (!user || loading) return;
     if (!validarEtapa1()) { setStep(1); return; }
     setLoading(true);
     const { tempo_locado_custom, gols_para_encerrar_ativo, ...rest } = form;
@@ -110,7 +111,15 @@ export function CriarPeladaWizard({ grupoId, onCreated }: { grupoId: string; onC
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    // Propositalmente uma <div>, não um <form>: o botão "Criar Pelada" (etapa 3)
+    // e o botão "Continuar" (etapas 1-2) ficam na mesma posição do rodapé, e o
+    // React reaproveita o mesmo elemento <button> ao trocar de etapa, só mudando
+    // o atributo "type" — só que, se um deles fosse type="submit" dentro de um
+    // <form>, o clique em "Continuar" que leva à etapa 3 disparava o submit do
+    // form sozinho (o navegador via aquele clique como submit assim que o type
+    // mudava). Por isso a criação da pelada é chamada direto no onClick, nunca
+    // via evento de submit do formulário.
+    <div className="space-y-4">
       {/* Indicador de etapas */}
       <div className="flex items-center gap-1">
         {ETAPAS.map((e, idx) => {
@@ -439,11 +448,11 @@ export function CriarPeladaWizard({ grupoId, onCreated }: { grupoId: string; onC
             Continuar
           </Button>
         ) : (
-          <Button type="submit" disabled={loading} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
+          <Button type="button" onClick={() => void criarPelada()} disabled={loading} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
             {loading ? "Criando..." : "Criar Pelada"}
           </Button>
         )}
       </DialogFooter>
-    </form>
+    </div>
   );
 }
