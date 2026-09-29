@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { encerrarPeladasVencidas } from "@/lib/limpezaPeladas";
 import { ConvitesGrupoCard } from "@/components/ConvitesGrupoCard";
 import { CaixinhaEntradaCard } from "@/components/CaixinhaEntradaCard";
+import { AgendarPeladaCard } from "@/components/AgendarPeladaCard";
 
 type PeladaResumo = {
   id: string; nome_pelada: string; data: string; horario_inicio: string; status: string;
@@ -178,6 +179,7 @@ export function HomeDashboard() {
       )}
 
       <div className="grid grid-cols-2 gap-3">
+        <AgendarPeladaCard />
         <Link to={proxima ? "/peladas/$id" : `${base}/peladas`} params={proxima ? { id: proxima.id } : undefined} className="rounded-2xl border border-border bg-card p-4">
           <Calendar className="h-6 w-6 text-primary" />
           <div className="mt-2 text-lg font-black leading-tight">Próxima Pelada</div>
