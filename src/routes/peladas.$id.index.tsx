@@ -57,6 +57,7 @@ function PeladaDetail() {
   const [presencasOpen, setPresencasOpen] = useState(false);
   const [auxiliaresOpen, setAuxiliaresOpen] = useState(false);
   const [timesExpandido, setTimesExpandido] = useState(false);
+  const [verTimesOpen, setVerTimesOpen] = useState(false);
   const [sorteioOpen, setSorteioOpen] = useState(false);
   const [partidaAtual, setPartidaAtual] = useState<any>(null);
   const [tempoRestante, setTempoRestante] = useState<number>(0);
@@ -821,12 +822,82 @@ function PeladaDetail() {
           const temRodizio = pelada.sistema_disputa === "rodizio" && times.length >= 3;
           const foraPrimeira = temRodizio ? [...times].sort((a, b) => a.ordem - b.ordem)[0] : null;
           const estaDeFora = (t: typeof times[number]) => !!foraPrimeira && t.id === foraPrimeira.id;
-          const jogamPrimeiro = temRodizio ? [...times].filter((t) => !estaDeFora(t)).sort((a, b) => a.ordem - b.ordem) : [];
+          const jogamPrimeiro = temRodizio ? [...times].filter((t) => !estaDeFora(t)).sort((a, b) => a.ordem - b.ordem) : [...times];
           const numeroTime = (t: typeof times[number]) => {
             if (!temRodizio) return t.ordem + 1;
             if (estaDeFora(t)) return times.length;
             return jogamPrimeiro.findIndex((x) => x.id === t.id) + 1;
           };
+
+          // Antes de iniciar a pelada (sorteio já feito, esperando o capitão dar
+          // início): em vez de abrir os cards de todos os times na tela, mostra só
+          // o essencial — quem começa jogando e quem fica de fora — e os detalhes
+          // completos de cada time (jogadores, força) ficam atrás do botão
+          // "Ver times sorteados". O comportamento durante a partida (mais abaixo,
+          // no `else`/continuação) não muda em nada.
+          if (pelada.status !== "em_andamento") {
+            const timesDeFora = temRodizio ? times.filter((t) => estaDeFora(t)) : [];
+            return (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-[#00FF87]/40 bg-[#00FF87]/5 p-4">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#00FF87]">
+                    <CircleDot className="h-4 w-4" /> Começam jogando
+                  </div>
+                  <div className="mb-3 text-[11px] text-[#888]">{jogamPrimeiro.length} {jogamPrimeiro.length === 1 ? "time em campo" : "times em campo"}</div>
+                  <div className={`grid gap-2 ${jogamPrimeiro.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {jogamPrimeiro.map((t) => (
+                      <div key={t.id} className="rounded-xl border p-3 text-center" style={{ borderColor: t.cor, backgroundColor: `${t.cor}15` }}>
+                        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: t.cor }}>
+                          <Shirt className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="mt-1.5 truncate text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{t.nome}</div>
+                        <div className="mt-0.5 flex items-center justify-center gap-1 text-[10px] font-bold text-[#00FF87]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#00FF87]" /> Pronto para iniciar
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {timesDeFora.length > 0 && (
+                  <button onClick={() => setVerTimesOpen(true)} className="w-full rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4 text-left">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#888]">
+                      <User className="h-4 w-4" /> De fora nesta rodada
+                    </div>
+                    {timesDeFora.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between rounded-xl border border-[#2A2A2A] p-3">
+                        <div className="flex items-center gap-2 text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: t.cor }}>
+                            <Shirt className="h-4 w-4 text-white" />
+                          </div>
+                          {t.nome}
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-[#888]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#666]" /> Entra na próxima troca <ChevronRight className="h-3.5 w-3.5" />
+                        </div>
+                      </div>
+                    ))}
+                  </button>
+                )}
+
+                {isCapitao && pelada.status !== "cancelada" && (
+                  <Link
+                    to="/peladas/$id/editar-times" params={{ id }}
+                    className="flex items-center justify-between rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4"
+                  >
+                    <div className="flex items-center gap-2 text-sm font-bold text-white"><Users className="h-4 w-4 text-[#00FF87]" /> Editar times</div>
+                    <div className="flex items-center gap-1 text-[11px] text-[#888]">Altere os jogadores de cada time <ChevronRight className="h-3.5 w-3.5" /></div>
+                  </Link>
+                )}
+
+                <button onClick={() => setVerTimesOpen(true)} className="flex w-full items-center justify-between rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-4 text-left">
+                  <div className="flex items-center gap-2 text-sm font-bold text-white"><Shuffle className="h-4 w-4 text-[#00FF87]" /> Ver times sorteados</div>
+                  <div className="flex items-center gap-1 text-[11px] text-[#888]">Veja a lista completa de jogadores e a ordem do sorteio <ChevronRight className="h-3.5 w-3.5" /></div>
+                </button>
+              </div>
+            );
+          }
+
           const resumido = pelada.status === "em_andamento" && !timesExpandido;
           return (
             <div className="space-y-3">
@@ -1189,6 +1260,17 @@ function PeladaDetail() {
 
       <StatsPeladaModal open={statsOpen} onOpenChange={setStatsOpen} peladaId={id} initialTab={statsInitialTab} />
 
+      <VerTimesSorteadosModal
+        open={verTimesOpen}
+        onOpenChange={setVerTimesOpen}
+        times={times}
+        userId={user?.id}
+        temRodizio={pelada.sistema_disputa === "rodizio" && times.length >= 3}
+        isCapitao={isCapitao}
+        peladaId={id}
+        podeEditar={pelada.status !== "encerrada" && pelada.status !== "cancelada"}
+      />
+
       <GerenciarPresencasModal
         open={presencasOpen}
         onOpenChange={(v) => { setPresencasOpen(v); if (!v) void load(); }}
@@ -1269,6 +1351,101 @@ function PeladaDetail() {
   );
 }
 
+// Modal "Ver times sorteados" — lista completa de cada time e seus jogadores
+// (o mesmo conteúdo que antes ficava sempre aberto na tela, antes de a pelada
+// começar), com um atalho pra "Editar times" dentro dele também.
+function VerTimesSorteadosModal({
+  open, onOpenChange, times, userId, temRodizio, isCapitao, peladaId, podeEditar,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  times: { id: string; nome: string; cor: string; ordem: number; membros: Jogador[] }[];
+  userId: string | undefined;
+  temRodizio: boolean;
+  isCapitao: boolean;
+  peladaId: string;
+  podeEditar: boolean;
+}) {
+  const meuTime = times.find((t) => t.membros.some((m) => m.user_id === userId));
+  const foraPrimeira = temRodizio ? [...times].sort((a, b) => a.ordem - b.ordem)[0] : null;
+  const estaDeFora = (t: (typeof times)[number]) => !!foraPrimeira && t.id === foraPrimeira.id;
+  const outros = times.filter((t) => t !== meuTime);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto bg-[#0D0D0D] border-[#2A2A2A] text-white">
+        <DialogHeader><DialogTitle className="text-white">Times sorteados</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          {meuTime && (
+            <div className="rounded-2xl border-2 bg-[#1A1A1A] p-4 relative overflow-hidden" style={{ borderColor: meuTime.cor }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2" style={{ borderColor: meuTime.cor }}>
+                    <Star className="h-5 w-5" style={{ color: corTextoLegivel(meuTime.cor) }} />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: corTextoLegivel(meuTime.cor) }}>Seu time</div>
+                    <div className="text-lg font-black text-white leading-tight">{meuTime.nome}</div>
+                  </div>
+                </div>
+              </div>
+              {temRodizio && estaDeFora(meuTime) && (
+                <div className="mb-2 flex items-center gap-1 text-[10px] font-bold text-[#AAA]"><User className="h-3 w-3" /> fora na 1ª rodada</div>
+              )}
+              <div className="flex gap-4">
+                <div className="flex-1 space-y-1">
+                  {meuTime.membros.map((m) => (
+                    <div key={m.user_id} className="text-sm text-white">
+                      {m.nome}{m.user_id === userId && <span className="ml-1 font-bold" style={{ color: corTextoLegivel(meuTime.cor) }}>(você)</span>}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-[#888] uppercase">Força</div>
+                  <div className="text-2xl font-bold border-b-2 pb-0.5" style={{ color: corTextoLegivel(meuTime.cor), borderColor: meuTime.cor }}>{mediaTime(meuTime.membros).toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-3">
+            {outros.map((t) => (
+              <div key={t.id} className="rounded-xl border bg-[#1A1A1A] p-3 relative overflow-hidden" style={{ borderColor: t.cor }}>
+                {temRodizio && estaDeFora(t) && (
+                  <span className="absolute right-3 top-3 flex items-center gap-1 text-[9px] font-bold text-[#AAA]"><User className="h-3 w-3" /> 1 fora</span>
+                )}
+                <div className="flex items-center gap-2 mb-2 font-bold text-sm" style={{ color: corTextoLegivel(t.cor) }}>
+                  <div className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center" style={{ backgroundColor: t.cor }}>
+                    <Shirt className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="truncate">{t.nome}</span>
+                </div>
+                <div className="space-y-1 mb-2">
+                  {t.membros.map((m) => <div key={m.user_id} className="text-[11px] text-white truncate">{m.nome}</div>)}
+                </div>
+                <div className="text-right">
+                  <span className="text-[9px] text-[#888] uppercase mr-1">Força</span>
+                  <span className="text-sm font-bold" style={{ color: corTextoLegivel(t.cor) }}>{mediaTime(t.membros).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {isCapitao && podeEditar && (
+            <Link
+              to="/peladas/$id/editar-times" params={{ id: peladaId }}
+              onClick={() => onOpenChange(false)}
+              className="flex items-center justify-between rounded-2xl border border-[#00FF87]/40 bg-[#00FF87]/5 p-4"
+            >
+              <div className="flex items-center gap-2 text-sm font-bold text-white"><Users className="h-4 w-4 text-[#00FF87]" /> Editar times</div>
+              <ChevronRight className="h-4 w-4 text-[#00FF87]" />
+            </Link>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const CORES_2 = [
   { nome: "Amarelo", cor: "#FACC15" },
