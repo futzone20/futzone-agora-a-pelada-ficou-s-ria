@@ -140,7 +140,11 @@ function RootComponent() {
       <AuthProvider>
         <ConfirmProvider>
           <Outlet />
-          <Toaster theme="dark" />
+          {/* top-center: por padrão o toast aparece embaixo, bem em cima dos drawers de
+              gol/assistência/goleiro (que sobem da base da tela) — competindo com os
+              botões que a pessoa está tentando clicar em seguida e dando a sensação de
+              lentidão/trava no fluxo de marcar lance. */}
+          <Toaster theme="dark" position="top-center" />
         </ConfirmProvider>
       </AuthProvider>
     </QueryClientProvider>
