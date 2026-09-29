@@ -77,6 +77,24 @@ function LancesPage() {
   const [empateP1Aberto, setEmpateP1Aberto] = useState<{ timeAId: string; timeBId: string; escolhendo?: boolean } | null>(null);
   const [acordiaoOverride, setAcordiaoOverride] = useState<Record<string, boolean>>({});
 
+  // Trava contra clique duplo/repetido durante o registro de um lance. O ref é
+  // checado de forma síncrona (antes de qualquer await), então mesmo um segundo
+  // toque disparado a poucos milissegundos do primeiro — enquanto o gol ainda
+  // está sendo salvo — é ignorado. O state serve só pra desabilitar visualmente
+  // os botões (mostrar "Marcando...") enquanto isso acontece.
+  const processandoRef = useRef(false);
+  const [processando, setProcessando] = useState(false);
+  const iniciarProcessamento = () => {
+    if (processandoRef.current) return false;
+    processandoRef.current = true;
+    setProcessando(true);
+    return true;
+  };
+  const finalizarProcessamento = () => {
+    processandoRef.current = false;
+    setProcessando(false);
+  };
+
   // Apito de fim de partida — som configurado pelo super admin (Aparência > Sons).
   const apitoUrlRef = useRef<string | null>(null);
   const encerradasConhecidasRef = useRef<Set<string> | null>(null);
@@ -410,103 +428,110 @@ function LancesPage() {
 
   const marcar = async (userId: string) => {
     if (!partida || !user || !drawer) return;
-    const { tipo, timeId } = drawer;
+    if (!iniciarProcessamento()) return; // já tem um clique em andamento — ignora o segundo toque
+    try {
+      const { tipo, timeId } = drawer;
 
-    if (tipo === "gol") {
+      if (tipo === "gol") {
+        const { error } = await supabase.from("lances").insert({
+          partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
+        } as never);
+        if (error) { toast.error(error.message); return; }
+        toast.success("Gol registrado! ⚽");
+        setDrawer(null);
+        void load();
+
+        const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+        if (partidaAtualizada) setPartida(partidaAtualizada);
+
+        // gols_para_encerrar já está no state `pelada` (não muda durante a pelada) —
+        // evita uma segunda consulta ao banco só pra isso, que só deixava o
+        // fluxo mais lento a cada gol marcado.
+        let vaiEncerrar = false;
+        if (partidaAtualizada && pelada?.gols_para_encerrar) {
+          if (partidaAtualizada.placar_a >= pelada.gols_para_encerrar || partidaAtualizada.placar_b >= pelada.gols_para_encerrar) {
+            vaiEncerrar = true;
+          }
+        }
+
+        // pergunta se teve assistência antes de perguntar o goleiro — mesmo que esse
+        // seja o gol que encerra a partida, o encerramento só acontece DEPOIS desse
+        // fluxo (senão a pergunta de assistência nunca chegava a aparecer).
+        const timeDoGol = times.find((t: any) => t.id === timeId);
+        setPendingEncerrarPartida(vaiEncerrar);
+        if (timeDoGol) {
+          setPendingGol({ userId, tipo, timeId });
+          setDrawerAssistencia({ etapa: "perguntar", scorerId: userId, timeId, timeNome: timeDoGol.nome, timeCor: timeDoGol.cor });
+        } else {
+          abrirDrawerGoleiroAdversario(timeId);
+        }
+        return;
+      }
+
+      if (tipo === "gol_contra") {
+        const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+        const { error } = await supabase.from("lances").insert({
+          partida_id: partida.id, pelada_id: id, tipo: "gol_contra", user_id: userId, time_id: timeId, marcado_por: user.id,
+        } as never);
+        if (error) { toast.error(error.message); return; }
+        // o trigger do banco só soma gol pro time_id quando tipo='gol' — aqui o gol é
+        // contra, então soma manualmente pro time ADVERSÁRIO (quem se beneficia).
+        const campo = timeAdversarioId === partida.time_a_id ? "placar_a" : "placar_b";
+        const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+        const novoPlacar = (partidaAtualizada?.[campo] || 0) + 1;
+        await supabase.from("partidas").update({ [campo]: novoPlacar } as never).eq("id", partida.id);
+        toast.success("Gol contra registrado 🙈");
+        setDrawer(null);
+        void load();
+        const { data: partidaFinal }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+        if (partidaFinal) setPartida(partidaFinal);
+
+        // pergunta qual goleiro DO PRÓPRIO TIME (o time que sofreu o gol contra) levou
+        const timeDoGol = times.find((t: any) => t.id === timeId);
+        const jogadoresDoProprioTime = timeJogadores.filter((j: any) => j.time_id === timeId);
+        if (jogadoresDoProprioTime.length > 0 && timeDoGol) {
+          setPendingGol({ userId, tipo: "gol_contra", timeId });
+          setDrawerGoleiro({ goleiroTimeId: timeId, goleiroTimeNome: timeDoGol.nome, goleiroTimeCor: timeDoGol.cor });
+        }
+        return;
+      }
+
+      if (tipo === "frango") {
+        const { error } = await supabase.from("lances").insert({
+          partida_id: partida.id, pelada_id: id, tipo: "frango", user_id: userId, time_id: timeId, marcado_por: user.id,
+        } as never);
+        if (error) { toast.error(error.message); return; }
+        toast.success("Frango registrado 🐔");
+        setDrawer(null);
+        void load();
+
+        const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
+        const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
+        const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
+
+        if (jogadoresAdversario.length > 0 && timeAdversario) {
+          setDrawerArtilheiro({
+            timeId: timeAdversarioId,
+            timeNome: timeAdversario.nome,
+            timeCor: timeAdversario.cor,
+          });
+        }
+        return;
+      }
+
       const { error } = await supabase.from("lances").insert({
         partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
       } as never);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Gol registrado! ⚽");
+      if (error) toast.error(error.message);
+      else toast.success("Lance marcado ✓");
       setDrawer(null);
       void load();
 
       const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
       if (partidaAtualizada) setPartida(partidaAtualizada);
-
-      let vaiEncerrar = false;
-      if (partidaAtualizada) {
-        const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
-        if (pel?.gols_para_encerrar && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
-          vaiEncerrar = true;
-        }
-      }
-
-      // pergunta se teve assistência antes de perguntar o goleiro — mesmo que esse
-      // seja o gol que encerra a partida, o encerramento só acontece DEPOIS desse
-      // fluxo (senão a pergunta de assistência nunca chegava a aparecer).
-      const timeDoGol = times.find((t: any) => t.id === timeId);
-      setPendingEncerrarPartida(vaiEncerrar);
-      if (timeDoGol) {
-        setPendingGol({ userId, tipo, timeId });
-        setDrawerAssistencia({ etapa: "perguntar", scorerId: userId, timeId, timeNome: timeDoGol.nome, timeCor: timeDoGol.cor });
-      } else {
-        abrirDrawerGoleiroAdversario(timeId);
-      }
-      return;
+    } finally {
+      finalizarProcessamento();
     }
-
-    if (tipo === "gol_contra") {
-      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
-      const { error } = await supabase.from("lances").insert({
-        partida_id: partida.id, pelada_id: id, tipo: "gol_contra", user_id: userId, time_id: timeId, marcado_por: user.id,
-      } as never);
-      if (error) { toast.error(error.message); return; }
-      // o trigger do banco só soma gol pro time_id quando tipo='gol' — aqui o gol é
-      // contra, então soma manualmente pro time ADVERSÁRIO (quem se beneficia).
-      const campo = timeAdversarioId === partida.time_a_id ? "placar_a" : "placar_b";
-      const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
-      const novoPlacar = (partidaAtualizada?.[campo] || 0) + 1;
-      await supabase.from("partidas").update({ [campo]: novoPlacar } as never).eq("id", partida.id);
-      toast.success("Gol contra registrado 🙈");
-      setDrawer(null);
-      void load();
-      const { data: partidaFinal }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
-      if (partidaFinal) setPartida(partidaFinal);
-
-      // pergunta qual goleiro DO PRÓPRIO TIME (o time que sofreu o gol contra) levou
-      const timeDoGol = times.find((t: any) => t.id === timeId);
-      const jogadoresDoProprioTime = timeJogadores.filter((j: any) => j.time_id === timeId);
-      if (jogadoresDoProprioTime.length > 0 && timeDoGol) {
-        setPendingGol({ userId, tipo: "gol_contra", timeId });
-        setDrawerGoleiro({ goleiroTimeId: timeId, goleiroTimeNome: timeDoGol.nome, goleiroTimeCor: timeDoGol.cor });
-      }
-      return;
-    }
-
-    if (tipo === "frango") {
-      const { error } = await supabase.from("lances").insert({
-        partida_id: partida.id, pelada_id: id, tipo: "frango", user_id: userId, time_id: timeId, marcado_por: user.id,
-      } as never);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Frango registrado 🐔");
-      setDrawer(null);
-      void load();
-
-      const timeAdversarioId = timeId === partida.time_a_id ? partida.time_b_id : partida.time_a_id;
-      const timeAdversario = times.find((t: any) => t.id === timeAdversarioId);
-      const jogadoresAdversario = timeJogadores.filter((j: any) => j.time_id === timeAdversarioId);
-
-      if (jogadoresAdversario.length > 0 && timeAdversario) {
-        setDrawerArtilheiro({
-          timeId: timeAdversarioId,
-          timeNome: timeAdversario.nome,
-          timeCor: timeAdversario.cor,
-        });
-      }
-      return;
-    }
-
-    const { error } = await supabase.from("lances").insert({
-      partida_id: partida.id, pelada_id: id, tipo, user_id: userId, time_id: timeId, marcado_por: user.id,
-    } as never);
-    if (error) toast.error(error.message);
-    else toast.success("Lance marcado ✓");
-    setDrawer(null);
-    void load();
-
-    const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
-    if (partidaAtualizada) setPartida(partidaAtualizada);
   };
 
   const abrirDrawerGoleiroAdversario = (timeId: string) => {
@@ -534,60 +559,74 @@ function LancesPage() {
 
   const marcarAssistencia = async (assistenciaUserId: string | null) => {
     if (!partida || !user || !drawerAssistencia) return;
-    if (assistenciaUserId) {
-      const { error } = await supabase.from("lances").insert({
-        partida_id: partida.id, pelada_id: id, tipo: "passe_decisivo", user_id: assistenciaUserId, time_id: drawerAssistencia.timeId, marcado_por: user.id,
-      } as never);
-      if (error) toast.error(error.message);
-      else toast.success("Assistência registrada 🤝");
-      void load();
+    if (!iniciarProcessamento()) return;
+    try {
+      if (assistenciaUserId) {
+        const { error } = await supabase.from("lances").insert({
+          partida_id: partida.id, pelada_id: id, tipo: "passe_decisivo", user_id: assistenciaUserId, time_id: drawerAssistencia.timeId, marcado_por: user.id,
+        } as never);
+        if (error) toast.error(error.message);
+        else toast.success("Assistência registrada 🤝");
+        void load();
+      }
+      const timeId = drawerAssistencia.timeId;
+      setDrawerAssistencia(null);
+      abrirDrawerGoleiroAdversario(timeId);
+    } finally {
+      finalizarProcessamento();
     }
-    const timeId = drawerAssistencia.timeId;
-    setDrawerAssistencia(null);
-    abrirDrawerGoleiroAdversario(timeId);
   };
 
 
   const marcarGoleiro = async (goleiroUserId: string | null) => {
     if (!partida || !user || !drawerGoleiro) return;
-    if (goleiroUserId) {
-      await supabase.from("lances").insert({
-        partida_id: partida.id,
-        pelada_id: id,
-        tipo: "frango",
-        user_id: goleiroUserId,
-        time_id: drawerGoleiro.goleiroTimeId,
-        marcado_por: user.id,
-      } as never);
-      toast.success("Goleiro registrado 🧤");
+    if (!iniciarProcessamento()) return;
+    try {
+      if (goleiroUserId) {
+        await supabase.from("lances").insert({
+          partida_id: partida.id,
+          pelada_id: id,
+          tipo: "frango",
+          user_id: goleiroUserId,
+          time_id: drawerGoleiro.goleiroTimeId,
+          marcado_por: user.id,
+        } as never);
+        toast.success("Goleiro registrado 🧤");
+      }
+      setDrawerGoleiro(null);
+      setPendingGol(null);
+      void load();
+      if (pendingEncerrarPartida) { setPendingEncerrarPartida(false); void encerrarPartidaAuto(); }
+    } finally {
+      finalizarProcessamento();
     }
-    setDrawerGoleiro(null);
-    setPendingGol(null);
-    void load();
-    if (pendingEncerrarPartida) { setPendingEncerrarPartida(false); void encerrarPartidaAuto(); }
   };
 
   const marcarArtilheiro = async (userId: string | null) => {
     if (!partida || !user || !drawerArtilheiro) return;
-    if (userId) {
-      const { error } = await supabase.from("lances").insert({
-        partida_id: partida.id, pelada_id: id, tipo: "gol", user_id: userId, time_id: drawerArtilheiro.timeId, marcado_por: user.id,
-      } as never);
-      if (error) { toast.error(error.message); setDrawerArtilheiro(null); return; }
-      toast.success("Gol registrado! ⚽");
+    if (!iniciarProcessamento()) return;
+    try {
+      if (userId) {
+        const { error } = await supabase.from("lances").insert({
+          partida_id: partida.id, pelada_id: id, tipo: "gol", user_id: userId, time_id: drawerArtilheiro.timeId, marcado_por: user.id,
+        } as never);
+        if (error) { toast.error(error.message); setDrawerArtilheiro(null); return; }
+        toast.success("Gol registrado! ⚽");
 
-      const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
-      if (partidaAtualizada) setPartida(partidaAtualizada);
+        const { data: partidaAtualizada }: any = await supabase.from("partidas").select("*").eq("id", partida.id).single();
+        if (partidaAtualizada) setPartida(partidaAtualizada);
 
-      const { data: pel }: any = await supabase.from("peladas").select("gols_para_encerrar").eq("id", id).single();
-      if (pel?.gols_para_encerrar && partidaAtualizada && (partidaAtualizada.placar_a >= pel.gols_para_encerrar || partidaAtualizada.placar_b >= pel.gols_para_encerrar)) {
-        setDrawerArtilheiro(null);
-        void encerrarPartidaAuto();
-        return;
+        if (pelada?.gols_para_encerrar && partidaAtualizada && (partidaAtualizada.placar_a >= pelada.gols_para_encerrar || partidaAtualizada.placar_b >= pelada.gols_para_encerrar)) {
+          setDrawerArtilheiro(null);
+          void encerrarPartidaAuto();
+          return;
+        }
       }
+      setDrawerArtilheiro(null);
+      void load();
+    } finally {
+      finalizarProcessamento();
     }
-    setDrawerArtilheiro(null);
-    void load();
   };
 
   if (!partida) {
@@ -973,7 +1012,7 @@ function LancesPage() {
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">
-                {drawer.tipo === "frango" ? "Qual goleiro levou o frango? 🐔" : `Quem fez o ${TIPOS.find((t) => t.v === drawer.tipo)?.label}?`}
+                {processando ? "Marcando..." : drawer.tipo === "frango" ? "Qual goleiro levou o frango? 🐔" : `Quem fez o ${TIPOS.find((t) => t.v === drawer.tipo)?.label}?`}
               </h3>
               <button onClick={() => setDrawer(null)} className="text-white/60"><X className="h-5 w-5" /></button>
             </div>
@@ -982,7 +1021,8 @@ function LancesPage() {
                 <button
                   key={j.user_id}
                   onClick={() => marcar(j.user_id)}
-                  className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
+                  disabled={processando}
+                  className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
                 >
                   <span className="truncate text-sm">{nomeComLuva(j.user_id, profiles[j.user_id]?.nome || "Jogador")}</span>
                 </button>
@@ -1001,8 +1041,8 @@ function LancesPage() {
               <button onClick={() => responderAssistencia(false)} className="text-white/60"><X className="h-5 w-5" /></button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => responderAssistencia(true)} className="h-12 rounded-lg bg-[#00FF87] font-bold text-black active:scale-95">Sim</button>
-              <button onClick={() => responderAssistencia(false)} className="h-12 rounded-lg border border-[#2A2A2A] font-bold text-white active:scale-95">Não</button>
+              <button onClick={() => responderAssistencia(true)} disabled={processando} className="h-12 rounded-lg bg-[#00FF87] font-bold text-black active:scale-95 disabled:opacity-40 disabled:pointer-events-none">Sim</button>
+              <button onClick={() => responderAssistencia(false)} disabled={processando} className="h-12 rounded-lg border border-[#2A2A2A] font-bold text-white active:scale-95 disabled:opacity-40 disabled:pointer-events-none">Não</button>
             </div>
           </div>
         </div>
@@ -1027,14 +1067,15 @@ function LancesPage() {
                   <button
                     key={j.user_id}
                     onClick={() => marcarAssistencia(j.user_id)}
-                    className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
+                    disabled={processando}
+                    className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
                   >
                     <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
                   </button>
                 ))
               }
             </div>
-            <button onClick={() => marcarAssistencia(null)} className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60">
+            <button onClick={() => marcarAssistencia(null)} disabled={processando} className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60 disabled:opacity-40 disabled:pointer-events-none">
               Pular — sem assistência
             </button>
           </div>
@@ -1066,7 +1107,8 @@ function LancesPage() {
                   <button
                     key={j.user_id}
                     onClick={() => marcarGoleiro(j.user_id)}
-                    className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
+                    disabled={processando}
+                    className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
                   >
                     <span className="truncate text-sm">{profiles[j.user_id]?.nome || "Jogador"}</span>
                   </button>
@@ -1075,7 +1117,8 @@ function LancesPage() {
             </div>
             <button
               onClick={() => marcarGoleiro(null)}
-              className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60"
+              disabled={processando}
+              className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60 disabled:opacity-40 disabled:pointer-events-none"
             >
               Pular — sem goleiro definido
             </button>
@@ -1107,7 +1150,8 @@ function LancesPage() {
                 <button
                   key={j.user_id}
                   onClick={() => marcarArtilheiro(j.user_id)}
-                  className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95"
+                  disabled={processando}
+                  className="flex h-[52px] items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 text-left font-bold text-white transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
                 >
                   <span className="truncate text-sm">{nomeComLuva(j.user_id, profiles[j.user_id]?.nome || "Jogador")}</span>
                 </button>
@@ -1115,7 +1159,8 @@ function LancesPage() {
             </div>
             <button
               onClick={() => marcarArtilheiro(null)}
-              className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60"
+              disabled={processando}
+              className="mt-3 w-full rounded-lg border border-[#2A2A2A] py-2 text-sm text-white/60 disabled:opacity-40 disabled:pointer-events-none"
             >
               Pular — sem artilheiro definido
             </button>
