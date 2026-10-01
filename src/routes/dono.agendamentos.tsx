@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/agendamentos")({ component: AgPage });
@@ -24,7 +25,42 @@ const FORMAS = [
   { value: "cartao_credito", label: "Crédito" },
 ];
 
-const NOVO_VAZIO = { quadra_id: "", data: "", horario_inicio: "", horario_fim: "", cliente_nome: "", valor_cobrado: 0, forma_pagamento: "dinheiro", observacoes: "" };
+const NOVO_VAZIO = {
+  quadra_id: "", data: "", horario_inicio: "", horario_fim: "", cliente_nome: "",
+  valor_cobrado: 0, forma_pagamento: "dinheiro", observacoes: "",
+  pagamento_antecipado: false, fixa: false, repeticoes: 8,
+};
+
+// Calcula o valor sugerido com base no valor/hora (diurno ou noturno, conforme
+// o horário de início) da quadra e na duração da reserva.
+function minutosEntre(inicio: string, fim: string) {
+  if (!inicio || !fim) return 0;
+  const [h1, m1] = inicio.split(":").map(Number);
+  const [h2, m2] = fim.split(":").map(Number);
+  let min = (h2 * 60 + m2) - (h1 * 60 + m1);
+  if (min <= 0) min += 24 * 60;
+  return min;
+}
+
+function valorHoraQuadra(quadra: any, horario: string) {
+  if (!quadra) return 0;
+  const corte = String(quadra.horario_corte_noturno || "18:00").slice(0, 5);
+  const ehNoturno = horario >= corte;
+  return Number((ehNoturno ? quadra.valor_noturno : quadra.valor_diurno) ?? quadra.valor_padrao ?? 0);
+}
+
+function calcularValorSugerido(quadra: any, horarioInicio: string, horarioFim: string) {
+  if (!quadra || !horarioInicio || !horarioFim) return 0;
+  const valorHora = valorHoraQuadra(quadra, horarioInicio);
+  const minutos = minutosEntre(horarioInicio, horarioFim);
+  return Math.round(valorHora * (minutos / 60) * 100) / 100;
+}
+
+function somarMinutos(horario: string, minutos: number) {
+  const [h, m] = horario.split(":").map(Number);
+  const total = (h * 60 + m + minutos + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 function AgPage() {
   const { user } = useAuth();
@@ -39,6 +75,11 @@ function AgPage() {
   // Agendamento manual
   const [openNovo, setOpenNovo] = useState(false);
   const [novo, setNovo] = useState<any>(NOVO_VAZIO);
+  const [valorManual, setValorManual] = useState(false);
+
+  // Reagendar
+  const [reagendarAg, setReagendarAg] = useState<any>(null);
+  const [reagendarForm, setReagendarForm] = useState<any>({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "" });
 
   // Dar baixa
   const [baixaAg, setBaixaAg] = useState<any>(null);
@@ -59,6 +100,17 @@ function AgPage() {
   };
   useEffect(() => { void load(); }, [user?.id]);
 
+  // Preenche o valor sugerido automaticamente conforme a quadra/horário
+  // escolhidos, a menos que o usuário já tenha editado o valor manualmente.
+  useEffect(() => {
+    if (!openNovo || valorManual) return;
+    const quadra = quadras.find(q => q.id === novo.quadra_id);
+    if (!quadra || !novo.horario_inicio || !novo.horario_fim) return;
+    const sugerido = calcularValorSugerido(quadra, novo.horario_inicio, novo.horario_fim);
+    setNovo((n: any) => ({ ...n, valor_cobrado: sugerido }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openNovo, novo.quadra_id, novo.horario_inicio, novo.horario_fim, valorManual]);
+
   const updateStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("agendamentos").update({ status, atualizado_em: new Date().toISOString() } as never).eq("id", id);
     if (error) toast.error(error.message); else { toast.success("Atualizado"); void load(); }
@@ -71,15 +123,35 @@ function AgPage() {
 
   const criarAgendamentoManual = async () => {
     if (!arena || !user) return;
-    const { error } = await supabase.from("agendamentos").insert({
+    const base = {
       arena_id: arena.id, quadra_id: novo.quadra_id, capitao_id: user.id, cliente_nome: novo.cliente_nome || null,
-      data: novo.data, horario_inicio: novo.horario_inicio, horario_fim: novo.horario_fim,
-      valor_cobrado: novo.valor_cobrado, forma_pagamento: novo.forma_pagamento, observacoes: novo.observacoes || null,
+      horario_inicio: novo.horario_inicio, horario_fim: novo.horario_fim,
+      valor_cobrado: novo.valor_cobrado, observacoes: novo.observacoes || null,
       status: "confirmado",
-    } as never);
+      pagamento_antecipado: !!novo.pagamento_antecipado,
+      forma_pagamento: novo.pagamento_antecipado ? novo.forma_pagamento : null,
+      // Pagamento antecipado = já recebido na hora da reserva: dá baixa de
+      // imediato (gera o lançamento no financeiro via trigger).
+      modo_cobranca: novo.pagamento_antecipado ? "responsavel" : null,
+      baixa_dada: !!novo.pagamento_antecipado,
+    };
+
+    const datas: string[] = [novo.data];
+    if (novo.fixa) {
+      const [ano, mes, dia] = novo.data.split("-").map(Number);
+      const d0 = new Date(ano, mes - 1, dia);
+      for (let i = 1; i < Math.max(1, Number(novo.repeticoes) || 1); i++) {
+        const d = new Date(d0); d.setDate(d0.getDate() + 7 * i);
+        datas.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+      }
+    }
+    const recorrenciaId = novo.fixa && datas.length > 1 ? crypto.randomUUID() : null;
+    const linhas = datas.map(data => ({ ...base, data, recorrencia_id: recorrenciaId } as never));
+
+    const { error } = await supabase.from("agendamentos").insert(linhas);
     if (error) { toast.error(error.message); return; }
-    toast.success("Agendamento criado");
-    setOpenNovo(false); setNovo(NOVO_VAZIO); void load();
+    toast.success(datas.length > 1 ? `Agendamento criado — ${datas.length} reservas fixas` : "Agendamento criado");
+    setOpenNovo(false); setNovo(NOVO_VAZIO); setValorManual(false); void load();
   };
 
   // ---- Dar baixa ----
@@ -135,6 +207,50 @@ function AgPage() {
     setBaixaAg(null); void load();
   };
 
+  // ---- Adicionar tempo ----
+  const adicionarTempo = async (ag: any, minutos: number) => {
+    const quadra = quadras.find(q => q.id === ag.quadra_id);
+    if (!quadra) { toast.error("Quadra não encontrada"); return; }
+    const novoFim = somarMinutos(ag.horario_fim, minutos);
+
+    const { data: outros } = await supabase.from("agendamentos").select("id,horario_inicio,status")
+      .eq("quadra_id", ag.quadra_id).eq("data", ag.data).neq("id", ag.id).in("status", ["pendente", "confirmado"]);
+    const haConflito = (outros ?? []).some((c: any) => c.horario_inicio >= ag.horario_fim && c.horario_inicio < novoFim);
+    if (haConflito) { toast.error("Já existe outro horário marcado logo em seguida nessa quadra."); return; }
+
+    const valorHora = valorHoraQuadra(quadra, ag.horario_fim);
+    const extra = Math.round(valorHora * (minutos / 60) * 100) / 100;
+    const { error } = await supabase.from("agendamentos").update({
+      horario_fim: novoFim, valor_cobrado: Number(ag.valor_cobrado || 0) + extra,
+    } as never).eq("id", ag.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`+${minutos}min adicionados — acréscimo de ${brl(extra)}`);
+    void load();
+  };
+
+  // ---- Reagendar ----
+  const abrirReagendar = (ag: any) => {
+    setReagendarAg(ag);
+    setReagendarForm({ quadra_id: ag.quadra_id, data: ag.data, horario_inicio: ag.horario_inicio?.slice(0, 5) ?? "", horario_fim: ag.horario_fim?.slice(0, 5) ?? "" });
+  };
+
+  const confirmarReagendar = async () => {
+    if (!reagendarAg) return;
+    const { data: outros } = await supabase.from("agendamentos").select("id,horario_inicio,horario_fim")
+      .eq("quadra_id", reagendarForm.quadra_id).eq("data", reagendarForm.data).neq("id", reagendarAg.id).in("status", ["pendente", "confirmado"]);
+    const haConflito = (outros ?? []).some((c: any) => c.horario_inicio < reagendarForm.horario_fim && c.horario_fim > reagendarForm.horario_inicio);
+    if (haConflito) { toast.error("Conflito: já existe reserva nesse horário para essa quadra."); return; }
+
+    const { error } = await supabase.from("agendamentos").update({
+      quadra_id: reagendarForm.quadra_id, data: reagendarForm.data,
+      horario_inicio: reagendarForm.horario_inicio, horario_fim: reagendarForm.horario_fim,
+      atualizado_em: new Date().toISOString(),
+    } as never).eq("id", reagendarAg.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Reagendado com sucesso");
+    setReagendarAg(null); void load();
+  };
+
   if (!arena) return <div className="text-center text-sm text-muted-foreground py-8">Cadastre sua arena primeiro.</div>;
 
   const filtrados = agendamentos.filter(a =>
@@ -157,7 +273,7 @@ function AgPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Dialog open={openNovo} onOpenChange={setOpenNovo}>
+        <Dialog open={openNovo} onOpenChange={o => { setOpenNovo(o); if (!o) { setNovo(NOVO_VAZIO); setValorManual(false); } }}>
           <DialogTrigger asChild><Button><CalendarPlus className="h-4 w-4 mr-1" />Novo agendamento</Button></DialogTrigger>
           <DialogContent className="max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Agendar horário manualmente</DialogTitle></DialogHeader>
@@ -169,13 +285,39 @@ function AgPage() {
                 <div><Label>Início</Label><Input type="time" value={novo.horario_inicio} onChange={e => setNovo({ ...novo, horario_inicio: e.target.value })} /></div>
                 <div><Label>Fim</Label><Input type="time" value={novo.horario_fim} onChange={e => setNovo({ ...novo, horario_fim: e.target.value })} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label>Valor cobrado</Label><Input type="number" step="0.01" value={novo.valor_cobrado} onChange={e => setNovo({ ...novo, valor_cobrado: +e.target.value })} /></div>
-                <div><Label>Forma de pagamento prevista</Label><Select value={novo.forma_pagamento} onValueChange={v => setNovo({ ...novo, forma_pagamento: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+              <div>
+                <Label>Valor cobrado</Label>
+                <Input type="number" step="0.01" value={novo.valor_cobrado} onChange={e => { setValorManual(true); setNovo({ ...novo, valor_cobrado: +e.target.value }); }} />
+                <p className="text-[11px] text-muted-foreground mt-1">Preenchido automaticamente conforme o valor diurno/noturno da quadra — pode editar se quiser.</p>
               </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label>Pagamento antecipado?</Label>
+                  <p className="text-[11px] text-muted-foreground">O cliente já pagou ao agendar</p>
+                </div>
+                <Switch checked={novo.pagamento_antecipado} onCheckedChange={v => setNovo({ ...novo, pagamento_antecipado: v })} />
+              </div>
+              {novo.pagamento_antecipado && (
+                <div><Label>Forma de pagamento</Label><Select value={novo.forma_pagamento} onValueChange={v => setNovo({ ...novo, forma_pagamento: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+              )}
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label>Pelada fixa?</Label>
+                  <p className="text-[11px] text-muted-foreground">Repete semanalmente neste mesmo dia e horário</p>
+                </div>
+                <Switch checked={novo.fixa} onCheckedChange={v => setNovo({ ...novo, fixa: v })} />
+              </div>
+              {novo.fixa && (
+                <div><Label>Quantas semanas repetir</Label><Input type="number" min={2} value={novo.repeticoes} onChange={e => setNovo({ ...novo, repeticoes: +e.target.value })} /></div>
+              )}
+
               <div><Label>Observações (opcional)</Label><Input value={novo.observacoes} onChange={e => setNovo({ ...novo, observacoes: e.target.value })} /></div>
-              <p className="text-xs text-muted-foreground">O pagamento só entra no financeiro quando você "Dar baixa" depois de criado.</p>
-              <Button onClick={criarAgendamentoManual} className="w-full" disabled={!novo.quadra_id || !novo.data || !novo.horario_inicio || !novo.horario_fim}>Agendar</Button>
+              {!novo.pagamento_antecipado && <p className="text-xs text-muted-foreground">O pagamento só entra no financeiro quando você "Dar baixa" depois de criado.</p>}
+              <Button onClick={criarAgendamentoManual} className="w-full" disabled={!novo.quadra_id || !novo.data || !novo.horario_inicio || !novo.horario_fim}>
+                {novo.fixa ? <><Repeat className="h-4 w-4 mr-1" />Agendar fixo</> : "Agendar"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -219,10 +361,18 @@ function AgPage() {
               </div>
             </div>
             {a.status === "pendente" && <div className="flex gap-2 mt-2"><Button size="sm" onClick={() => updateStatus(a.id, "confirmado")}>Confirmar</Button><Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button></div>}
-            <div className="flex gap-2 mt-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               {a.status === "confirmado" && <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "concluido")}>Concluir</Button>}
               {podeDarBaixa && !a.baixa_dada && <Button size="sm" onClick={() => abrirBaixa(a)}><Wallet className="h-3.5 w-3.5 mr-1" />Dar baixa</Button>}
               {podeDarBaixa && a.baixa_dada && <Button size="sm" variant="ghost" onClick={() => abrirBaixa(a)}>Ver pagamento</Button>}
+              {a.status === "confirmado" && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 30)}><Clock className="h-3.5 w-3.5 mr-1" />+30min</Button>
+                  <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 60)}><Clock className="h-3.5 w-3.5 mr-1" />+60min</Button>
+                  <Button size="sm" variant="outline" onClick={() => abrirReagendar(a)}><RotateCcw className="h-3.5 w-3.5 mr-1" />Reagendar</Button>
+                  <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button>
+                </>
+              )}
             </div>
           </Card>
         );
@@ -289,6 +439,24 @@ function AgPage() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reagendar */}
+      <Dialog open={!!reagendarAg} onOpenChange={o => !o && setReagendarAg(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Reagendar</DialogTitle></DialogHeader>
+          {reagendarAg && (
+            <div className="space-y-3">
+              <div><Label>Local (quadra)</Label><Select value={reagendarForm.quadra_id} onValueChange={v => setReagendarForm({ ...reagendarForm, quadra_id: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Data</Label><Input type="date" value={reagendarForm.data} onChange={e => setReagendarForm({ ...reagendarForm, data: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Início</Label><Input type="time" value={reagendarForm.horario_inicio} onChange={e => setReagendarForm({ ...reagendarForm, horario_inicio: e.target.value })} /></div>
+                <div><Label>Fim</Label><Input type="time" value={reagendarForm.horario_fim} onChange={e => setReagendarForm({ ...reagendarForm, horario_fim: e.target.value })} /></div>
+              </div>
+              <Button onClick={confirmarReagendar} className="w-full" disabled={!reagendarForm.quadra_id || !reagendarForm.data || !reagendarForm.horario_inicio || !reagendarForm.horario_fim}>Confirmar novo horário</Button>
             </div>
           )}
         </DialogContent>
