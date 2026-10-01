@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Bell, MessageCircle, Calendar, Clock, MapPin, Users, BarChart3, ChevronRight,
-  CalendarDays, Trophy, Zap, Radio, CircleDot, Hexagon, Hand,
+  CalendarDays, Trophy, Zap, Radio, CircleDot, Hexagon, Hand, AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,10 @@ type PeladaResumo = {
   quadraNome: string | null;
   confirmados: number; capacidade: number;
 };
+
+// Pelada já reservada pela arena (dono vinculou a um grupo do capitão), mas
+// que ainda não teve a configuração de jogo finalizada (times, goleiros etc.)
+type PeladaPendenteConfig = { id: string; nome_pelada: string; data: string; horario_inicio: string; grupo_id: string };
 
 // Fórmula simples (inventada agora, não existia antes): 1 nível a cada 200 pontos.
 function nivelDe(pontos: number) {
@@ -35,6 +39,7 @@ export function HomeDashboard() {
   const [alertasCount, setAlertasCount] = useState(0);
   const [aoVivo, setAoVivo] = useState<PeladaResumo | null>(null);
   const [proxima, setProxima] = useState<PeladaResumo | null>(null);
+  const [pendentesConfig, setPendentesConfig] = useState<PeladaPendenteConfig[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,13 +48,22 @@ export function HomeDashboard() {
       const [{ data: prof }, { data: of }, { data: gm }] = await Promise.all([
         supabase.from("profiles").select("pontos_total").eq("user_id", user.id).maybeSingle(),
         supabase.from("ofensivas").select("sequencia_atual").eq("user_id", user.id).maybeSingle(),
-        supabase.from("grupo_membros").select("grupo_id").eq("user_id", user.id).eq("status", "ativo"),
+        supabase.from("grupo_membros").select("grupo_id, papel").eq("user_id", user.id).eq("status", "ativo"),
       ]);
       setPontos((prof as any)?.pontos_total || 0);
       setOfensiva((of as any)?.sequencia_atual || 0);
 
       const grupoIds = Array.from(new Set((gm || []).map((g: any) => g.grupo_id as string)));
       setGruposCount(grupoIds.length);
+
+      // Grupos em que o usuário é capitão/auxiliar: é só ali que pode existir
+      // uma pelada "reservada pela arena" esperando ele terminar de configurar.
+      const grupoIdsCapitao = Array.from(new Set((gm || []).filter((g: any) => g.papel === "capitao" || g.papel === "auxiliar").map((g: any) => g.grupo_id as string)));
+      if (grupoIdsCapitao.length) {
+        const { data: pend } = await supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, grupo_id")
+          .in("grupo_id", grupoIdsCapitao).eq("configuracao_pendente", true).order("data", { ascending: true }).limit(5);
+        setPendentesConfig(pend ?? []);
+      }
 
       const [{ count: notifsCount }, { count: convitesCount }] = await Promise.all([
         supabase.from("notificacoes").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("lida", false),
@@ -137,6 +151,28 @@ export function HomeDashboard() {
         <ConvitesGrupoCard />
         <CaixinhaEntradaCard to={`${base}/vaquinhas` as any} />
       </div>
+
+      {pendentesConfig.length > 0 && (
+        <div className="space-y-2">
+          {pendentesConfig.map((p) => (
+            <Link
+              key={p.id}
+              to="/grupos/$id"
+              params={{ id: p.grupo_id }}
+              className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-sm font-bold">Reserva pendente de configuração</div>
+                  <div className="text-xs text-muted-foreground">{p.nome_pelada} — {p.data.split("-").reverse().join("/")} às {p.horario_inicio.slice(0, 5)}</div>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       {aoVivo ? (
         <Link
