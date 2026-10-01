@@ -98,18 +98,6 @@ function ArenaPage() {
         )}
       </Card>
 
-      <Card className="p-4 space-y-3">
-        <div>
-          <h3 className="font-bold">Configurações de preço</h3>
-          <p className="text-xs text-muted-foreground">Usadas na calculadora de preço sugerido, em Produtos.</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div><Label>Taxa do cartão (%)</Label><Input type="number" step="0.01" value={form.taxa_cartao_pct ?? 4} onChange={e=>setForm({...form,taxa_cartao_pct:+e.target.value})}/></div>
-          <div><Label>Imposto (%)</Label><Input type="number" step="0.01" value={form.imposto_pct ?? 6} onChange={e=>setForm({...form,imposto_pct:+e.target.value})}/></div>
-          <div><Label>Margem de lucro (%)</Label><Input type="number" step="0.01" value={form.margem_lucro_pct ?? 30} onChange={e=>setForm({...form,margem_lucro_pct:+e.target.value})}/></div>
-        </div>
-      </Card>
-
       <Card className="p-4 space-y-2">
         <h3 className="font-bold">Horário de funcionamento</h3>
         {DIAS.map(([d,lbl])=>{
