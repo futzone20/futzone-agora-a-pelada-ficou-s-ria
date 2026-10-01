@@ -179,8 +179,19 @@ function AgPage() {
     setCapitaesBusca([]);
     setBuscaCapitao("");
     setGrupoSelecionado("");
-    const { data } = await supabase.from("grupo_membros").select("grupo_id, grupos(id,nome)").eq("user_id", c.user_id).eq("papel", "capitao").eq("status", "ativo");
-    const grupos = (data ?? []).map((g: any) => g.grupos).filter(Boolean);
+    // Busca por dois caminhos e junta: via grupo_membros (papel=capitao) e
+    // via grupos.criado_por diretamente — alguns grupos mais antigos nunca
+    // ganharam a linha em grupo_membros (bug já corrigido na criação), mas
+    // quem criou o grupo é capitão dele de qualquer forma.
+    const [porMembro, porCriador] = await Promise.all([
+      supabase.from("grupo_membros").select("grupo_id, grupos(id,nome)").eq("user_id", c.user_id).eq("papel", "capitao").eq("status", "ativo"),
+      supabase.from("grupos").select("id,nome").eq("criado_por", c.user_id),
+    ]);
+    const porMembroGrupos = (porMembro.data ?? []).map((g: any) => g.grupos).filter(Boolean);
+    const porCriadorGrupos = porCriador.data ?? [];
+    const mapa = new Map<string, { id: string; nome: string }>();
+    [...porMembroGrupos, ...porCriadorGrupos].forEach((g: any) => mapa.set(g.id, g));
+    const grupos = Array.from(mapa.values());
     setGruposCapitao(grupos);
     if (grupos.length === 1) setGrupoSelecionado(grupos[0].id);
   };
