@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Trash2, CheckCircle2, Users, Wallet, ImageOff } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, Users, Wallet, ImageOff, ArrowLeft, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 function brl(n: number) { return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -140,112 +139,142 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
     if (ok) { toast.success("Comanda fechada — todos pagaram"); onChanged(); onClose(); }
   };
 
+  const cabecalho = (
+    <div className="flex items-center gap-2">
+      <Button variant="ghost" size="icon" onClick={onClose}><ArrowLeft className="h-4 w-4" /></Button>
+      <div>
+        <div className="font-bold flex items-center gap-1.5"><Receipt className="h-4 w-4 text-muted-foreground" />{comanda.nome}</div>
+        <div className="text-xs text-muted-foreground">{comanda.tipo === "grupo" ? "Grupo" : "Separada"}{comanda.num_pessoas ? ` · ${comanda.num_pessoas} pessoas` : ""}</div>
+      </div>
+    </div>
+  );
+
+  if (comanda.status === "fechada") {
+    return (
+      <div className="space-y-3">
+        {cabecalho}
+        <div className="rounded-lg bg-emerald-500/10 text-emerald-500 text-sm font-bold text-center p-4 flex items-center justify-center gap-1.5">
+          <CheckCircle2 className="h-4 w-4" />Comanda fechada — {brl(total)}
+        </div>
+        <div className="space-y-1">
+          {itens.map(i => (
+            <div key={i.id} className="flex items-center justify-between text-sm py-1">
+              <span className="truncate flex-1">{i.quantidade}x {i.pdv_produtos?.nome}</span>
+              <span className="w-16 text-right">{brl(i.subtotal)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Dialog open onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto max-w-lg">
-        <DialogHeader><DialogTitle>{comanda.nome} {comanda.tipo === "grupo" ? "(grupo)" : "(separada)"}</DialogTitle></DialogHeader>
-
-        {comanda.status === "fechada" ? (
-          <div className="rounded-lg bg-emerald-500/10 text-emerald-500 text-sm font-bold text-center p-4 flex items-center justify-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4" />Comanda fechada — {brl(total)}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {!comanda.travada && (
-              <>
-                <Input placeholder="Buscar produto por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
-                <div className="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto">
-                  {filtrados.map((p: any) => (
-                    <button key={p.id} type="button" onClick={() => addItem(p)} className="text-left border border-border rounded-lg p-1.5 hover:bg-muted">
-                      <div className="aspect-square rounded bg-muted mb-1 overflow-hidden flex items-center justify-center">
-                        {p.foto_url ? <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" /> : <ImageOff className="h-4 w-4 text-muted-foreground/50" />}
-                      </div>
-                      <div className="text-[11px] font-bold truncate">{p.nome}</div>
-                      <div className="text-[11px] text-emerald-500">{brl(Number(p.preco))}</div>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <div className="space-y-1">
-              {itens.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">Nenhum item lançado ainda.</p>}
-              {itens.map(i => (
-                <div key={i.id} className="flex items-center justify-between text-sm py-1">
-                  <span className="truncate flex-1">{i.pdv_produtos?.nome}</span>
-                  {!comanda.travada ? (
-                    <div className="flex items-center gap-1">
-                      <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => decItem(i)}><Minus className="h-3 w-3" /></Button>
-                      <span className="w-5 text-center">{i.quantidade}</span>
-                      <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => addItem(produtos.find((p: any) => p.id === i.produto_id) || { id: i.produto_id, preco: i.preco_unitario, estoque_atual: 0 })}><Plus className="h-3 w-3" /></Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removerItem(i)}><Trash2 className="h-3 w-3" /></Button>
+    <div className="space-y-3">
+      {cabecalho}
+      <div className="grid lg:grid-cols-[1fr_320px] gap-3 items-start">
+        {/* Produtos — mesmo estilo de grade com foto da tela principal do PDV */}
+        <div className="space-y-2 min-w-0">
+          {!comanda.travada ? (
+            <>
+              <Input placeholder="Buscar produto por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                {filtrados.map((p: any) => (
+                  <Card key={p.id} className="p-2 cursor-pointer overflow-hidden hover:border-primary/50" onClick={() => addItem(p)}>
+                    <div className="aspect-square rounded-md bg-muted mb-1.5 overflow-hidden flex items-center justify-center">
+                      {p.foto_url ? <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" /> : <ImageOff className="h-6 w-6 text-muted-foreground/50" />}
                     </div>
-                  ) : (
-                    <span className="text-muted-foreground">{i.quantidade}x</span>
-                  )}
-                  <span className="w-16 text-right">{brl(i.subtotal)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-border pt-2 flex justify-between font-bold">
-              <span>Total</span><span>{brl(total)}</span>
-            </div>
-
-            {comanda.tipo === "separada" && (
-              <div className="space-y-2 pt-1">
-                <div><Label>Forma de pagamento</Label><Select value={forma} onValueChange={setForma}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
-                <Button onClick={finalizarSeparada} disabled={itens.length === 0 || salvando} className="w-full"><Wallet className="h-4 w-4 mr-1" />Finalizar e cobrar — {brl(total)}</Button>
+                    <div className="font-bold text-sm truncate leading-tight">{p.nome}</div>
+                    <div className="text-emerald-500 font-bold text-sm">{brl(Number(p.preco))}</div>
+                  </Card>
+                ))}
+                {filtrados.length === 0 && <p className="col-span-full text-sm text-muted-foreground text-center py-6">Nenhum produto encontrado.</p>}
               </div>
-            )}
+            </>
+          ) : (
+            <Card className="p-4 text-center text-sm text-muted-foreground">Comanda travada para divisão — os itens não podem mais ser alterados.</Card>
+          )}
+        </div>
 
-            {comanda.tipo === "grupo" && !comanda.travada && (
-              <div className="space-y-2 pt-1">
-                {!dividindo ? (
-                  <Button onClick={() => setDividindo(true)} disabled={itens.length === 0} className="w-full"><Users className="h-4 w-4 mr-1" />Finalizar e dividir a conta</Button>
+        {/* Painel fixo — itens lançados e fechamento da comanda */}
+        <Card className="p-3 lg:sticky lg:top-4 bg-card shadow-lg space-y-3">
+          <div className="flex items-center gap-2"><Receipt className="h-4 w-4" /><b>Comanda {itens.length > 0 ? `(${itens.length})` : ""}</b></div>
+
+          <div className="space-y-1 max-h-[35vh] overflow-y-auto">
+            {itens.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Nenhum item lançado ainda.</p>}
+            {itens.map(i => (
+              <div key={i.id} className="flex items-center justify-between text-sm py-1">
+                <span className="truncate flex-1">{i.pdv_produtos?.nome}</span>
+                {!comanda.travada ? (
+                  <div className="flex items-center gap-1">
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => decItem(i)}><Minus className="h-3 w-3" /></Button>
+                    <span className="w-5 text-center">{i.quantidade}</span>
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => addItem(produtos.find((p: any) => p.id === i.produto_id) || { id: i.produto_id, preco: i.preco_unitario, estoque_atual: 0 })}><Plus className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removerItem(i)}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <Input type="number" min={1} placeholder="Quantas pessoas no grupo?" value={numPessoasInput} onChange={e => setNumPessoasInput(e.target.value)} />
-                    <Button onClick={iniciarDivisao}>Dividir</Button>
-                  </div>
+                  <span className="text-muted-foreground">{i.quantidade}x</span>
                 )}
+                <span className="w-16 text-right">{brl(i.subtotal)}</span>
               </div>
-            )}
-
-            {comanda.tipo === "grupo" && comanda.travada && (
-              <div className="space-y-3 pt-1">
-                <Card className="p-3 space-y-1 text-sm">
-                  <div className="flex justify-between"><span>Total</span><b>{brl(total)}</b></div>
-                  <div className="flex justify-between"><span>{comanda.num_pessoas} pessoas · valor individual</span><b>{brl(cota)}</b></div>
-                  <div className="border-t border-border pt-1 flex justify-between"><span className="text-emerald-500">Pago</span><span className="text-emerald-500 font-bold">{brl(pagoSum)}</span></div>
-                  <div className="flex justify-between"><span className="text-amber-500">Restante</span><span className="text-amber-500 font-bold">{brl(total - pagoSum)}</span></div>
-                </Card>
-                {participantes.length < comanda.num_pessoas && (
-                  <div className="flex gap-2">
-                    <Input placeholder="Nome do participante" value={novoParticipante} onChange={e => setNovoParticipante(e.target.value)} onKeyDown={e => e.key === "Enter" && addParticipante()} />
-                    <Button type="button" onClick={addParticipante}><Plus className="h-4 w-4" /></Button>
-                  </div>
-                )}
-                <div className="space-y-1.5">
-                  {participantes.map(p => (
-                    <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
-                      <label className="flex items-center gap-2 flex-1 cursor-pointer">
-                        <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} />
-                        <span className={p.pago ? "" : "font-bold"}>{p.nome}</span>
-                      </label>
-                      <span className="text-xs text-muted-foreground">{brl(cota)}</span>
-                      {!p.pago && <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>}
-                    </div>
-                  ))}
-                </div>
-                <Button onClick={confirmarBaixaGrupo} disabled={!todosPagos || salvando} className="w-full">
-                  {todosPagos ? `Confirmar baixa — ${brl(total)}` : `Faltam ${comanda.num_pessoas - participantes.filter(p => p.pago).length} pagar`}
-                </Button>
-              </div>
-            )}
+            ))}
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+
+          <div className="border-t border-border pt-2 flex justify-between font-bold">
+            <span>Total</span><span>{brl(total)}</span>
+          </div>
+
+          {comanda.tipo === "separada" && (
+            <div className="space-y-2 pt-1">
+              <div><Label>Forma de pagamento</Label><Select value={forma} onValueChange={setForma}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+              <Button onClick={finalizarSeparada} disabled={itens.length === 0 || salvando} className="w-full"><Wallet className="h-4 w-4 mr-1" />Finalizar e cobrar — {brl(total)}</Button>
+            </div>
+          )}
+
+          {comanda.tipo === "grupo" && !comanda.travada && (
+            <div className="space-y-2 pt-1">
+              {!dividindo ? (
+                <Button onClick={() => setDividindo(true)} disabled={itens.length === 0} className="w-full"><Users className="h-4 w-4 mr-1" />Finalizar e dividir a conta</Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Input type="number" min={1} placeholder="Quantas pessoas?" value={numPessoasInput} onChange={e => setNumPessoasInput(e.target.value)} />
+                  <Button onClick={iniciarDivisao}>Dividir</Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {comanda.tipo === "grupo" && comanda.travada && (
+            <div className="space-y-3 pt-1">
+              <Card className="p-3 space-y-1 text-sm">
+                <div className="flex justify-between"><span>{comanda.num_pessoas} pessoas · individual</span><b>{brl(cota)}</b></div>
+                <div className="border-t border-border pt-1 flex justify-between"><span className="text-emerald-500">Pago</span><span className="text-emerald-500 font-bold">{brl(pagoSum)}</span></div>
+                <div className="flex justify-between"><span className="text-amber-500">Restante</span><span className="text-amber-500 font-bold">{brl(total - pagoSum)}</span></div>
+              </Card>
+              {participantes.length < comanda.num_pessoas && (
+                <div className="flex gap-2">
+                  <Input placeholder="Nome do participante" value={novoParticipante} onChange={e => setNovoParticipante(e.target.value)} onKeyDown={e => e.key === "Enter" && addParticipante()} />
+                  <Button type="button" onClick={addParticipante}><Plus className="h-4 w-4" /></Button>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                {participantes.map(p => (
+                  <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+                    <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                      <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} />
+                      <span className={p.pago ? "" : "font-bold"}>{p.nome}</span>
+                    </label>
+                    <span className="text-xs text-muted-foreground">{brl(cota)}</span>
+                    {!p.pago && <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>}
+                  </div>
+                ))}
+              </div>
+              <Button onClick={confirmarBaixaGrupo} disabled={!todosPagos || salvando} className="w-full">
+                {todosPagos ? `Confirmar baixa — ${brl(total)}` : `Faltam ${comanda.num_pessoas - participantes.filter(p => p.pago).length} pagar`}
+              </Button>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
   );
 }
