@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ContagemCaixa, totalContagem, type ContagemDetalhe } from "@/components/ContagemCaixa";
 import { ComandaDialog } from "@/components/ComandaDialog";
-import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle, ImageOff, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/pdv")({ component: PDV });
@@ -29,6 +29,7 @@ function PDV() {
   const [arena, setArena] = useState<any>(null);
   const [produtos, setProdutos] = useState<any[]>([]);
   const [busca, setBusca] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   const [carrinho, setCarrinho] = useState<Item[]>([]);
   const [openPag, setOpenPag] = useState(false);
   const [forma, setForma] = useState("dinheiro");
@@ -169,15 +170,24 @@ function PDV() {
     setOpenHistorico(true);
   };
 
+  const categorias = useMemo(() => {
+    const vistas = new Set<string>();
+    const lista: string[] = [];
+    produtos.forEach((p: any) => { const n = p.pdv_categorias?.nome; if (n && !vistas.has(n)) { vistas.add(n); lista.push(n); } });
+    return lista;
+  }, [produtos]);
+
   const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase(); if (!q) return produtos;
+    let base = produtos;
+    if (categoriaFiltro !== "todas") base = base.filter((p: any) => p.pdv_categorias?.nome === categoriaFiltro);
+    const q = busca.trim().toLowerCase(); if (!q) return base;
     const n = Number(q);
     if (!isNaN(n)) {
-      if (q.length <= 2) return produtos.filter((p: any) => p.pdv_categorias?.codigo === n);
-      return produtos.filter((p: any) => p.codigo === n);
+      if (q.length <= 2) return base.filter((p: any) => p.pdv_categorias?.codigo === n);
+      return base.filter((p: any) => p.codigo === n);
     }
-    return produtos.filter((p: any) => p.nome.toLowerCase().includes(q));
-  }, [produtos, busca]);
+    return base.filter((p: any) => p.nome.toLowerCase().includes(q));
+  }, [produtos, busca, categoriaFiltro]);
 
   const add = (p: any) => {
     if (!caixa) { toast.error("Abra o caixa antes de vender"); return; }
@@ -277,51 +287,99 @@ function PDV() {
         </div>
       </Card>
 
-      <Tabs defaultValue="rapida">
+      <Tabs defaultValue="produtos">
         <TabsList className="w-full">
-          <TabsTrigger value="rapida" className="flex-1">Venda rápida</TabsTrigger>
-          <TabsTrigger value="comandas" className="flex-1">Comandas</TabsTrigger>
+          <TabsTrigger value="produtos" className="flex-1">Produtos</TabsTrigger>
+          <TabsTrigger value="abertas" className="flex-1">Comandas abertas</TabsTrigger>
+          <TabsTrigger value="fechadas" className="flex-1">Comandas fechadas</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="rapida" className="space-y-3">
-          <Input placeholder="Buscar por código ou nome..." value={busca} onChange={e => setBusca(e.target.value)} />
-          <div className="grid grid-cols-2 gap-2">
-            {filtrados.map(p => {
-              const noCart = carrinho.find(i => i.produto.id === p.id)?.qtd;
-              const baixo = p.estoque_atual <= p.estoque_minimo;
-              return (
-                <Card key={p.id} className={`p-2 cursor-pointer ${baixo ? "border-rose-500/40" : ""}`} onClick={() => add(p)}>
-                  <div className="text-xs text-muted-foreground">{p.codigo}</div>
-                  <div className="font-bold text-sm truncate">{p.nome}</div>
-                  <div className="text-emerald-500 font-bold">{brl(Number(p.preco))}</div>
-                  <div className={`text-xs ${baixo ? "text-rose-500" : ""}`}>Est: {p.estoque_atual}</div>
-                  {noCart && <div className="text-xs text-primary">No carrinho: {noCart}</div>}
-                </Card>
-              );
-            })}
-          </div>
+        <TabsContent value="produtos">
+          <div className="grid lg:grid-cols-[1fr_320px] gap-3 items-start">
+            {/* Produtos — lado principal, estilo PDV */}
+            <div className="space-y-2 min-w-0">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input className="pl-9" placeholder="Buscar produto por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
+              </div>
 
-          {carrinho.length > 0 && (
-            <Card className="p-3 sticky bottom-20 bg-card shadow-lg">
-              <div className="flex items-center gap-2 mb-2"><ShoppingCart className="h-4 w-4" /><b>Carrinho ({carrinho.length})</b></div>
-              {carrinho.map(i => (
-                <div key={i.produto.id} className="flex items-center justify-between py-1 text-sm">
-                  <span className="truncate flex-1">{i.produto.nome}</span>
-                  <div className="flex items-center gap-1">
-                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => dec(i.produto.id)}><Minus className="h-3 w-3" /></Button>
-                    <span className="w-6 text-center">{i.qtd}</span>
-                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => add(i.produto)}><Plus className="h-3 w-3" /></Button>
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del(i.produto.id)}><Trash className="h-3 w-3" /></Button>
-                  </div>
+              {categorias.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                  <button
+                    type="button"
+                    onClick={() => setCategoriaFiltro("todas")}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-colors ${categoriaFiltro === "todas" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                  >Todas</button>
+                  {categorias.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCategoriaFiltro(c)}
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-colors ${categoriaFiltro === c ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                    >{c}</button>
+                  ))}
                 </div>
-              ))}
-              <div className="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
-              <Button onClick={() => setOpenPag(true)} className="w-full mt-2">Finalizar</Button>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                {filtrados.map(p => {
+                  const noCart = carrinho.find(i => i.produto.id === p.id)?.qtd;
+                  const baixo = p.estoque_atual <= p.estoque_minimo;
+                  const semEstoque = p.estoque_atual <= 0;
+                  return (
+                    <Card
+                      key={p.id}
+                      className={`p-2 cursor-pointer overflow-hidden relative transition-opacity ${baixo ? "border-rose-500/40" : ""} ${semEstoque ? "opacity-50" : "hover:border-primary/50"}`}
+                      onClick={() => add(p)}
+                    >
+                      <div className="aspect-square rounded-md bg-muted mb-1.5 overflow-hidden flex items-center justify-center">
+                        {p.foto_url ? (
+                          <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageOff className="h-6 w-6 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      {noCart ? <span className="absolute top-3 right-3 bg-primary text-primary-foreground text-[11px] font-bold rounded-full h-5 w-5 flex items-center justify-center">{noCart}</span> : null}
+                      <div className="text-[11px] text-muted-foreground">{p.codigo} · {p.pdv_categorias?.nome}</div>
+                      <div className="font-bold text-sm truncate leading-tight">{p.nome}</div>
+                      <div className="text-emerald-500 font-bold text-sm">{brl(Number(p.preco))}</div>
+                      <div className={`text-[11px] ${baixo ? "text-rose-500" : "text-muted-foreground"}`}>Est: {p.estoque_atual}</div>
+                    </Card>
+                  );
+                })}
+                {filtrados.length === 0 && <p className="col-span-full text-sm text-muted-foreground text-center py-6">Nenhum produto encontrado.</p>}
+              </div>
+            </div>
+
+            {/* Pedido — painel lateral fixo */}
+            <Card className="p-3 lg:sticky lg:top-4 bg-card shadow-lg">
+              <div className="flex items-center gap-2 mb-2"><ShoppingCart className="h-4 w-4" /><b>Pedido {carrinho.length > 0 ? `(${carrinho.length})` : ""}</b></div>
+              {carrinho.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Toque em um produto para adicionar ao pedido.</p>
+              ) : (
+                <>
+                  <div className="max-h-[50vh] overflow-y-auto">
+                    {carrinho.map(i => (
+                      <div key={i.produto.id} className="flex items-center justify-between py-1 text-sm">
+                        <span className="truncate flex-1">{i.produto.nome}</span>
+                        <div className="flex items-center gap-1">
+                          <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => dec(i.produto.id)}><Minus className="h-3 w-3" /></Button>
+                          <span className="w-6 text-center">{i.qtd}</span>
+                          <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => add(i.produto)}><Plus className="h-3 w-3" /></Button>
+                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del(i.produto.id)}><Trash className="h-3 w-3" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
+                  <Button onClick={() => setOpenPag(true)} className="w-full mt-2">Finalizar</Button>
+                </>
+              )}
             </Card>
-          )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="comandas" className="space-y-3">
+        <TabsContent value="abertas" className="space-y-3">
           <Dialog open={openNovaComanda} onOpenChange={setOpenNovaComanda}>
             <DialogContent>
               <DialogHeader><DialogTitle>Abrir comanda</DialogTitle></DialogHeader>
@@ -340,21 +398,34 @@ function PDV() {
           </Dialog>
           <Button onClick={() => setOpenNovaComanda(true)} className="w-full"><Receipt className="h-4 w-4 mr-1" />Abrir nova comanda</Button>
 
-          {comandas.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comanda aberta.</p>}
-          {comandas.map(c => (
+          {comandas.filter(c => c.status !== "fechada").length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comanda aberta.</p>}
+          {comandas.filter(c => c.status !== "fechada").map(c => (
             <Card key={c.id} className="p-3 cursor-pointer" onClick={() => setComandaAberta(c)}>
               <div className="flex justify-between items-center">
                 <div>
                   <div className="font-bold">{c.nome}</div>
                   <div className="text-xs text-muted-foreground">{c.tipo === "grupo" ? "Grupo" : "Separada"} {c.num_pessoas ? `· ${c.num_pessoas} pessoas` : ""}</div>
                 </div>
-                {c.status === "fechada" ? (
-                  <span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Fechada</span>
-                ) : c.travada ? (
+                {c.travada ? (
                   <span className="text-xs text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />Aguardando pagto</span>
                 ) : (
                   <span className="text-xs text-muted-foreground">Aberta</span>
                 )}
+              </div>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="fechadas" className="space-y-3">
+          {comandas.filter(c => c.status === "fechada").length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comanda fechada ainda.</p>}
+          {comandas.filter(c => c.status === "fechada").map(c => (
+            <Card key={c.id} className="p-3 cursor-pointer" onClick={() => setComandaAberta(c)}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-bold">{c.nome}</div>
+                  <div className="text-xs text-muted-foreground">{c.tipo === "grupo" ? "Grupo" : "Separada"} {c.num_pessoas ? `· ${c.num_pessoas} pessoas` : ""}</div>
+                </div>
+                <span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Fechada</span>
               </div>
             </Card>
           ))}
