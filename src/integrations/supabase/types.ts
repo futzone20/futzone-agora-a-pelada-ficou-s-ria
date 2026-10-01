@@ -376,7 +376,10 @@ export type Database = {
         Row: {
           arena_id: string
           atualizado_em: string
+          baixa_dada: boolean
+          baixa_em: string | null
           capitao_id: string
+          cliente_nome: string | null
           criado_em: string
           data: string
           forma_pagamento: string | null
@@ -384,6 +387,7 @@ export type Database = {
           horario_fim: string
           horario_inicio: string
           id: string
+          modo_cobranca: string
           observacoes: string | null
           quadra_id: string
           status: string
@@ -392,7 +396,10 @@ export type Database = {
         Insert: {
           arena_id: string
           atualizado_em?: string
+          baixa_dada?: boolean
+          baixa_em?: string | null
           capitao_id: string
+          cliente_nome?: string | null
           criado_em?: string
           data: string
           forma_pagamento?: string | null
@@ -400,6 +407,7 @@ export type Database = {
           horario_fim: string
           horario_inicio: string
           id?: string
+          modo_cobranca?: string
           observacoes?: string | null
           quadra_id: string
           status?: string
@@ -408,7 +416,10 @@ export type Database = {
         Update: {
           arena_id?: string
           atualizado_em?: string
+          baixa_dada?: boolean
+          baixa_em?: string | null
           capitao_id?: string
+          cliente_nome?: string | null
           criado_em?: string
           data?: string
           forma_pagamento?: string | null
@@ -416,6 +427,7 @@ export type Database = {
           horario_fim?: string
           horario_inicio?: string
           id?: string
+          modo_cobranca?: string
           observacoes?: string | null
           quadra_id?: string
           status?: string
@@ -441,6 +453,44 @@ export type Database = {
             columns: ["quadra_id"]
             isOneToOne: false
             referencedRelation: "quadras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agendamento_participantes: {
+        Row: {
+          agendamento_id: string
+          criado_em: string
+          id: string
+          nome: string
+          pago: boolean
+          pago_em: string | null
+          valor: number | null
+        }
+        Insert: {
+          agendamento_id: string
+          criado_em?: string
+          id?: string
+          nome: string
+          pago?: boolean
+          pago_em?: string | null
+          valor?: number | null
+        }
+        Update: {
+          agendamento_id?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+          pago?: boolean
+          pago_em?: string | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamento_participantes_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
             referencedColumns: ["id"]
           },
         ]
