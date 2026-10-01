@@ -463,6 +463,7 @@ export type Database = {
           logo_url: string | null
           longitude: number | null
           margem_lucro_pct: number
+          modo_precificacao: string
           nome: string
           plano: string
           plano_validade: string | null
@@ -489,6 +490,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           margem_lucro_pct?: number
+          modo_precificacao?: string
           nome: string
           plano?: string
           plano_validade?: string | null
@@ -515,6 +517,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           margem_lucro_pct?: number
+          modo_precificacao?: string
           nome?: string
           plano?: string
           plano_validade?: string | null
