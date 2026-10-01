@@ -61,6 +61,7 @@ import { Route as CapitaoGruposRouteImport } from './routes/capitao.grupos'
 import { Route as AdminUsuariosRouteImport } from './routes/admin.usuarios'
 import { Route as AdminQuadrasRouteImport } from './routes/admin.quadras'
 import { Route as AdminParceirosRouteImport } from './routes/admin.parceiros'
+import { Route as AdminGruposRouteImport } from './routes/admin.grupos'
 import { Route as AdminGamificacaoRouteImport } from './routes/admin.gamificacao'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
 import { Route as AdminComunicacaoRouteImport } from './routes/admin.comunicacao'
@@ -339,6 +340,11 @@ const AdminParceirosRoute = AdminParceirosRouteImport.update({
   path: '/parceiros',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGruposRoute = AdminGruposRouteImport.update({
+  id: '/grupos',
+  path: '/grupos',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminGamificacaoRoute = AdminGamificacaoRouteImport.update({
   id: '/gamificacao',
   path: '/gamificacao',
@@ -443,6 +449,7 @@ export interface FileRoutesByFullPath {
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/gamificacao': typeof AdminGamificacaoRoute
+  '/admin/grupos': typeof AdminGruposRoute
   '/admin/parceiros': typeof AdminParceirosRoute
   '/admin/quadras': typeof AdminQuadrasRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -509,6 +516,7 @@ export interface FileRoutesByTo {
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/gamificacao': typeof AdminGamificacaoRoute
+  '/admin/grupos': typeof AdminGruposRoute
   '/admin/parceiros': typeof AdminParceirosRoute
   '/admin/quadras': typeof AdminQuadrasRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -581,6 +589,7 @@ export interface FileRoutesById {
   '/admin/comunicacao': typeof AdminComunicacaoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/gamificacao': typeof AdminGamificacaoRoute
+  '/admin/grupos': typeof AdminGruposRoute
   '/admin/parceiros': typeof AdminParceirosRoute
   '/admin/quadras': typeof AdminQuadrasRoute
   '/admin/usuarios': typeof AdminUsuariosRoute
@@ -654,6 +663,7 @@ export interface FileRouteTypes {
     | '/admin/comunicacao'
     | '/admin/financeiro'
     | '/admin/gamificacao'
+    | '/admin/grupos'
     | '/admin/parceiros'
     | '/admin/quadras'
     | '/admin/usuarios'
@@ -720,6 +730,7 @@ export interface FileRouteTypes {
     | '/admin/comunicacao'
     | '/admin/financeiro'
     | '/admin/gamificacao'
+    | '/admin/grupos'
     | '/admin/parceiros'
     | '/admin/quadras'
     | '/admin/usuarios'
@@ -791,6 +802,7 @@ export interface FileRouteTypes {
     | '/admin/comunicacao'
     | '/admin/financeiro'
     | '/admin/gamificacao'
+    | '/admin/grupos'
     | '/admin/parceiros'
     | '/admin/quadras'
     | '/admin/usuarios'
@@ -1244,6 +1256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminParceirosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/grupos': {
+      id: '/admin/grupos'
+      path: '/grupos'
+      fullPath: '/admin/grupos'
+      preLoaderRoute: typeof AdminGruposRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/gamificacao': {
       id: '/admin/gamificacao'
       path: '/gamificacao'
@@ -1372,6 +1391,7 @@ interface AdminRouteChildren {
   AdminComunicacaoRoute: typeof AdminComunicacaoRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminGamificacaoRoute: typeof AdminGamificacaoRoute
+  AdminGruposRoute: typeof AdminGruposRoute
   AdminParceirosRoute: typeof AdminParceirosRoute
   AdminQuadrasRoute: typeof AdminQuadrasRoute
   AdminUsuariosRoute: typeof AdminUsuariosRoute
@@ -1384,6 +1404,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComunicacaoRoute: AdminComunicacaoRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminGamificacaoRoute: AdminGamificacaoRoute,
+  AdminGruposRoute: AdminGruposRoute,
   AdminParceirosRoute: AdminParceirosRoute,
   AdminQuadrasRoute: AdminQuadrasRoute,
   AdminUsuariosRoute: AdminUsuariosRoute,
@@ -1523,3 +1544,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
