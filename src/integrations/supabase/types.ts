@@ -2275,6 +2275,168 @@ export type Database = {
           },
         ]
       }
+      pdv_comandas: {
+        Row: {
+          aberta_em: string
+          arena_id: string
+          baixa_dada: boolean
+          caixa_sessao_id: string | null
+          fechada_em: string | null
+          forma_pagamento: string | null
+          id: string
+          nome: string
+          num_pessoas: number | null
+          observacoes: string | null
+          operador_abertura_id: string
+          operador_fechamento_id: string | null
+          status: string
+          tipo: string
+          travada: boolean
+          venda_id: string | null
+        }
+        Insert: {
+          aberta_em?: string
+          arena_id: string
+          baixa_dada?: boolean
+          caixa_sessao_id?: string | null
+          fechada_em?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome: string
+          num_pessoas?: number | null
+          observacoes?: string | null
+          operador_abertura_id: string
+          operador_fechamento_id?: string | null
+          status?: string
+          tipo: string
+          travada?: boolean
+          venda_id?: string | null
+        }
+        Update: {
+          aberta_em?: string
+          arena_id?: string
+          baixa_dada?: boolean
+          caixa_sessao_id?: string | null
+          fechada_em?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome?: string
+          num_pessoas?: number | null
+          observacoes?: string | null
+          operador_abertura_id?: string
+          operador_fechamento_id?: string | null
+          status?: string
+          tipo?: string
+          travada?: boolean
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_comandas_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comandas_caixa_sessao_id_fkey"
+            columns: ["caixa_sessao_id"]
+            isOneToOne: false
+            referencedRelation: "caixa_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comandas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_comanda_itens: {
+        Row: {
+          comanda_id: string
+          criado_em: string
+          id: string
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+        }
+        Insert: {
+          comanda_id: string
+          criado_em?: string
+          id?: string
+          preco_unitario: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+        }
+        Update: {
+          comanda_id?: string
+          criado_em?: string
+          id?: string
+          preco_unitario?: number
+          produto_id?: string
+          quantidade?: number
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_comanda_itens_comanda_id_fkey"
+            columns: ["comanda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comanda_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_comanda_participantes: {
+        Row: {
+          comanda_id: string
+          criado_em: string
+          id: string
+          nome: string
+          pago: boolean
+          pago_em: string | null
+          valor_cota: number | null
+        }
+        Insert: {
+          comanda_id: string
+          criado_em?: string
+          id?: string
+          nome: string
+          pago?: boolean
+          pago_em?: string | null
+          valor_cota?: number | null
+        }
+        Update: {
+          comanda_id?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+          pago?: boolean
+          pago_em?: string | null
+          valor_cota?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_comanda_participantes_comanda_id_fkey"
+            columns: ["comanda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comandas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_categorias: {
         Row: {
           arena_id: string
