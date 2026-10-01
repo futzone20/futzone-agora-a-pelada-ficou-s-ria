@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat } from "lucide-react";
 import { toast } from "sonner";
 
@@ -135,11 +136,19 @@ function AgPage() {
     setCapitaoSelecionado(null); setGruposCapitao([]); setGrupoSelecionado("");
   };
 
-  const buscarCapitao = async () => {
-    const q = buscaCapitao.trim(); if (!q) return;
-    const { data } = await supabase.from("profiles").select("user_id,nome,whatsapp").eq("role", "capitao").or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(5);
-    setCapitaesBusca(data ?? []);
-  };
+  // Busca ao vivo (debounced) conforme digita — só capitães da mesma cidade
+  // da arena, pra não aparecer capitão de outra cidade pra jogar aqui.
+  useEffect(() => {
+    const q = buscaCapitao.trim();
+    if (!vincularCapitao || capitaoSelecionado || !q || !arena) { setCapitaesBusca([]); return; }
+    const t = setTimeout(async () => {
+      let query = supabase.from("profiles").select("user_id,nome,whatsapp,foto_url,cidade").eq("role", "capitao").or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(8);
+      if (arena.cidade) query = query.eq("cidade", arena.cidade);
+      const { data } = await query;
+      setCapitaesBusca(data ?? []);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [buscaCapitao, vincularCapitao, capitaoSelecionado, arena]);
 
   const selecionarCapitao = async (c: any) => {
     setCapitaoSelecionado(c);
@@ -348,14 +357,38 @@ function AgPage() {
                 <div className="space-y-2 rounded-lg border p-3">
                   {!capitaoSelecionado ? (
                     <>
-                      <div className="flex gap-2"><Input placeholder="Nome ou WhatsApp do capitão" value={buscaCapitao} onChange={e => setBuscaCapitao(e.target.value)} onKeyDown={e => e.key === "Enter" && buscarCapitao()} /><Button type="button" onClick={buscarCapitao}>Buscar</Button></div>
-                      {capitaesBusca.map(c => <div key={c.user_id} className="p-2 border rounded cursor-pointer hover:bg-muted text-sm" onClick={() => selecionarCapitao(c)}>{c.nome}</div>)}
-                      {capitaesBusca.length === 0 && buscaCapitao && <p className="text-xs text-muted-foreground">Busque e clique em "Buscar".</p>}
+                      <Input placeholder="Nome ou WhatsApp do capitão" value={buscaCapitao} onChange={e => setBuscaCapitao(e.target.value)} />
+                      {!arena?.cidade && (
+                        <p className="text-[11px] text-amber-500">Cadastre a cidade da sua arena pra filtrar só capitães daqui.</p>
+                      )}
+                      <div className="space-y-1">
+                        {capitaesBusca.map(c => (
+                          <div key={c.user_id} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-muted text-sm" onClick={() => selecionarCapitao(c)}>
+                            <Avatar className="h-7 w-7">
+                              {c.foto_url ? <AvatarImage src={c.foto_url} /> : null}
+                              <AvatarFallback className="text-xs">{c.nome?.[0]}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{c.nome}</div>
+                              {c.cidade && <div className="text-[11px] text-muted-foreground truncate">{c.cidade}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {capitaesBusca.length === 0 && buscaCapitao.trim() && (
+                        <p className="text-xs text-muted-foreground">Nenhum capitão encontrado{arena?.cidade ? ` em ${arena.cidade}` : ""}.</p>
+                      )}
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between">
-                        <div className="p-2 bg-muted rounded text-sm flex-1"><b>{capitaoSelecionado.nome}</b></div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm flex-1 min-w-0">
+                          <Avatar className="h-7 w-7">
+                            {capitaoSelecionado.foto_url ? <AvatarImage src={capitaoSelecionado.foto_url} /> : null}
+                            <AvatarFallback className="text-xs">{capitaoSelecionado.nome?.[0]}</AvatarFallback>
+                          </Avatar>
+                          <b className="truncate">{capitaoSelecionado.nome}</b>
+                        </div>
                         <Button type="button" variant="ghost" size="sm" onClick={() => { setCapitaoSelecionado(null); setGruposCapitao([]); setGrupoSelecionado(""); }}>Trocar</Button>
                       </div>
                       {gruposCapitao.length === 0 && <p className="text-xs text-amber-500">Esse capitão não tem nenhum grupo — não é possível vincular.</p>}
