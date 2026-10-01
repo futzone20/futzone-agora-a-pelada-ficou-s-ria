@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MobileShell } from "@/components/MobileShell";
-import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Info, BookOpen, FolderPlus, PiggyBank, ChevronRight, Trophy } from "lucide-react";
+import { Shield, Users, CircleDot, Settings, Copy, Plus, Crown, UserCog, Trash2, ArrowLeft, Home, User, UserPlus, Info, BookOpen, FolderPlus, PiggyBank, ChevronRight, Trophy, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -24,6 +24,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { SKILL_KEYS, mediaSkill, type SkillRow } from "@/lib/sorteio";
 import { AvaliarMembroModal } from "@/components/AvaliarMembroModal";
 import { CriarPeladaWizard } from "@/components/CriarPeladaWizard";
+import { FinalizarPeladaDialog } from "@/components/FinalizarPeladaDialog";
 import { TemporadaTab } from "@/components/TemporadaTab";
 import { criarMembroManual } from "@/lib/membroManual";
 
@@ -46,7 +47,7 @@ type Membro = {
   skill: SkillRow | null;
   skill_origem: string | null;
 };
-type Pelada = { id: string; nome_pelada: string; data: string; horario_inicio: string; status: string };
+type Pelada = { id: string; nome_pelada: string; data: string; horario_inicio: string; status: string; configuracao_pendente?: boolean };
 
 function GrupoPage() {
   const { id } = Route.useParams();
@@ -92,7 +93,7 @@ function GrupoPage() {
       const [g, m, p] = await Promise.all([
         supabase.from("grupos").select("*").eq("id", id).maybeSingle(),
         (supabase as any).from("grupo_membros").select("id, user_id, papel, status").eq("grupo_id", id).eq("avulso", false).in("status", ["ativo", "pendente"]),
-        supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, status").eq("grupo_id", id).order("data", { ascending: true }),
+        supabase.from("peladas").select("id, nome_pelada, data, horario_inicio, status, configuracao_pendente").eq("grupo_id", id).order("data", { ascending: true }),
       ]);
       if (g.error) toast.error(g.error.message);
       setGrupo(g.data);
@@ -542,9 +543,41 @@ function ConvidarJogadorModal({ grupo, membros, onDone }: { grupo: any; membros:
 
 function PeladasTab({ grupoId, peladas, isCapitao, onChange }: { grupoId: string; peladas: Pelada[]; isCapitao: boolean; onChange: () => void }) {
   const [open, setOpen] = useState(false);
+  const [configurando, setConfigurando] = useState<Pelada | null>(null);
   const navigate = useNavigate();
+
+  const pendentes = peladas.filter((p) => p.configuracao_pendente);
+  const prontas = peladas.filter((p) => !p.configuracao_pendente);
+
   return (
     <div className="space-y-3">
+      {isCapitao && pendentes.length > 0 && (
+        <div className="space-y-2">
+          {pendentes.map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-bold text-sm">{p.nome_pelada}</div>
+                  <div className="text-xs text-muted-foreground">{p.data.split("-").reverse().join("/")} às {p.horario_inicio.slice(0, 5)} — reservada pela arena, falta configurar</div>
+                </div>
+              </div>
+              <Button size="sm" onClick={() => setConfigurando(p)}>Configurar agora</Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={!!configurando} onOpenChange={(o) => !o && setConfigurando(null)}>
+        {configurando && (
+          <FinalizarPeladaDialog
+            pelada={configurando}
+            onClose={() => setConfigurando(null)}
+            onFinished={() => { setConfigurando(null); onChange(); }}
+          />
+        )}
+      </Dialog>
+
       {isCapitao && (
         <div className="flex justify-end">
           <Dialog open={open} onOpenChange={setOpen}>
@@ -566,10 +599,10 @@ function PeladasTab({ grupoId, peladas, isCapitao, onChange }: { grupoId: string
         </div>
       )}
 
-      {peladas.length === 0 ? (
-        <EmptyState icon={CircleDot} title="Nenhuma pelada criada" description="Marque a primeira pelada deste grupo." />
+      {prontas.length === 0 ? (
+        pendentes.length === 0 && <EmptyState icon={CircleDot} title="Nenhuma pelada criada" description="Marque a primeira pelada deste grupo." />
       ) : (
-        peladas.map((p) => (
+        prontas.map((p) => (
           <Link key={p.id} to="/peladas/$id" params={{ id: p.id }} className="block rounded-xl border border-border bg-card p-4 transition hover:border-primary/50">
             <div className="flex items-start justify-between">
               <div>
