@@ -234,7 +234,11 @@ function AgPage() {
       forma_pagamento: novo.pagamento_antecipado ? novo.forma_pagamento : null,
       // Pagamento antecipado = já recebido na hora da reserva: dá baixa de
       // imediato (gera o lançamento no financeiro via trigger).
-      modo_cobranca: novo.pagamento_antecipado ? "responsavel" : null,
+      // modo_cobranca tem DEFAULT 'responsavel' no banco e é NOT NULL — só
+      // mandamos a coluna quando já sabemos que é "responsavel" (pagamento
+      // antecipado); nos outros casos melhor nem enviar e deixar o default
+      // valer, em vez de mandar null (isso quebrava a constraint).
+      ...(novo.pagamento_antecipado ? { modo_cobranca: "responsavel" } : {}),
       baixa_dada: !!novo.pagamento_antecipado,
     };
 
@@ -253,14 +257,22 @@ function AgPage() {
       // Cada ocorrência vira a própria "pelada" (rascunho) na data certa —
       // o capitão finaliza a configuração depois, no perfil do grupo dele.
       for (const data of datas) {
-        const { data: peladaRow, error: ePelada } = await supabase.from("peladas").insert({
-          criado_por: capitaoSelecionado.user_id, grupo_id: grupoSelecionado, data,
-          horario_inicio: novo.horario_inicio, horario_fim: novo.horario_fim,
-          nome_pelada: `Pelada ${data.split("-").reverse().join("/")}`,
-          configuracao_pendente: true,
-        } as never).select("id").single();
-        if (ePelada || !peladaRow) { toast.error(ePelada?.message || "Erro ao criar a pelada"); return; }
-        const { error } = await supabase.from("agendamentos").insert({ ...base, data, recorrencia_id: recorrenciaId, pelada_id: (peladaRow as any).id } as never);
+        // Inserir direto em "peladas" daqui é bloqueado pela RLS: a policy
+        // de INSERT exige que quem está logado seja o próprio capitão do
+        // grupo, e aqui quem está logado é o dono da quadra. Por isso
+        // passamos pela função criar_pelada_rascunho_dono (SECURITY
+        // DEFINER), que valida que o capitão selecionado é mesmo capitão
+        // desse grupo e cria o rascunho com privilégio elevado.
+        const { data: peladaId, error: ePelada } = await supabase.rpc("criar_pelada_rascunho_dono" as any, {
+          _grupo_id: grupoSelecionado,
+          _criado_por: capitaoSelecionado.user_id,
+          _data: data,
+          _horario_inicio: novo.horario_inicio,
+          _horario_fim: novo.horario_fim,
+          _nome_pelada: `Pelada ${data.split("-").reverse().join("/")}`,
+        } as never);
+        if (ePelada || !peladaId) { toast.error(ePelada?.message || "Erro ao criar a pelada"); return; }
+        const { error } = await supabase.from("agendamentos").insert({ ...base, data, recorrencia_id: recorrenciaId, pelada_id: peladaId as unknown as string } as never);
         if (error) { toast.error(error.message); return; }
       }
     } else {
