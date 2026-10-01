@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Trash2, CheckCircle2, Users, Wallet, ImageOff, ArrowLeft, Receipt } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, Users, Wallet, ImageOff, ArrowLeft, Receipt, Banknote } from "lucide-react";
 import { toast } from "sonner";
 
 function brl(n: number) { return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -40,6 +40,9 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
   const [forma, setForma] = useState("dinheiro");
   const [salvando, setSalvando] = useState(false);
   const [valorRecebido, setValorRecebido] = useState("");
+  const [rascunhoValores, setRascunhoValores] = useState<Record<string, string>>({});
+  const [trocoAberto, setTrocoAberto] = useState<Record<string, boolean>>({});
+  const [trocoValor, setTrocoValor] = useState<Record<string, string>>({});
 
   // Recarrega a comanda do banco (não só itens/participantes): sem isso, se
   // o dono dividir a conta, sair de tela e reabrir essa comanda a partir de
@@ -62,12 +65,29 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
 
   const total = useMemo(() => itens.reduce((s, i) => s + Number(i.subtotal), 0), [itens]);
   const cota = comanda.num_pessoas ? total / comanda.num_pessoas : 0;
-  // Cada participante pode ter um valor diferente (alguém paga mais, outro
-  // menos) — valor_cota é o valor específico dele; sem edição manual, cai
-  // na divisão igual (cota).
-  const valorDe = (p: any) => (p.valor_cota != null ? Number(p.valor_cota) : cota);
-  const pagoSum = participantes.filter(p => p.pago).reduce((s, p) => s + valorDe(p), 0);
-  const somaTotalParticipantes = participantes.reduce((s, p) => s + valorDe(p), 0);
+
+  // Quem já pagou tem o valor travado (persistido no momento do pagamento —
+  // ver togglePago). O que falta pagar nunca é um valor fixo: é sempre o
+  // que ainda resta dividido entre quem falta, recalculado a cada pagamento
+  // ou edição manual — assim nunca sobra nem falta e ninguém "esquece" de
+  // recalcular quando um amigo paga mais ou menos que a parte igual.
+  const pagoSum = participantes.filter(p => p.pago).reduce((s, p) => s + Number(p.valor_cota ?? cota), 0);
+  const restante = Math.max(0, total - pagoSum);
+  const naoPagos = participantes.filter(p => !p.pago);
+  const naoPagosManual = naoPagos.filter(p => p.valor_cota != null);
+  const somaManualNaoPagos = naoPagosManual.reduce((s, p) => s + Number(p.valor_cota), 0);
+  const naoPagosAuto = naoPagos.filter(p => p.valor_cota == null);
+  const restanteAuto = Math.max(0, restante - somaManualNaoPagos);
+  const valorAutoCada = naoPagosAuto.length > 0 ? restanteAuto / naoPagosAuto.length : 0;
+
+  // Valor "efetivo" de cada participante: travado se já pago, manual se
+  // editado, senão a divisão automática do que resta entre quem falta.
+  const valorDe = (p: any) => {
+    if (p.valor_cota != null) return Number(p.valor_cota);
+    if (p.pago) return cota;
+    return valorAutoCada;
+  };
+  const somaTotalParticipantes = pagoSum + naoPagos.reduce((s, p) => s + valorDe(p), 0);
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase(); if (!q) return produtos;
@@ -134,7 +154,9 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
   const addParticipante = async () => {
     if (!novoParticipante.trim()) return;
     if (participantes.length >= (comanda.num_pessoas || 0)) { toast.error(`Já tem ${comanda.num_pessoas} pessoas adicionadas`); return; }
-    const valor = novoParticipanteValor.trim() ? Number(novoParticipanteValor) : cota;
+    // Sem valor digitado = automático (divide o que resta); só trava um
+    // valor fixo se o dono realmente digitou um aqui.
+    const valor = novoParticipanteValor.trim() ? Number(novoParticipanteValor) : null;
     const { error } = await supabase.from("pdv_comanda_participantes").insert({ comanda_id: comanda.id, nome: novoParticipante.trim(), valor_cota: valor } as never);
     if (error) { toast.error(error.message); return; }
     setNovoParticipante(""); setNovoParticipanteValor("");
@@ -142,17 +164,39 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
   };
 
   const togglePago = async (p: any) => {
-    const { error } = await supabase.from("pdv_comanda_participantes").update({ pago: !p.pago, pago_em: !p.pago ? new Date().toISOString() : null } as never).eq("id", p.id);
+    const marcandoComoPago = !p.pago;
+    const payload: Record<string, any> = { pago: marcandoComoPago, pago_em: marcandoComoPago ? new Date().toISOString() : null };
+    // Trava o valor no exato momento em que marca como pago — senão, ao
+    // marcar o próximo como pago, o valor dele recalcularia e o histórico
+    // do que essa pessoa realmente pagou mudaria sozinho depois.
+    if (marcandoComoPago && p.valor_cota == null) payload.valor_cota = Number(valorDe(p).toFixed(2));
+    const { error } = await supabase.from("pdv_comanda_participantes").update(payload as never).eq("id", p.id);
     if (error) { toast.error(error.message); return; }
     void carregarParticipantes();
   };
 
   // Permite ajustar o valor de cada um a qualquer momento (antes de marcar
-  // como pago) — um amigo pode cobrir mais, outro menos, não precisa ser
-  // sempre a divisão igual.
+  // como pago) — um amigo pode cobrir mais, outro menos. Nunca deixa passar
+  // do que ainda falta (ninguém pode "pagar" mais do que resta da conta) —
+  // o resto sempre recalcula sozinho entre quem ainda não editou o valor.
   const atualizarValorParticipante = async (p: any, novoValor: string) => {
-    const valor = novoValor.trim() === "" ? null : Number(novoValor);
-    if (valor != null && Number.isNaN(valor)) return;
+    if (novoValor.trim() === "") {
+      // Campo limpo = volta a ser automático (divide o que resta).
+      const { error } = await supabase.from("pdv_comanda_participantes").update({ valor_cota: null } as never).eq("id", p.id);
+      if (error) { toast.error(error.message); return; }
+      void carregarParticipantes();
+      return;
+    }
+    let valor = Number(novoValor);
+    if (Number.isNaN(valor) || valor < 0) { toast.error("Valor inválido"); void carregarParticipantes(); return; }
+    // O teto é o que resta, descontando o que outras pessoas (que também
+    // não pagaram ainda) já tiverem com valor manual travado.
+    const outrosManuaisSoma = naoPagosManual.filter(x => x.id !== p.id).reduce((s, x) => s + Number(x.valor_cota), 0);
+    const teto = Math.max(0, restante - outrosManuaisSoma);
+    if (valor > teto + 0.009) {
+      toast.error(`Não dá pra cobrar mais do que falta (${brl(teto)})`);
+      valor = Number(teto.toFixed(2));
+    }
     const { error } = await supabase.from("pdv_comanda_participantes").update({ valor_cota: valor } as never).eq("id", p.id);
     if (error) { toast.error(error.message); return; }
     void carregarParticipantes();
@@ -295,12 +339,12 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
           {comanda.tipo === "grupo" && comanda.travada && (
             <div className="space-y-3 pt-1">
               <Card className="p-3 space-y-1 text-sm">
-                <div className="flex justify-between"><span>{comanda.num_pessoas} pessoas · divisão igual</span><b>{brl(cota)}</b></div>
+                <div className="flex justify-between"><span>{comanda.num_pessoas} pessoas · parte igual seria</span><b>{brl(cota)}</b></div>
                 <div className="border-t border-border pt-1 flex justify-between"><span className="text-emerald-500">Pago</span><span className="text-emerald-500 font-bold">{brl(pagoSum)}</span></div>
-                <div className="flex justify-between"><span className="text-amber-500">Restante</span><span className="text-amber-500 font-bold">{brl(total - pagoSum)}</span></div>
+                <div className="flex justify-between"><span className="text-amber-500">Restante</span><span className="text-amber-500 font-bold">{brl(restante)}</span></div>
                 {Math.abs(diferencaSoma) >= 0.01 && (
-                  <div className="text-[11px] text-muted-foreground pt-1 border-t border-border">
-                    Valores somam {brl(somaTotalParticipantes)} — {diferencaSoma > 0 ? `faltam ${brl(diferencaSoma)} pra fechar o total` : `${brl(-diferencaSoma)} acima do total`}
+                  <div className="text-[11px] text-rose-500 pt-1 border-t border-border">
+                    Valores manuais somam acima do total — {brl(-diferencaSoma)} sobrando.
                   </div>
                 )}
               </Card>
@@ -311,25 +355,47 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
                   <Button type="button" onClick={addParticipante}><Plus className="h-4 w-4" /></Button>
                 </div>
               )}
-              <p className="text-[11px] text-muted-foreground -mt-1">Por padrão cada um paga a parte igual — edite o valor se alguém for pagar mais ou menos.</p>
+              <p className="text-[11px] text-muted-foreground -mt-1">Por padrão o que falta é dividido igual entre quem não pagou — edite o valor se alguém for pagar mais ou menos (o resto recalcula sozinho).</p>
               <div className="space-y-1.5">
                 {participantes.map(p => (
-                  <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
-                    <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
-                      <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} />
-                      <span className={`truncate ${p.pago ? "" : "font-bold"}`}>{p.nome}</span>
-                    </label>
-                    {p.pago ? (
-                      <span className="text-xs text-muted-foreground shrink-0">{brl(valorDe(p))}</span>
-                    ) : (
-                      <Input
-                        type="number" step="0.01"
-                        className="h-7 w-20 text-right text-xs shrink-0"
-                        defaultValue={p.valor_cota != null ? String(p.valor_cota) : String(cota.toFixed(2))}
-                        onBlur={e => atualizarValorParticipante(p, e.target.value)}
-                      />
+                  <div key={p.id} className="space-y-1">
+                    <div className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+                      <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
+                        <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} />
+                        <span className={`truncate ${p.pago ? "" : "font-bold"}`}>{p.nome}</span>
+                      </label>
+                      {p.pago ? (
+                        <span className="text-xs text-muted-foreground shrink-0">{brl(valorDe(p))}</span>
+                      ) : (
+                        <>
+                          <Input
+                            type="number" step="0.01"
+                            className="h-7 w-20 text-right text-xs shrink-0"
+                            value={rascunhoValores[p.id] !== undefined ? rascunhoValores[p.id] : valorDe(p).toFixed(2)}
+                            onChange={e => setRascunhoValores(r => ({ ...r, [p.id]: e.target.value }))}
+                            onBlur={e => { void atualizarValorParticipante(p, e.target.value); setRascunhoValores(r => { const n = { ...r }; delete n[p.id]; return n; }); }}
+                          />
+                          <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" title="Calcular troco" onClick={() => setTrocoAberto(t => ({ ...t, [p.id]: !t[p.id] }))}><Banknote className="h-3 w-3" /></Button>
+                        </>
+                      )}
+                      {!p.pago && <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>}
+                    </div>
+                    {!p.pago && trocoAberto[p.id] && (
+                      <div className="rounded-lg bg-muted p-2 ml-1 space-y-1.5">
+                        <Label className="text-[11px]">Troco pra {p.nome} (deve {brl(valorDe(p))})</Label>
+                        <Input
+                          type="number" step="0.01" placeholder="Valor recebido em dinheiro" className="h-7 text-xs"
+                          value={trocoValor[p.id] ?? ""} onChange={e => setTrocoValor(v => ({ ...v, [p.id]: e.target.value }))}
+                        />
+                        {trocoValor[p.id] && (
+                          Number(trocoValor[p.id]) >= valorDe(p) ? (
+                            <div className="text-xs font-semibold text-emerald-600">Troco: {brl(Number(trocoValor[p.id]) - valorDe(p))}</div>
+                          ) : (
+                            <div className="text-xs font-semibold text-rose-500">Falta {brl(valorDe(p) - Number(trocoValor[p.id]))}</div>
+                          )
+                        )}
+                      </div>
                     )}
-                    {!p.pago && <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>}
                   </div>
                 ))}
               </div>
