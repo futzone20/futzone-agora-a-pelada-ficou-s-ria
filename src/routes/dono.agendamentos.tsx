@@ -174,14 +174,18 @@ function AgPage() {
       const candidatos = data ?? [];
       if (candidatos.length === 0) { setCapitaesBusca([]); return; }
       const ids = candidatos.map((c: any) => c.user_id);
-      const [porMembro, porCriador] = await Promise.all([
-        supabase.from("grupo_membros").select("user_id").in("user_id", ids).eq("papel", "capitao").eq("status", "ativo"),
-        supabase.from("grupos").select("criado_por").in("criado_por", ids),
-      ]);
-      const capitaesReais = new Set<string>([
-        ...((porMembro.data ?? []).map((g: any) => g.user_id)),
-        ...((porCriador.data ?? []).map((g: any) => g.criado_por)),
-      ]);
+      // Não dá pra consultar grupo_membros/grupos direto daqui: a RLS dessas
+      // tabelas só libera leitura pra quem é membro do grupo (ou o criador),
+      // e o dono da quadra não é nem um nem outro — a consulta sempre
+      // voltaria vazia mesmo com os dados certos. Por isso usamos a função
+      // ids_capitaes_reais (SECURITY DEFINER), que decide isso com
+      // privilégio elevado e só devolve o id de quem é capitão de verdade.
+      const { data: capitaesData, error: capitaesError } = await supabase.rpc(
+        "ids_capitaes_reais" as any,
+        { _user_ids: ids } as never
+      );
+      if (capitaesError) { setCapitaesBusca([]); return; }
+      const capitaesReais = new Set<string>((capitaesData as any[] ?? []).map((r: any) => r.user_id));
       let resultados = candidatos.filter((c: any) => capitaesReais.has(c.user_id));
       if (arena.latitude != null && arena.longitude != null) {
         resultados = resultados
@@ -199,19 +203,16 @@ function AgPage() {
     setCapitaesBusca([]);
     setBuscaCapitao("");
     setGrupoSelecionado("");
-    // Busca por dois caminhos e junta: via grupo_membros (papel=capitao) e
-    // via grupos.criado_por diretamente — alguns grupos mais antigos nunca
-    // ganharam a linha em grupo_membros (bug já corrigido na criação), mas
-    // quem criou o grupo é capitão dele de qualquer forma.
-    const [porMembro, porCriador] = await Promise.all([
-      supabase.from("grupo_membros").select("grupo_id, grupos(id,nome)").eq("user_id", c.user_id).eq("papel", "capitao").eq("status", "ativo"),
-      supabase.from("grupos").select("id,nome").eq("criado_por", c.user_id),
-    ]);
-    const porMembroGrupos = (porMembro.data ?? []).map((g: any) => g.grupos).filter(Boolean);
-    const porCriadorGrupos = porCriador.data ?? [];
-    const mapa = new Map<string, { id: string; nome: string }>();
-    [...porMembroGrupos, ...porCriadorGrupos].forEach((g: any) => mapa.set(g.id, g));
-    const grupos = Array.from(mapa.values());
+    // Não dá pra buscar isso direto em grupo_membros/grupos: a RLS dessas
+    // tabelas só libera pra quem é membro do grupo (ou o criador), e o dono
+    // da quadra não é nenhum dos dois — por mais certo que esteja o dado,
+    // a consulta sempre voltaria vazia (era exatamente isso que fazia
+    // aparecer "esse capitão não tem nenhum grupo" mesmo quando tinha).
+    // grupos_do_capitao roda com privilégio elevado (SECURITY DEFINER) e
+    // devolve só id/nome dos grupos que esse usuário capitaneia de fato.
+    const { data, error } = await supabase.rpc("grupos_do_capitao" as any, { _user_id: c.user_id } as never);
+    if (error) { setGruposCapitao([]); return; }
+    const grupos = ((data as unknown) as { id: string; nome: string }[] | null) ?? [];
     setGruposCapitao(grupos);
     if (grupos.length === 1) setGrupoSelecionado(grupos[0].id);
   };
