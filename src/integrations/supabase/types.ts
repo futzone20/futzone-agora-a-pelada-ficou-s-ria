@@ -389,7 +389,9 @@ export type Database = {
           id: string
           modo_cobranca: string
           observacoes: string | null
+          pagamento_antecipado: boolean
           quadra_id: string
+          recorrencia_id: string | null
           status: string
           valor_cobrado: number | null
         }
@@ -409,7 +411,9 @@ export type Database = {
           id?: string
           modo_cobranca?: string
           observacoes?: string | null
+          pagamento_antecipado?: boolean
           quadra_id: string
+          recorrencia_id?: string | null
           status?: string
           valor_cobrado?: number | null
         }
@@ -429,7 +433,9 @@ export type Database = {
           id?: string
           modo_cobranca?: string
           observacoes?: string | null
+          pagamento_antecipado?: boolean
           quadra_id?: string
+          recorrencia_id?: string | null
           status?: string
           valor_cobrado?: number | null
         }
@@ -3285,11 +3291,14 @@ export type Database = {
           criado_em: string
           duracao_partida_padrao: number
           goleiros_por_time: number
+          horario_corte_noturno: string
           id: string
           jogadores_por_time: number
           nome: string
           slug: string
           tipo_superficie: string
+          valor_diurno: number | null
+          valor_noturno: number | null
           valor_padrao: number | null
         }
         Insert: {
@@ -3298,11 +3307,14 @@ export type Database = {
           criado_em?: string
           duracao_partida_padrao?: number
           goleiros_por_time?: number
+          horario_corte_noturno?: string
           id?: string
           jogadores_por_time?: number
           nome: string
           slug: string
           tipo_superficie?: string
+          valor_diurno?: number | null
+          valor_noturno?: number | null
           valor_padrao?: number | null
         }
         Update: {
@@ -3311,11 +3323,14 @@ export type Database = {
           criado_em?: string
           duracao_partida_padrao?: number
           goleiros_por_time?: number
+          horario_corte_noturno?: string
           id?: string
           jogadores_por_time?: number
           nome?: string
           slug?: string
           tipo_superficie?: string
+          valor_diurno?: number | null
+          valor_noturno?: number | null
           valor_padrao?: number | null
         }
         Relationships: [
