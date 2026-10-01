@@ -36,6 +36,7 @@ function PDV() {
   const [buscaUser, setBuscaUser] = useState("");
   const [userPag, setUserPag] = useState<any>(null);
   const [saldoUser, setSaldoUser] = useState(0);
+  const [valorRecebido, setValorRecebido] = useState("");
   const [usuariosBusca, setUsuariosBusca] = useState<any[]>([]);
   const [recibo, setRecibo] = useState<any>(null);
 
@@ -249,7 +250,7 @@ function PDV() {
       venda_id: (venda as any).id, operador_id: user.id, descricao: `Venda #${(venda as any).id.slice(0, 8)}`,
     } as never);
     setRecibo({ venda, itens: carrinho, total });
-    setCarrinho([]); setOpenPag(false); setForma("dinheiro"); setUserPag(null); setBuscaUser(""); setSaldoUser(0);
+    setCarrinho([]); setOpenPag(false); setForma("dinheiro"); setUserPag(null); setBuscaUser(""); setSaldoUser(0); setValorRecebido("");
     await load();
   };
 
@@ -474,6 +475,19 @@ function PDV() {
                 <SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="pix">PIX</SelectItem><SelectItem value="cartao_debito">Débito</SelectItem><SelectItem value="cartao_credito">Crédito</SelectItem><SelectItem value="cashback">Cashback</SelectItem>
               </SelectContent></Select>
             </div>
+            {forma === "dinheiro" && (
+              <div className="space-y-2 p-3 bg-muted rounded-lg">
+                <Label>Valor recebido do cliente</Label>
+                <Input type="number" step="0.01" placeholder="0,00" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} />
+                {valorRecebido !== "" && (
+                  Number(valorRecebido) >= total ? (
+                    <div className="text-sm font-semibold text-emerald-600">Troco: {brl(Number(valorRecebido) - total)}</div>
+                  ) : (
+                    <div className="text-sm font-semibold text-rose-500">Falta {brl(total - Number(valorRecebido))}</div>
+                  )
+                )}
+              </div>
+            )}
             {forma === "cashback" && (
               <div className="space-y-2">
                 <div className="flex gap-2"><Input placeholder="Nome ou WhatsApp" value={buscaUser} onChange={e => setBuscaUser(e.target.value)} /><Button onClick={buscarUser}>Buscar</Button></div>
