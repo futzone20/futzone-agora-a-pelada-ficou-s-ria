@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, History, Calculator } from "lucide-react";
+import { ProdutoFotoPicker } from "@/components/ProdutoFotoPicker";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/produtos")({ component: ProdutosPage });
@@ -154,7 +155,7 @@ function ProdutosPage() {
               <div className="space-y-3">
                 <div><Label>Categoria</Label><Select value={pForm.categoria_id} onValueChange={v => setPForm({ ...pForm, categoria_id: v })}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{cats.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent></Select></div>
                 <div><Label>Nome</Label><Input value={pForm.nome} onChange={e => setPForm({ ...pForm, nome: e.target.value })} /></div>
-                <div><Label>Foto URL</Label><Input value={pForm.foto_url} onChange={e => setPForm({ ...pForm, foto_url: e.target.value })} /></div>
+                <ProdutoFotoPicker value={pForm.foto_url} nomeSugestao={pForm.nome} onChange={url => setPForm({ ...pForm, foto_url: url })} />
                 <div className="grid grid-cols-2 gap-2">
                   <div><Label>Preço de custo</Label><Input type="number" step="0.01" value={pForm.preco_custo} onChange={e => setPForm({ ...pForm, preco_custo: +e.target.value })} /></div>
                   <div><Label>Preço de venda</Label><Input type="number" step="0.01" value={pForm.preco} onChange={e => setPForm({ ...pForm, preco: +e.target.value })} /></div>
