@@ -77,6 +77,15 @@ function AgPage() {
   const [novo, setNovo] = useState<any>(NOVO_VAZIO);
   const [valorManual, setValorManual] = useState(false);
 
+  // Vincular a um capitão e um grupo dele (cria a pelada já, em "rascunho"
+  // pendente de configuração, pro capitão só finalizar depois).
+  const [vincularCapitao, setVincularCapitao] = useState(false);
+  const [buscaCapitao, setBuscaCapitao] = useState("");
+  const [capitaesBusca, setCapitaesBusca] = useState<any[]>([]);
+  const [capitaoSelecionado, setCapitaoSelecionado] = useState<any>(null);
+  const [gruposCapitao, setGruposCapitao] = useState<any[]>([]);
+  const [grupoSelecionado, setGrupoSelecionado] = useState("");
+
   // Reagendar
   const [reagendarAg, setReagendarAg] = useState<any>(null);
   const [reagendarForm, setReagendarForm] = useState<any>({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "" });
@@ -121,10 +130,38 @@ function AgPage() {
     if (error) toast.error(error.message); else { toast.success("Bloqueio criado"); setOpenBloq(false); setBloq({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "", motivo: "" }); }
   };
 
+  const resetVinculo = () => {
+    setVincularCapitao(false); setBuscaCapitao(""); setCapitaesBusca([]);
+    setCapitaoSelecionado(null); setGruposCapitao([]); setGrupoSelecionado("");
+  };
+
+  const buscarCapitao = async () => {
+    const q = buscaCapitao.trim(); if (!q) return;
+    const { data } = await supabase.from("profiles").select("user_id,nome,whatsapp").eq("role", "capitao").or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(5);
+    setCapitaesBusca(data ?? []);
+  };
+
+  const selecionarCapitao = async (c: any) => {
+    setCapitaoSelecionado(c);
+    setCapitaesBusca([]);
+    setBuscaCapitao("");
+    setGrupoSelecionado("");
+    const { data } = await supabase.from("grupo_membros").select("grupo_id, grupos(id,nome)").eq("user_id", c.user_id).eq("papel", "capitao").eq("status", "ativo");
+    const grupos = (data ?? []).map((g: any) => g.grupos).filter(Boolean);
+    setGruposCapitao(grupos);
+    if (grupos.length === 1) setGrupoSelecionado(grupos[0].id);
+  };
+
   const criarAgendamentoManual = async () => {
     if (!arena || !user) return;
+    const vinculando = vincularCapitao && !!capitaoSelecionado && !!grupoSelecionado;
+    if (vincularCapitao && !vinculando) { toast.error("Selecione o capitão e o grupo dele"); return; }
+
     const base = {
-      arena_id: arena.id, quadra_id: novo.quadra_id, capitao_id: user.id, cliente_nome: novo.cliente_nome || null,
+      arena_id: arena.id, quadra_id: novo.quadra_id,
+      capitao_id: vinculando ? capitaoSelecionado.user_id : user.id,
+      grupo_id: vinculando ? grupoSelecionado : null,
+      cliente_nome: vinculando ? capitaoSelecionado.nome : (novo.cliente_nome || null),
       horario_inicio: novo.horario_inicio, horario_fim: novo.horario_fim,
       valor_cobrado: novo.valor_cobrado, observacoes: novo.observacoes || null,
       status: "confirmado",
@@ -146,12 +183,29 @@ function AgPage() {
       }
     }
     const recorrenciaId = novo.fixa && datas.length > 1 ? crypto.randomUUID() : null;
-    const linhas = datas.map(data => ({ ...base, data, recorrencia_id: recorrenciaId } as never));
 
-    const { error } = await supabase.from("agendamentos").insert(linhas);
-    if (error) { toast.error(error.message); return; }
+    if (vinculando) {
+      // Cada ocorrência vira a própria "pelada" (rascunho) na data certa —
+      // o capitão finaliza a configuração depois, no perfil do grupo dele.
+      for (const data of datas) {
+        const { data: peladaRow, error: ePelada } = await supabase.from("peladas").insert({
+          criado_por: capitaoSelecionado.user_id, grupo_id: grupoSelecionado, data,
+          horario_inicio: novo.horario_inicio, horario_fim: novo.horario_fim,
+          nome_pelada: `Pelada ${data.split("-").reverse().join("/")}`,
+          configuracao_pendente: true,
+        } as never).select("id").single();
+        if (ePelada || !peladaRow) { toast.error(ePelada?.message || "Erro ao criar a pelada"); return; }
+        const { error } = await supabase.from("agendamentos").insert({ ...base, data, recorrencia_id: recorrenciaId, pelada_id: (peladaRow as any).id } as never);
+        if (error) { toast.error(error.message); return; }
+      }
+    } else {
+      const linhas = datas.map(data => ({ ...base, data, recorrencia_id: recorrenciaId } as never));
+      const { error } = await supabase.from("agendamentos").insert(linhas);
+      if (error) { toast.error(error.message); return; }
+    }
+
     toast.success(datas.length > 1 ? `Agendamento criado — ${datas.length} reservas fixas` : "Agendamento criado");
-    setOpenNovo(false); setNovo(NOVO_VAZIO); setValorManual(false); void load();
+    setOpenNovo(false); setNovo(NOVO_VAZIO); setValorManual(false); resetVinculo(); void load();
   };
 
   // ---- Dar baixa ----
@@ -273,13 +327,47 @@ function AgPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Dialog open={openNovo} onOpenChange={o => { setOpenNovo(o); if (!o) { setNovo(NOVO_VAZIO); setValorManual(false); } }}>
+        <Dialog open={openNovo} onOpenChange={o => { setOpenNovo(o); if (!o) { setNovo(NOVO_VAZIO); setValorManual(false); resetVinculo(); } }}>
           <DialogTrigger asChild><Button><CalendarPlus className="h-4 w-4 mr-1" />Novo agendamento</Button></DialogTrigger>
           <DialogContent className="max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Agendar horário manualmente</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Local (quadra)</Label><Select value={novo.quadra_id} onValueChange={v => setNovo({ ...novo, quadra_id: v })}><SelectTrigger><SelectValue placeholder="Selecione a quadra" /></SelectTrigger><SelectContent>{quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}</SelectContent></Select></div>
-              <div><Label>Nome do cliente</Label><Input value={novo.cliente_nome} onChange={e => setNovo({ ...novo, cliente_nome: e.target.value })} placeholder="Ex: João (grupo da pelada de sexta)" /></div>
+              {!vincularCapitao && (
+                <div><Label>Nome do cliente</Label><Input value={novo.cliente_nome} onChange={e => setNovo({ ...novo, cliente_nome: e.target.value })} placeholder="Ex: João (grupo da pelada de sexta)" /></div>
+              )}
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label>Vincular a um capitão?</Label>
+                  <p className="text-[11px] text-muted-foreground">Já cria a pelada pro grupo dele, pendente de configuração</p>
+                </div>
+                <Switch checked={vincularCapitao} onCheckedChange={v => { setVincularCapitao(v); if (!v) resetVinculo(); }} />
+              </div>
+              {vincularCapitao && (
+                <div className="space-y-2 rounded-lg border p-3">
+                  {!capitaoSelecionado ? (
+                    <>
+                      <div className="flex gap-2"><Input placeholder="Nome ou WhatsApp do capitão" value={buscaCapitao} onChange={e => setBuscaCapitao(e.target.value)} onKeyDown={e => e.key === "Enter" && buscarCapitao()} /><Button type="button" onClick={buscarCapitao}>Buscar</Button></div>
+                      {capitaesBusca.map(c => <div key={c.user_id} className="p-2 border rounded cursor-pointer hover:bg-muted text-sm" onClick={() => selecionarCapitao(c)}>{c.nome}</div>)}
+                      {capitaesBusca.length === 0 && buscaCapitao && <p className="text-xs text-muted-foreground">Busque e clique em "Buscar".</p>}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="p-2 bg-muted rounded text-sm flex-1"><b>{capitaoSelecionado.nome}</b></div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setCapitaoSelecionado(null); setGruposCapitao([]); setGrupoSelecionado(""); }}>Trocar</Button>
+                      </div>
+                      {gruposCapitao.length === 0 && <p className="text-xs text-amber-500">Esse capitão não tem nenhum grupo — não é possível vincular.</p>}
+                      {gruposCapitao.length > 1 && (
+                        <div><Label>Qual grupo dele?</Label><Select value={grupoSelecionado} onValueChange={setGrupoSelecionado}><SelectTrigger><SelectValue placeholder="Selecione o grupo" /></SelectTrigger><SelectContent>{gruposCapitao.map(g => <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>)}</SelectContent></Select></div>
+                      )}
+                      {gruposCapitao.length === 1 && <p className="text-xs text-muted-foreground">Grupo: <b className="text-foreground">{gruposCapitao[0].nome}</b></p>}
+                    </>
+                  )}
+                </div>
+              )}
+
               <div><Label>Data</Label><Input type="date" value={novo.data} onChange={e => setNovo({ ...novo, data: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-2">
                 <div><Label>Início</Label><Input type="time" value={novo.horario_inicio} onChange={e => setNovo({ ...novo, horario_inicio: e.target.value })} /></div>
@@ -315,7 +403,7 @@ function AgPage() {
 
               <div><Label>Observações (opcional)</Label><Input value={novo.observacoes} onChange={e => setNovo({ ...novo, observacoes: e.target.value })} /></div>
               {!novo.pagamento_antecipado && <p className="text-xs text-muted-foreground">O pagamento só entra no financeiro quando você "Dar baixa" depois de criado.</p>}
-              <Button onClick={criarAgendamentoManual} className="w-full" disabled={!novo.quadra_id || !novo.data || !novo.horario_inicio || !novo.horario_fim}>
+              <Button onClick={criarAgendamentoManual} className="w-full" disabled={!novo.quadra_id || !novo.data || !novo.horario_inicio || !novo.horario_fim || (vincularCapitao && (!capitaoSelecionado || !grupoSelecionado))}>
                 {novo.fixa ? <><Repeat className="h-4 w-4 mr-1" />Agendar fixo</> : "Agendar"}
               </Button>
             </div>
