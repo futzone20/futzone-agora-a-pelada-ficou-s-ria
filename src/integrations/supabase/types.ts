@@ -458,13 +458,16 @@ export type Database = {
           foto_capa_url: string | null
           horario_funcionamento: Json | null
           id: string
+          imposto_pct: number
           latitude: number | null
           logo_url: string | null
           longitude: number | null
+          margem_lucro_pct: number
           nome: string
           plano: string
           plano_validade: string | null
           slug: string
+          taxa_cartao_pct: number
           telefone: string | null
           user_id: string
           whatsapp: string | null
@@ -481,13 +484,16 @@ export type Database = {
           foto_capa_url?: string | null
           horario_funcionamento?: Json | null
           id?: string
+          imposto_pct?: number
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
+          margem_lucro_pct?: number
           nome: string
           plano?: string
           plano_validade?: string | null
           slug: string
+          taxa_cartao_pct?: number
           telefone?: string | null
           user_id: string
           whatsapp?: string | null
@@ -504,13 +510,16 @@ export type Database = {
           foto_capa_url?: string | null
           horario_funcionamento?: Json | null
           id?: string
+          imposto_pct?: number
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
+          margem_lucro_pct?: number
           nome?: string
           plano?: string
           plano_validade?: string | null
           slug?: string
+          taxa_cartao_pct?: number
           telefone?: string | null
           user_id?: string
           whatsapp?: string | null
@@ -2303,6 +2312,7 @@ export type Database = {
           id: string
           nome: string
           preco: number
+          preco_custo: number
         }
         Insert: {
           arena_id: string
@@ -2316,6 +2326,7 @@ export type Database = {
           id?: string
           nome: string
           preco?: number
+          preco_custo?: number
         }
         Update: {
           arena_id?: string
@@ -2329,6 +2340,7 @@ export type Database = {
           id?: string
           nome?: string
           preco?: number
+          preco_custo?: number
         }
         Relationships: [
           {
@@ -2347,9 +2359,184 @@ export type Database = {
           },
         ]
       }
+      pdv_produtos_custo_historico: {
+        Row: {
+          arena_id: string
+          criado_em: string
+          id: string
+          observacao: string | null
+          preco_custo: number
+          preco_venda: number | null
+          produto_id: string
+          quantidade_reposta: number | null
+          registrado_por: string | null
+        }
+        Insert: {
+          arena_id: string
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          preco_custo: number
+          preco_venda?: number | null
+          produto_id: string
+          quantidade_reposta?: number | null
+          registrado_por?: string | null
+        }
+        Update: {
+          arena_id?: string
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          preco_custo?: number
+          preco_venda?: number | null
+          produto_id?: string
+          quantidade_reposta?: number | null
+          registrado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_produtos_custo_historico_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_produtos_custo_historico_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caixa_sessoes: {
+        Row: {
+          abertura_detalhe: Json | null
+          aberto_em: string
+          arena_id: string
+          criado_em: string
+          diferenca: number | null
+          fechado_em: string | null
+          fechamento_detalhe: Json | null
+          id: string
+          observacoes: string | null
+          operador_abertura_id: string
+          operador_fechamento_id: string | null
+          status: string
+          valor_abertura: number
+          valor_calculado_fechamento: number | null
+          valor_contado_fechamento: number | null
+        }
+        Insert: {
+          abertura_detalhe?: Json | null
+          aberto_em?: string
+          arena_id: string
+          criado_em?: string
+          diferenca?: number | null
+          fechado_em?: string | null
+          fechamento_detalhe?: Json | null
+          id?: string
+          observacoes?: string | null
+          operador_abertura_id: string
+          operador_fechamento_id?: string | null
+          status?: string
+          valor_abertura?: number
+          valor_calculado_fechamento?: number | null
+          valor_contado_fechamento?: number | null
+        }
+        Update: {
+          abertura_detalhe?: Json | null
+          aberto_em?: string
+          arena_id?: string
+          criado_em?: string
+          diferenca?: number | null
+          fechado_em?: string | null
+          fechamento_detalhe?: Json | null
+          id?: string
+          observacoes?: string | null
+          operador_abertura_id?: string
+          operador_fechamento_id?: string | null
+          status?: string
+          valor_abertura?: number
+          valor_calculado_fechamento?: number | null
+          valor_contado_fechamento?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_sessoes_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caixa_movimentos: {
+        Row: {
+          arena_id: string
+          caixa_sessao_id: string
+          criado_em: string
+          descricao: string | null
+          forma_pagamento: string | null
+          id: string
+          operador_id: string | null
+          tipo: string
+          valor: number
+          venda_id: string | null
+        }
+        Insert: {
+          arena_id: string
+          caixa_sessao_id: string
+          criado_em?: string
+          descricao?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          operador_id?: string | null
+          tipo: string
+          valor: number
+          venda_id?: string | null
+        }
+        Update: {
+          arena_id?: string
+          caixa_sessao_id?: string
+          criado_em?: string
+          descricao?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          operador_id?: string | null
+          tipo?: string
+          valor?: number
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_movimentos_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_movimentos_caixa_sessao_id_fkey"
+            columns: ["caixa_sessao_id"]
+            isOneToOne: false
+            referencedRelation: "caixa_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_movimentos_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_vendas: {
         Row: {
           arena_id: string
+          caixa_sessao_id: string | null
           cashback_utilizado: number
           criado_em: string
           forma_pagamento: string
@@ -2360,6 +2547,7 @@ export type Database = {
         }
         Insert: {
           arena_id: string
+          caixa_sessao_id?: string | null
           cashback_utilizado?: number
           criado_em?: string
           forma_pagamento: string
@@ -2370,6 +2558,7 @@ export type Database = {
         }
         Update: {
           arena_id?: string
+          caixa_sessao_id?: string | null
           cashback_utilizado?: number
           criado_em?: string
           forma_pagamento?: string
@@ -2384,6 +2573,13 @@ export type Database = {
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_vendas_caixa_sessao_id_fkey"
+            columns: ["caixa_sessao_id"]
+            isOneToOne: false
+            referencedRelation: "caixa_sessoes"
             referencedColumns: ["id"]
           },
         ]
