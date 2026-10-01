@@ -38,6 +38,7 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
   const [dividindo, setDividindo] = useState(false);
   const [forma, setForma] = useState("dinheiro");
   const [salvando, setSalvando] = useState(false);
+  const [valorRecebido, setValorRecebido] = useState("");
 
   const carregarItens = async () => {
     const { data } = await supabase.from("pdv_comanda_itens").select("*, pdv_produtos(nome)").eq("comanda_id", comanda.id).order("criado_em");
@@ -226,6 +227,19 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
           {comanda.tipo === "separada" && (
             <div className="space-y-2 pt-1">
               <div><Label>Forma de pagamento</Label><Select value={forma} onValueChange={setForma}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+              {forma === "dinheiro" && (
+                <div className="space-y-2 p-3 bg-muted rounded-lg">
+                  <Label>Valor recebido do cliente</Label>
+                  <Input type="number" step="0.01" placeholder="0,00" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} />
+                  {valorRecebido !== "" && (
+                    Number(valorRecebido) >= total ? (
+                      <div className="text-sm font-semibold text-emerald-600">Troco: {brl(Number(valorRecebido) - total)}</div>
+                    ) : (
+                      <div className="text-sm font-semibold text-rose-500">Falta {brl(total - Number(valorRecebido))}</div>
+                    )
+                  )}
+                </div>
+              )}
               <Button onClick={finalizarSeparada} disabled={itens.length === 0 || salvando} className="w-full"><Wallet className="h-4 w-4 mr-1" />Finalizar e cobrar — {brl(total)}</Button>
             </div>
           )}
