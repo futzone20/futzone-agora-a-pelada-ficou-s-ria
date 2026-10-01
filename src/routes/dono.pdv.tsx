@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ContagemCaixa, totalContagem, type ContagemDetalhe } from "@/components/ContagemCaixa";
 import { ComandaDialog } from "@/components/ComandaDialog";
-import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle, ImageOff, Search, Eye, EyeOff } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle, ImageOff, Search, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/pdv")({ component: PDV });
@@ -31,7 +31,7 @@ function PDV() {
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   const [carrinho, setCarrinho] = useState<Item[]>([]);
-  const [openPag, setOpenPag] = useState(false);
+  const [mostrarPagamento, setMostrarPagamento] = useState(false);
   const [forma, setForma] = useState("dinheiro");
   const [buscaUser, setBuscaUser] = useState("");
   const [userPag, setUserPag] = useState<any>(null);
@@ -250,7 +250,7 @@ function PDV() {
       venda_id: (venda as any).id, operador_id: user.id, descricao: `Venda #${(venda as any).id.slice(0, 8)}`,
     } as never);
     setRecibo({ venda, itens: carrinho, total });
-    setCarrinho([]); setOpenPag(false); setForma("dinheiro"); setUserPag(null); setBuscaUser(""); setSaldoUser(0); setValorRecebido("");
+    setCarrinho([]); setMostrarPagamento(false); setForma("dinheiro"); setUserPag(null); setBuscaUser(""); setSaldoUser(0); setValorRecebido("");
     await load();
   };
 
@@ -382,12 +382,19 @@ function PDV() {
                 </div>
               </div>
 
-              {/* Pedido — painel lateral fixo */}
+              {/* Pedido — painel lateral fixo. O pagamento (forma, troco, cashback)
+                  acontece dentro deste mesmo painel, nunca em modal — só troca
+                  o conteúdo abaixo do carrinho. */}
               <Card className="p-3 lg:sticky lg:top-4 bg-card shadow-lg">
-                <div className="flex items-center gap-2 mb-2"><ShoppingCart className="h-4 w-4" /><b>Pedido {carrinho.length > 0 ? `(${carrinho.length})` : ""}</b></div>
+                <div className="flex items-center gap-2 mb-2">
+                  {mostrarPagamento && (
+                    <Button size="icon" variant="ghost" className="h-6 w-6 -ml-1" onClick={() => setMostrarPagamento(false)}><ArrowLeft className="h-4 w-4" /></Button>
+                  )}
+                  <ShoppingCart className="h-4 w-4" /><b>Pedido {carrinho.length > 0 ? `(${carrinho.length})` : ""}</b>
+                </div>
                 {carrinho.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-6">Toque em um produto para adicionar ao pedido.</p>
-                ) : (
+                ) : !mostrarPagamento ? (
                   <>
                     <div className="max-h-[50vh] overflow-y-auto">
                       {carrinho.map(i => (
@@ -403,8 +410,39 @@ function PDV() {
                       ))}
                     </div>
                     <div className="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
-                    <Button onClick={() => setOpenPag(true)} className="w-full mt-2">Finalizar</Button>
+                    <Button onClick={() => setMostrarPagamento(true)} className="w-full mt-2">Finalizar</Button>
                   </>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="border-b pb-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
+                    <div>
+                      <Label>Forma de pagamento</Label>
+                      <Select value={forma} onValueChange={setForma}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="pix">PIX</SelectItem><SelectItem value="cartao_debito">Débito</SelectItem><SelectItem value="cartao_credito">Crédito</SelectItem><SelectItem value="cashback">Cashback</SelectItem>
+                      </SelectContent></Select>
+                    </div>
+                    {forma === "dinheiro" && (
+                      <div className="space-y-2 p-3 bg-muted rounded-lg">
+                        <Label>Valor recebido do cliente</Label>
+                        <Input type="number" step="0.01" placeholder="0,00" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} />
+                        {valorRecebido !== "" && (
+                          Number(valorRecebido) >= total ? (
+                            <div className="text-sm font-semibold text-emerald-600">Troco: {brl(Number(valorRecebido) - total)}</div>
+                          ) : (
+                            <div className="text-sm font-semibold text-rose-500">Falta {brl(total - Number(valorRecebido))}</div>
+                          )
+                        )}
+                      </div>
+                    )}
+                    {forma === "cashback" && (
+                      <div className="space-y-2">
+                        <div className="flex gap-2"><Input placeholder="Nome ou WhatsApp" value={buscaUser} onChange={e => setBuscaUser(e.target.value)} /><Button onClick={buscarUser}>Buscar</Button></div>
+                        {usuariosBusca.map(u => <div key={u.user_id} className="p-2 border rounded cursor-pointer hover:bg-muted text-sm" onClick={() => selecionarUser(u)}>{u.nome}</div>)}
+                        {userPag && <div className="p-2 bg-muted rounded text-sm"><b>{userPag.nome}</b> — saldo {brl(saldoUser)}{saldoUser < total && <div className="text-rose-500 text-xs">Saldo insuficiente</div>}</div>}
+                      </div>
+                    )}
+                    <Button onClick={finalizar} className="w-full" disabled={forma === "cashback" && (!userPag || saldoUser < total)}>Confirmar venda</Button>
+                  </div>
                 )}
               </Card>
             </div>
@@ -465,40 +503,6 @@ function PDV() {
           </div>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={openPag} onOpenChange={setOpenPag}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Pagamento — {brl(total)}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Forma de pagamento</Label>
-              <Select value={forma} onValueChange={setForma}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
-                <SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="pix">PIX</SelectItem><SelectItem value="cartao_debito">Débito</SelectItem><SelectItem value="cartao_credito">Crédito</SelectItem><SelectItem value="cashback">Cashback</SelectItem>
-              </SelectContent></Select>
-            </div>
-            {forma === "dinheiro" && (
-              <div className="space-y-2 p-3 bg-muted rounded-lg">
-                <Label>Valor recebido do cliente</Label>
-                <Input type="number" step="0.01" placeholder="0,00" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} />
-                {valorRecebido !== "" && (
-                  Number(valorRecebido) >= total ? (
-                    <div className="text-sm font-semibold text-emerald-600">Troco: {brl(Number(valorRecebido) - total)}</div>
-                  ) : (
-                    <div className="text-sm font-semibold text-rose-500">Falta {brl(total - Number(valorRecebido))}</div>
-                  )
-                )}
-              </div>
-            )}
-            {forma === "cashback" && (
-              <div className="space-y-2">
-                <div className="flex gap-2"><Input placeholder="Nome ou WhatsApp" value={buscaUser} onChange={e => setBuscaUser(e.target.value)} /><Button onClick={buscarUser}>Buscar</Button></div>
-                {usuariosBusca.map(u => <div key={u.user_id} className="p-2 border rounded cursor-pointer hover:bg-muted" onClick={() => selecionarUser(u)}>{u.nome}</div>)}
-                {userPag && <div className="p-2 bg-muted rounded text-sm"><b>{userPag.nome}</b> — saldo {brl(saldoUser)}{saldoUser < total && <div className="text-rose-500 text-xs">Saldo insuficiente</div>}</div>}
-              </div>
-            )}
-            <Button onClick={finalizar} className="w-full" disabled={forma === "cashback" && (!userPag || saldoUser < total)}>Confirmar venda</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!recibo} onOpenChange={o => !o && setRecibo(null)}>
         <DialogContent>
