@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { ImageUploadCropper } from "@/components/ImageUploadCropper";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/arena")({ component: ArenaPage });
@@ -16,7 +17,7 @@ const DIAS = [["seg","Seg"],["ter","Ter"],["qua","Qua"],["qui","Qui"],["sex","Se
 function ArenaPage() {
   const { user } = useAuth();
   const [arena, setArena] = useState<any>(null);
-  const [form, setForm] = useState<any>({ nome: "", cnpj_cpf: "", endereco: "", cidade: "", estado: "", cep: "", telefone: "", whatsapp: "", logo_url: "", foto_capa_url: "", horario_funcionamento: {} });
+  const [form, setForm] = useState<any>({ nome: "", cnpj_cpf: "", endereco: "", cidade: "", estado: "", cep: "", telefone: "", whatsapp: "", logo_url: "", foto_capa_url: "", horario_funcionamento: {}, taxa_cartao_pct: 4, imposto_pct: 6, margem_lucro_pct: 30 });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -59,8 +60,54 @@ function ArenaPage() {
           <div><Label>CEP</Label><Input value={form.cep||""} onChange={e=>setForm({...form,cep:e.target.value})}/></div>
           <div><Label>WhatsApp</Label><Input value={form.whatsapp||""} onChange={e=>setForm({...form,whatsapp:e.target.value})}/></div>
         </div>
-        <div><Label>URL da Logo</Label><Input value={form.logo_url||""} onChange={e=>setForm({...form,logo_url:e.target.value})}/></div>
-        <div><Label>URL da Foto de Capa</Label><Input value={form.foto_capa_url||""} onChange={e=>setForm({...form,foto_capa_url:e.target.value})}/></div>
+        {arena?.id ? (
+          <>
+            <ImageUploadCropper
+              label="Logo"
+              value={form.logo_url}
+              arenaId={arena.id}
+              fileSlot="logo"
+              aspect={1}
+              cropShape="round"
+              previewClassName="h-28 w-28"
+              dimensionsHint="Arraste para posicionar e use o zoom para ajustar dentro do círculo."
+              onChange={async (url) => {
+                setForm({ ...form, logo_url: url });
+                await supabase.from("arenas").update({ logo_url: url } as never).eq("id", arena.id);
+              }}
+            />
+            <ImageUploadCropper
+              label="Foto de capa"
+              value={form.foto_capa_url}
+              arenaId={arena.id}
+              fileSlot="capa"
+              aspect={3}
+              cropShape="rect"
+              previewClassName="h-36"
+              dimensionsHint="Recomendado: 1200 x 400px (proporção 3:1) para não ficar cortada ou pixelizada."
+              onChange={async (url) => {
+                setForm({ ...form, foto_capa_url: url });
+                await supabase.from("arenas").update({ foto_capa_url: url } as never).eq("id", arena.id);
+              }}
+            />
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground border border-dashed border-border rounded-lg p-3">
+            Salve os dados da arena pelo menos uma vez (preenchendo o Nome) para liberar o upload de logo e foto de capa.
+          </p>
+        )}
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <div>
+          <h3 className="font-bold">Configurações de preço</h3>
+          <p className="text-xs text-muted-foreground">Usadas na calculadora de preço sugerido, em Produtos.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div><Label>Taxa do cartão (%)</Label><Input type="number" step="0.01" value={form.taxa_cartao_pct ?? 4} onChange={e=>setForm({...form,taxa_cartao_pct:+e.target.value})}/></div>
+          <div><Label>Imposto (%)</Label><Input type="number" step="0.01" value={form.imposto_pct ?? 6} onChange={e=>setForm({...form,imposto_pct:+e.target.value})}/></div>
+          <div><Label>Margem de lucro (%)</Label><Input type="number" step="0.01" value={form.margem_lucro_pct ?? 30} onChange={e=>setForm({...form,margem_lucro_pct:+e.target.value})}/></div>
+        </div>
       </Card>
 
       <Card className="p-4 space-y-2">
