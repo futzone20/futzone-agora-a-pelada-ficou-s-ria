@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ContagemCaixa, totalContagem, type ContagemDetalhe } from "@/components/ContagemCaixa";
-import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History } from "lucide-react";
+import { ComandaDialog } from "@/components/ComandaDialog";
+import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/pdv")({ component: PDV });
@@ -53,6 +55,29 @@ function PDV() {
   const [openHistorico, setOpenHistorico] = useState(false);
   const [historicoSessoes, setHistoricoSessoes] = useState<any[]>([]);
 
+  // ----- Comandas -----
+  const [comandas, setComandas] = useState<any[]>([]);
+  const [openNovaComanda, setOpenNovaComanda] = useState(false);
+  const [novaComandaTipo, setNovaComandaTipo] = useState<"grupo" | "separada">("separada");
+  const [novaComandaNome, setNovaComandaNome] = useState("");
+  const [comandaAberta, setComandaAberta] = useState<any>(null);
+
+  const loadComandas = async (arenaId: string) => {
+    const { data } = await supabase.from("pdv_comandas").select("*").eq("arena_id", arenaId).order("status").order("aberta_em", { ascending: false });
+    setComandas(data ?? []);
+  };
+
+  const abrirNovaComanda = async () => {
+    if (!arena || !user || !novaComandaNome.trim()) return;
+    const { data, error } = await supabase.from("pdv_comandas").insert({
+      arena_id: arena.id, tipo: novaComandaTipo, nome: novaComandaNome.trim(), operador_abertura_id: user.id,
+    } as never).select().single();
+    if (error || !data) { toast.error(error?.message || "Erro ao abrir comanda"); return; }
+    setOpenNovaComanda(false); setNovaComandaNome(""); setNovaComandaTipo("separada");
+    await loadComandas(arena.id);
+    setComandaAberta(data);
+  };
+
   const loadCaixa = async (arenaId: string) => {
     setChecandoCaixa(true);
     const { data } = await supabase.from("caixa_sessoes").select("*").eq("arena_id", arenaId).eq("status", "aberto").maybeSingle();
@@ -73,6 +98,7 @@ function PDV() {
     const { data: p } = await supabase.from("pdv_produtos").select("*, pdv_categorias(nome, codigo)").eq("arena_id", a.id).eq("ativo", true).order("codigo");
     setProdutos(p ?? []);
     await loadCaixa(a.id);
+    await loadComandas(a.id);
   };
   useEffect(() => { void load(); }, [user?.id]);
 
@@ -251,40 +277,100 @@ function PDV() {
         </div>
       </Card>
 
-      <Input placeholder="Buscar por código ou nome..." value={busca} onChange={e => setBusca(e.target.value)} />
-      <div className="grid grid-cols-2 gap-2">
-        {filtrados.map(p => {
-          const noCart = carrinho.find(i => i.produto.id === p.id)?.qtd;
-          const baixo = p.estoque_atual <= p.estoque_minimo;
-          return (
-            <Card key={p.id} className={`p-2 cursor-pointer ${baixo ? "border-rose-500/40" : ""}`} onClick={() => add(p)}>
-              <div className="text-xs text-muted-foreground">{p.codigo}</div>
-              <div className="font-bold text-sm truncate">{p.nome}</div>
-              <div className="text-emerald-500 font-bold">{brl(Number(p.preco))}</div>
-              <div className={`text-xs ${baixo ? "text-rose-500" : ""}`}>Est: {p.estoque_atual}</div>
-              {noCart && <div className="text-xs text-primary">No carrinho: {noCart}</div>}
-            </Card>
-          );
-        })}
-      </div>
+      <Tabs defaultValue="rapida">
+        <TabsList className="w-full">
+          <TabsTrigger value="rapida" className="flex-1">Venda rápida</TabsTrigger>
+          <TabsTrigger value="comandas" className="flex-1">Comandas</TabsTrigger>
+        </TabsList>
 
-      {carrinho.length > 0 && (
-        <Card className="p-3 sticky bottom-20 bg-card shadow-lg">
-          <div className="flex items-center gap-2 mb-2"><ShoppingCart className="h-4 w-4" /><b>Carrinho ({carrinho.length})</b></div>
-          {carrinho.map(i => (
-            <div key={i.produto.id} className="flex items-center justify-between py-1 text-sm">
-              <span className="truncate flex-1">{i.produto.nome}</span>
-              <div className="flex items-center gap-1">
-                <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => dec(i.produto.id)}><Minus className="h-3 w-3" /></Button>
-                <span className="w-6 text-center">{i.qtd}</span>
-                <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => add(i.produto)}><Plus className="h-3 w-3" /></Button>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del(i.produto.id)}><Trash className="h-3 w-3" /></Button>
+        <TabsContent value="rapida" className="space-y-3">
+          <Input placeholder="Buscar por código ou nome..." value={busca} onChange={e => setBusca(e.target.value)} />
+          <div className="grid grid-cols-2 gap-2">
+            {filtrados.map(p => {
+              const noCart = carrinho.find(i => i.produto.id === p.id)?.qtd;
+              const baixo = p.estoque_atual <= p.estoque_minimo;
+              return (
+                <Card key={p.id} className={`p-2 cursor-pointer ${baixo ? "border-rose-500/40" : ""}`} onClick={() => add(p)}>
+                  <div className="text-xs text-muted-foreground">{p.codigo}</div>
+                  <div className="font-bold text-sm truncate">{p.nome}</div>
+                  <div className="text-emerald-500 font-bold">{brl(Number(p.preco))}</div>
+                  <div className={`text-xs ${baixo ? "text-rose-500" : ""}`}>Est: {p.estoque_atual}</div>
+                  {noCart && <div className="text-xs text-primary">No carrinho: {noCart}</div>}
+                </Card>
+              );
+            })}
+          </div>
+
+          {carrinho.length > 0 && (
+            <Card className="p-3 sticky bottom-20 bg-card shadow-lg">
+              <div className="flex items-center gap-2 mb-2"><ShoppingCart className="h-4 w-4" /><b>Carrinho ({carrinho.length})</b></div>
+              {carrinho.map(i => (
+                <div key={i.produto.id} className="flex items-center justify-between py-1 text-sm">
+                  <span className="truncate flex-1">{i.produto.nome}</span>
+                  <div className="flex items-center gap-1">
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => dec(i.produto.id)}><Minus className="h-3 w-3" /></Button>
+                    <span className="w-6 text-center">{i.qtd}</span>
+                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => add(i.produto)}><Plus className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del(i.produto.id)}><Trash className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              ))}
+              <div className="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
+              <Button onClick={() => setOpenPag(true)} className="w-full mt-2">Finalizar</Button>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="comandas" className="space-y-3">
+          <Dialog open={openNovaComanda} onOpenChange={setOpenNovaComanda}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Abrir comanda</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Button type="button" variant={novaComandaTipo === "separada" ? "default" : "outline"} className="flex-1" onClick={() => setNovaComandaTipo("separada")}>Separada</Button>
+                  <Button type="button" variant={novaComandaTipo === "grupo" ? "default" : "outline"} className="flex-1" onClick={() => setNovaComandaTipo("grupo")}>Grupo</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {novaComandaTipo === "separada" ? "Pagamento único ao fechar — ideal pra uma mesa/cliente só." : "Divide o valor total entre várias pessoas ao fechar."}
+                </p>
+                <div><Label>Nome / identificação</Label><Input value={novaComandaNome} onChange={e => setNovaComandaNome(e.target.value)} placeholder={novaComandaTipo === "grupo" ? "Ex: Grupo pelada sexta" : "Ex: Mesa 3"} /></div>
+                <Button onClick={abrirNovaComanda} disabled={!novaComandaNome.trim()} className="w-full"><Receipt className="h-4 w-4 mr-1" />Abrir comanda</Button>
               </div>
-            </div>
+            </DialogContent>
+          </Dialog>
+          <Button onClick={() => setOpenNovaComanda(true)} className="w-full"><Receipt className="h-4 w-4 mr-1" />Abrir nova comanda</Button>
+
+          {comandas.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comanda aberta.</p>}
+          {comandas.map(c => (
+            <Card key={c.id} className="p-3 cursor-pointer" onClick={() => setComandaAberta(c)}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-bold">{c.nome}</div>
+                  <div className="text-xs text-muted-foreground">{c.tipo === "grupo" ? "Grupo" : "Separada"} {c.num_pessoas ? `· ${c.num_pessoas} pessoas` : ""}</div>
+                </div>
+                {c.status === "fechada" ? (
+                  <span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Fechada</span>
+                ) : c.travada ? (
+                  <span className="text-xs text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />Aguardando pagto</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Aberta</span>
+                )}
+              </div>
+            </Card>
           ))}
-          <div className="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
-          <Button onClick={() => setOpenPag(true)} className="w-full mt-2">Finalizar</Button>
-        </Card>
+        </TabsContent>
+      </Tabs>
+
+      {comandaAberta && (
+        <ComandaDialog
+          comanda={comandaAberta}
+          produtos={produtos}
+          arena={arena}
+          user={user}
+          caixa={caixa}
+          onClose={() => setComandaAberta(null)}
+          onChanged={() => { void loadComandas(arena.id); void load(); }}
+        />
       )}
 
       <Dialog open={openPag} onOpenChange={setOpenPag}>
