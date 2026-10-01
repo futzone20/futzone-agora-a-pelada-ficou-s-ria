@@ -121,11 +121,12 @@ function ProdutosPage() {
     setHistorico(data ?? []);
   };
 
+  const sugeridoNovo = useMemo(() => precoSugerido(Number(pForm.preco_custo) || 0), [pForm.preco_custo, arena]);
+  const sugeridoRep = useMemo(() => precoSugerido(Number(repForm.preco_custo) || 0), [repForm.preco_custo, arena]);
+
   if (!arena) return <div className="text-center text-sm text-muted-foreground py-8">Cadastre sua arena primeiro.</div>;
 
   const prodsFiltrados = prods.filter(p => filtroCat === "todas" || p.categoria_id === filtroCat);
-  const sugeridoNovo = useMemo(() => precoSugerido(Number(pForm.preco_custo) || 0), [pForm.preco_custo, arena]);
-  const sugeridoRep = repProduto ? precoSugerido(Number(repForm.preco_custo) || 0) : 0;
 
   return (
     <Tabs defaultValue="produtos">
