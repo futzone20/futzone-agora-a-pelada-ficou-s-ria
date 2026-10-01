@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Trash2, CheckCircle2, Users, Wallet } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, Users, Wallet, ImageOff } from "lucide-react";
 import { toast } from "sonner";
 
 function brl(n: number) { return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -154,9 +154,12 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
             {!comanda.travada && (
               <>
                 <Input placeholder="Buscar produto por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
-                <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto">
                   {filtrados.map((p: any) => (
                     <button key={p.id} type="button" onClick={() => addItem(p)} className="text-left border border-border rounded-lg p-1.5 hover:bg-muted">
+                      <div className="aspect-square rounded bg-muted mb-1 overflow-hidden flex items-center justify-center">
+                        {p.foto_url ? <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" /> : <ImageOff className="h-4 w-4 text-muted-foreground/50" />}
+                      </div>
                       <div className="text-[11px] font-bold truncate">{p.nome}</div>
                       <div className="text-[11px] text-emerald-500">{brl(Number(p.preco))}</div>
                     </button>
