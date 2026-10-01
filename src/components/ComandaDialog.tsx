@@ -34,12 +34,22 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
   const [busca, setBusca] = useState("");
   const [participantes, setParticipantes] = useState<any[]>([]);
   const [novoParticipante, setNovoParticipante] = useState("");
+  const [novoParticipanteValor, setNovoParticipanteValor] = useState("");
   const [numPessoasInput, setNumPessoasInput] = useState("");
   const [dividindo, setDividindo] = useState(false);
   const [forma, setForma] = useState("dinheiro");
   const [salvando, setSalvando] = useState(false);
   const [valorRecebido, setValorRecebido] = useState("");
 
+  // Recarrega a comanda do banco (não só itens/participantes): sem isso, se
+  // o dono dividir a conta, sair de tela e reabrir essa comanda a partir de
+  // um snapshot antigo (a lista de comandas aberta antes da divisão), o
+  // diálogo reiniciava do zero como se "travada"/"num_pessoas" nunca
+  // tivessem sido definidos — fazendo parecer que ninguém tinha pago ainda.
+  const carregarComanda = async () => {
+    const { data } = await supabase.from("pdv_comandas").select("*").eq("id", comanda.id).maybeSingle();
+    if (data) setComanda(data);
+  };
   const carregarItens = async () => {
     const { data } = await supabase.from("pdv_comanda_itens").select("*, pdv_produtos(nome)").eq("comanda_id", comanda.id).order("criado_em");
     setItens(data ?? []);
@@ -48,11 +58,16 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
     const { data } = await supabase.from("pdv_comanda_participantes").select("*").eq("comanda_id", comanda.id).order("pago").order("criado_em");
     setParticipantes(data ?? []);
   };
-  useEffect(() => { void carregarItens(); void carregarParticipantes(); }, [comanda.id]);
+  useEffect(() => { void carregarComanda(); void carregarItens(); void carregarParticipantes(); }, [comanda.id]);
 
   const total = useMemo(() => itens.reduce((s, i) => s + Number(i.subtotal), 0), [itens]);
   const cota = comanda.num_pessoas ? total / comanda.num_pessoas : 0;
-  const pagoSum = participantes.filter(p => p.pago).length * cota;
+  // Cada participante pode ter um valor diferente (alguém paga mais, outro
+  // menos) — valor_cota é o valor específico dele; sem edição manual, cai
+  // na divisão igual (cota).
+  const valorDe = (p: any) => (p.valor_cota != null ? Number(p.valor_cota) : cota);
+  const pagoSum = participantes.filter(p => p.pago).reduce((s, p) => s + valorDe(p), 0);
+  const somaTotalParticipantes = participantes.reduce((s, p) => s + valorDe(p), 0);
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase(); if (!q) return produtos;
@@ -113,24 +128,44 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
     if (error) { toast.error(error.message); return; }
     setComanda({ ...comanda, travada: true, num_pessoas: n });
     setDividindo(false);
+    onChanged(); // a lista de comandas (fora deste diálogo) precisa saber que travou, senão reabre do zero
   };
 
   const addParticipante = async () => {
     if (!novoParticipante.trim()) return;
     if (participantes.length >= (comanda.num_pessoas || 0)) { toast.error(`Já tem ${comanda.num_pessoas} pessoas adicionadas`); return; }
-    await supabase.from("pdv_comanda_participantes").insert({ comanda_id: comanda.id, nome: novoParticipante.trim() } as never);
-    setNovoParticipante("");
+    const valor = novoParticipanteValor.trim() ? Number(novoParticipanteValor) : cota;
+    const { error } = await supabase.from("pdv_comanda_participantes").insert({ comanda_id: comanda.id, nome: novoParticipante.trim(), valor_cota: valor } as never);
+    if (error) { toast.error(error.message); return; }
+    setNovoParticipante(""); setNovoParticipanteValor("");
     void carregarParticipantes();
   };
 
   const togglePago = async (p: any) => {
-    await supabase.from("pdv_comanda_participantes").update({ pago: !p.pago, pago_em: !p.pago ? new Date().toISOString() : null } as never).eq("id", p.id);
+    const { error } = await supabase.from("pdv_comanda_participantes").update({ pago: !p.pago, pago_em: !p.pago ? new Date().toISOString() : null } as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
     void carregarParticipantes();
   };
 
-  const removerParticipante = async (id: string) => { await supabase.from("pdv_comanda_participantes").delete().eq("id", id); void carregarParticipantes(); };
+  // Permite ajustar o valor de cada um a qualquer momento (antes de marcar
+  // como pago) — um amigo pode cobrir mais, outro menos, não precisa ser
+  // sempre a divisão igual.
+  const atualizarValorParticipante = async (p: any, novoValor: string) => {
+    const valor = novoValor.trim() === "" ? null : Number(novoValor);
+    if (valor != null && Number.isNaN(valor)) return;
+    const { error } = await supabase.from("pdv_comanda_participantes").update({ valor_cota: valor } as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
+    void carregarParticipantes();
+  };
+
+  const removerParticipante = async (id: string) => {
+    const { error } = await supabase.from("pdv_comanda_participantes").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    void carregarParticipantes();
+  };
 
   const todosPagos = comanda.num_pessoas > 0 && participantes.length === comanda.num_pessoas && participantes.every(p => p.pago);
+  const diferencaSoma = total - somaTotalParticipantes;
 
   const confirmarBaixaGrupo = async () => {
     if (!caixa) { toast.error("Abra o caixa antes de finalizar"); return; }
@@ -260,25 +295,41 @@ export function ComandaDialog({ comanda: comandaInicial, produtos, arena, user, 
           {comanda.tipo === "grupo" && comanda.travada && (
             <div className="space-y-3 pt-1">
               <Card className="p-3 space-y-1 text-sm">
-                <div className="flex justify-between"><span>{comanda.num_pessoas} pessoas · individual</span><b>{brl(cota)}</b></div>
+                <div className="flex justify-between"><span>{comanda.num_pessoas} pessoas · divisão igual</span><b>{brl(cota)}</b></div>
                 <div className="border-t border-border pt-1 flex justify-between"><span className="text-emerald-500">Pago</span><span className="text-emerald-500 font-bold">{brl(pagoSum)}</span></div>
                 <div className="flex justify-between"><span className="text-amber-500">Restante</span><span className="text-amber-500 font-bold">{brl(total - pagoSum)}</span></div>
+                {Math.abs(diferencaSoma) >= 0.01 && (
+                  <div className="text-[11px] text-muted-foreground pt-1 border-t border-border">
+                    Valores somam {brl(somaTotalParticipantes)} — {diferencaSoma > 0 ? `faltam ${brl(diferencaSoma)} pra fechar o total` : `${brl(-diferencaSoma)} acima do total`}
+                  </div>
+                )}
               </Card>
               {participantes.length < comanda.num_pessoas && (
                 <div className="flex gap-2">
-                  <Input placeholder="Nome do participante" value={novoParticipante} onChange={e => setNovoParticipante(e.target.value)} onKeyDown={e => e.key === "Enter" && addParticipante()} />
+                  <Input placeholder="Nome do participante" value={novoParticipante} onChange={e => setNovoParticipante(e.target.value)} onKeyDown={e => e.key === "Enter" && addParticipante()} className="flex-1" />
+                  <Input type="number" step="0.01" placeholder={brl(cota)} value={novoParticipanteValor} onChange={e => setNovoParticipanteValor(e.target.value)} className="w-24" onKeyDown={e => e.key === "Enter" && addParticipante()} />
                   <Button type="button" onClick={addParticipante}><Plus className="h-4 w-4" /></Button>
                 </div>
               )}
+              <p className="text-[11px] text-muted-foreground -mt-1">Por padrão cada um paga a parte igual — edite o valor se alguém for pagar mais ou menos.</p>
               <div className="space-y-1.5">
                 {participantes.map(p => (
                   <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
-                    <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                    <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
                       <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} />
-                      <span className={p.pago ? "" : "font-bold"}>{p.nome}</span>
+                      <span className={`truncate ${p.pago ? "" : "font-bold"}`}>{p.nome}</span>
                     </label>
-                    <span className="text-xs text-muted-foreground">{brl(cota)}</span>
-                    {!p.pago && <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>}
+                    {p.pago ? (
+                      <span className="text-xs text-muted-foreground shrink-0">{brl(valorDe(p))}</span>
+                    ) : (
+                      <Input
+                        type="number" step="0.01"
+                        className="h-7 w-20 text-right text-xs shrink-0"
+                        defaultValue={p.valor_cota != null ? String(p.valor_cota) : String(cota.toFixed(2))}
+                        onBlur={e => atualizarValorParticipante(p, e.target.value)}
+                      />
+                    )}
+                    {!p.pago && <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>}
                   </div>
                 ))}
               </div>
