@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, History, Calculator, Settings } from "lucide-react";
+import { Plus, History, Calculator, Settings, ImageOff } from "lucide-react";
 import { ProdutoFotoPicker } from "@/components/ProdutoFotoPicker";
 import { toast } from "sonner";
 
@@ -104,7 +104,14 @@ function ProdutosPage() {
 
   const criarProd = async () => {
     if (!arena || !pForm.categoria_id) return;
-    const proxCod = prods.length === 0 ? 10 : Math.max(...prods.map((p: any) => p.codigo)) + 10;
+    // Código do produto começa com o código da categoria (ex: categoria 10 →
+    // produtos 1001, 1002...), assim dá pra digitar só o início (o código da
+    // categoria) na busca do PDV e já aparecerem todos os produtos dela.
+    const cat = cats.find(c => c.id === pForm.categoria_id);
+    if (!cat) { toast.error("Selecione uma categoria"); return; }
+    const base = cat.codigo * 100;
+    const doCategoria = prods.filter((p: any) => p.categoria_id === pForm.categoria_id);
+    const proxCod = doCategoria.length === 0 ? base + 1 : Math.max(...doCategoria.map((p: any) => p.codigo)) + 1;
     const { data: novo, error } = await supabase.from("pdv_produtos").insert({
       nome: pForm.nome, categoria_id: pForm.categoria_id, preco: pForm.preco, preco_custo: pForm.preco_custo,
       estoque_atual: pForm.estoque_atual, estoque_minimo: pForm.estoque_minimo, foto_url: pForm.foto_url,
@@ -254,14 +261,19 @@ function ProdutosPage() {
           const margemAtual = Number(p.preco) > 0 ? ((Number(p.preco) - Number(p.preco_custo)) / Number(p.preco)) * 100 : 0;
           return (
             <Card key={p.id} className="p-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-bold">{p.codigo} - {p.nome}</div>
-                  <div className="text-xs text-muted-foreground">{p.pdv_categorias?.nome}</div>
-                  <div className="text-xs mt-0.5">Custo {brl(p.preco_custo)} · Venda <b>{brl(p.preco)}</b> {Number(p.preco) > 0 && <span className="text-muted-foreground">({margemAtual.toFixed(0)}% margem)</span>}</div>
-                  <div className={`text-xs mt-1 ${p.estoque_atual <= p.estoque_minimo ? "text-rose-500 font-bold" : ""}`}>Estoque: {p.estoque_atual} (mín {p.estoque_minimo})</div>
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex gap-2.5 min-w-0">
+                  <div className="h-12 w-12 shrink-0 rounded-md bg-muted overflow-hidden flex items-center justify-center">
+                    {p.foto_url ? <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" /> : <ImageOff className="h-5 w-5 text-muted-foreground/50" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold truncate">{p.codigo} - {p.nome}</div>
+                    <div className="text-xs text-muted-foreground">{p.pdv_categorias?.nome}</div>
+                    <div className="text-xs mt-0.5">Custo {brl(p.preco_custo)} · Venda <b>{brl(p.preco)}</b> {Number(p.preco) > 0 && <span className="text-muted-foreground">({margemAtual.toFixed(0)}% margem)</span>}</div>
+                    <div className={`text-xs mt-1 ${p.estoque_atual <= p.estoque_minimo ? "text-rose-500 font-bold" : ""}`}>Estoque: {p.estoque_atual} (mín {p.estoque_minimo})</div>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Switch checked={p.ativo} onCheckedChange={() => toggleProd(p)} />
                   <Button size="sm" variant="outline" onClick={() => ajustar(p)}>Ajuste</Button>
                   <Button size="sm" variant="outline" onClick={() => abrirReposicao(p)}>Repor estoque</Button>
