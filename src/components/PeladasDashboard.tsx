@@ -351,8 +351,13 @@ function CriarGrupoButton() {
     const { data, error } = await supabase
       .from("grupos").insert({ nome: nome.trim(), criado_por: user.id, codigo_convite: "" } as never)
       .select("id").single();
+    if (error) { setLoading(false); return toast.error(error.message); }
+    // Sem isso, quem cria o grupo nunca aparece em grupo_membros como
+    // capitão — só fica em grupos.criado_por — e qualquer busca por
+    // "capitão de qual grupo" (ex: a agenda do dono vinculando reserva a
+    // um capitão) não encontra esse grupo.
+    await supabase.from("grupo_membros").insert({ grupo_id: (data as any).id, user_id: user.id, papel: "capitao", status: "ativo" } as never);
     setLoading(false);
-    if (error) return toast.error(error.message);
     setOpen(false); setNome("");
     toast.success("Grupo criado");
     await refresh();
