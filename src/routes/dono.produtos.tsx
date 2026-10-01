@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, History, Calculator } from "lucide-react";
+import { Plus, History, Calculator, Settings } from "lucide-react";
 import { ProdutoFotoPicker } from "@/components/ProdutoFotoPicker";
 import { toast } from "sonner";
 
@@ -40,10 +40,20 @@ function ProdutosPage() {
   const [histProduto, setHistProduto] = useState<any>(null);
   const [historico, setHistorico] = useState<any[]>([]);
 
+  // Configurações de precificação (taxa de cartão, imposto, margem, modo automático/manual)
+  const [precifForm, setPrecifForm] = useState({ taxa_cartao_pct: 4, imposto_pct: 6, margem_lucro_pct: 30, modo_precificacao: "manual" });
+  const [salvandoPrecif, setSalvandoPrecif] = useState(false);
+
   const load = async () => {
     if (!user) return;
     const { data: a } = await supabase.from("arenas").select("*").eq("user_id", user.id).maybeSingle();
     if (!a) return; setArena(a);
+    setPrecifForm({
+      taxa_cartao_pct: Number((a as any).taxa_cartao_pct) || 0,
+      imposto_pct: Number((a as any).imposto_pct) || 0,
+      margem_lucro_pct: Number((a as any).margem_lucro_pct) || 0,
+      modo_precificacao: (a as any).modo_precificacao || "manual",
+    });
     const { data: c } = await supabase.from("pdv_categorias").select("*").eq("arena_id", a.id).order("codigo");
     setCats(c ?? []);
     const { data: p } = await supabase.from("pdv_produtos").select("*, pdv_categorias(nome)").eq("arena_id", a.id).order("codigo");
@@ -67,6 +77,29 @@ function ProdutosPage() {
     const pct = (Number(arena.taxa_cartao_pct) || 0) + (Number(arena.imposto_pct) || 0) + (Number(arena.margem_lucro_pct) || 0);
     if (pct >= 100) return 0; // combinação inválida, evita divisão por zero/negativo
     return custo / (1 - pct / 100);
+  };
+
+  const salvarPrecif = async () => {
+    if (!arena) return;
+    setSalvandoPrecif(true);
+    const { error } = await supabase.from("arenas").update({
+      taxa_cartao_pct: precifForm.taxa_cartao_pct, imposto_pct: precifForm.imposto_pct,
+      margem_lucro_pct: precifForm.margem_lucro_pct, modo_precificacao: precifForm.modo_precificacao,
+    } as never).eq("id", arena.id);
+    setSalvandoPrecif(false);
+    if (error) { toast.error(error.message); return; }
+    setArena({ ...arena, ...precifForm });
+    toast.success("Configurações de precificação salvas");
+  };
+
+  // Atualiza o preço de custo; se o modo for automático, já recalcula o preço de venda sugerido
+  const setCustoNovoProd = (v: number) => {
+    const automatico = arena?.modo_precificacao === "automatico";
+    setPForm((f: any) => ({ ...f, preco_custo: v, preco: automatico ? Number(precoSugerido(v).toFixed(2)) : f.preco }));
+  };
+  const setCustoReposicao = (v: number) => {
+    const automatico = arena?.modo_precificacao === "automatico";
+    setRepForm(f => ({ ...f, preco_custo: v, preco_venda: automatico ? Number(precoSugerido(v).toFixed(2)) : f.preco_venda }));
   };
 
   const criarProd = async () => {
@@ -131,7 +164,42 @@ function ProdutosPage() {
 
   return (
     <Tabs defaultValue="produtos">
-      <TabsList className="w-full"><TabsTrigger value="produtos" className="flex-1">Produtos</TabsTrigger><TabsTrigger value="categorias" className="flex-1">Categorias</TabsTrigger></TabsList>
+      <TabsList className="w-full">
+        <TabsTrigger value="produtos" className="flex-1">Produtos</TabsTrigger>
+        <TabsTrigger value="categorias" className="flex-1">Categorias</TabsTrigger>
+        <TabsTrigger value="precificacao" className="flex-1">Precificação</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="precificacao" className="space-y-3">
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold flex items-center gap-1.5"><Settings className="h-4 w-4" />Cálculo do preço sugerido</h3>
+              <p className="text-xs text-muted-foreground">Usado pra calcular o preço de venda ideal de cada produto a partir do custo.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div><Label>Taxa do cartão (%)</Label><Input type="number" step="0.01" value={precifForm.taxa_cartao_pct} onChange={e => setPrecifForm({ ...precifForm, taxa_cartao_pct: +e.target.value })} /></div>
+            <div><Label>Imposto (%)</Label><Input type="number" step="0.01" value={precifForm.imposto_pct} onChange={e => setPrecifForm({ ...precifForm, imposto_pct: +e.target.value })} /></div>
+            <div><Label>Margem de lucro (%)</Label><Input type="number" step="0.01" value={precifForm.margem_lucro_pct} onChange={e => setPrecifForm({ ...precifForm, margem_lucro_pct: +e.target.value })} /></div>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <div>
+              <div className="font-bold text-sm">Calcular preço de venda automaticamente</div>
+              <p className="text-xs text-muted-foreground">
+                {precifForm.modo_precificacao === "automatico"
+                  ? "Ligado: ao informar o preço de custo, o preço de venda já preenche sozinho com base nas %. Você ainda pode editar manualmente se quiser."
+                  : "Desligado: o preço de venda sugerido aparece como referência (com botão \"Usar\"), mas você digita o valor final."}
+              </p>
+            </div>
+            <Switch
+              checked={precifForm.modo_precificacao === "automatico"}
+              onCheckedChange={v => setPrecifForm({ ...precifForm, modo_precificacao: v ? "automatico" : "manual" })}
+            />
+          </div>
+          <Button onClick={salvarPrecif} disabled={salvandoPrecif} className="w-full">{salvandoPrecif ? "Salvando..." : "Salvar configurações"}</Button>
+        </Card>
+      </TabsContent>
 
       <TabsContent value="categorias" className="space-y-3">
         <Card className="p-3 flex gap-2"><Input placeholder="Nome da categoria" value={novaCat} onChange={e => setNovaCat(e.target.value)} /><Button onClick={criarCat}><Plus className="h-4 w-4" /></Button></Card>
@@ -157,20 +225,26 @@ function ProdutosPage() {
                 <div><Label>Nome</Label><Input value={pForm.nome} onChange={e => setPForm({ ...pForm, nome: e.target.value })} /></div>
                 <ProdutoFotoPicker value={pForm.foto_url} nomeSugestao={pForm.nome} onChange={url => setPForm({ ...pForm, foto_url: url })} />
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label>Preço de custo</Label><Input type="number" step="0.01" value={pForm.preco_custo} onChange={e => setPForm({ ...pForm, preco_custo: +e.target.value })} /></div>
+                  <div><Label>Preço de custo</Label><Input type="number" step="0.01" value={pForm.preco_custo} onChange={e => setCustoNovoProd(+e.target.value)} /></div>
                   <div><Label>Preço de venda</Label><Input type="number" step="0.01" value={pForm.preco} onChange={e => setPForm({ ...pForm, preco: +e.target.value })} /></div>
                 </div>
                 {Number(pForm.preco_custo) > 0 && (
                   <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border p-2 text-xs">
                     <div className="flex items-center gap-1 text-muted-foreground"><Calculator className="h-3.5 w-3.5" />Preço sugerido: <b className="text-foreground">{brl(sugeridoNovo)}</b></div>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setPForm({ ...pForm, preco: Number(sugeridoNovo.toFixed(2)) })}>Usar</Button>
+                    {arena.modo_precificacao !== "automatico" && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => setPForm({ ...pForm, preco: Number(sugeridoNovo.toFixed(2)) })}>Usar</Button>
+                    )}
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-2">
                   <div><Label>Estoque</Label><Input type="number" value={pForm.estoque_atual} onChange={e => setPForm({ ...pForm, estoque_atual: +e.target.value })} /></div>
                   <div><Label>Mínimo</Label><Input type="number" value={pForm.estoque_minimo} onChange={e => setPForm({ ...pForm, estoque_minimo: +e.target.value })} /></div>
                 </div>
-                <p className="text-xs text-muted-foreground">Cálculo considera as % de cartão, imposto e margem definidas em Arena.</p>
+                <p className="text-xs text-muted-foreground">
+                  {arena.modo_precificacao === "automatico"
+                    ? "Preço de venda calculado automaticamente a partir do custo (você pode ajustar manualmente também). Configure as % na aba Precificação."
+                    : "Cálculo considera as % de cartão, imposto e margem definidas na aba Precificação."}
+                </p>
                 <Button onClick={criarProd} disabled={!pForm.nome || !pForm.categoria_id} className="w-full">Criar</Button>
               </div>
             </DialogContent>
@@ -206,13 +280,15 @@ function ProdutosPage() {
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">Ao repor o estoque você pode registrar um novo preço de custo (ex: comprou por um valor diferente desta vez). O histórico anterior fica salvo para comparação.</p>
             <div className="grid grid-cols-2 gap-2">
-              <div><Label>Novo preço de custo</Label><Input type="number" step="0.01" value={repForm.preco_custo} onChange={e => setRepForm({ ...repForm, preco_custo: +e.target.value })} /></div>
+              <div><Label>Novo preço de custo</Label><Input type="number" step="0.01" value={repForm.preco_custo} onChange={e => setCustoReposicao(+e.target.value)} /></div>
               <div><Label>Preço de venda</Label><Input type="number" step="0.01" value={repForm.preco_venda} onChange={e => setRepForm({ ...repForm, preco_venda: +e.target.value })} /></div>
             </div>
             {Number(repForm.preco_custo) > 0 && (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border p-2 text-xs">
                 <div className="flex items-center gap-1 text-muted-foreground"><Calculator className="h-3.5 w-3.5" />Preço sugerido: <b className="text-foreground">{brl(sugeridoRep)}</b></div>
-                <Button type="button" size="sm" variant="outline" onClick={() => setRepForm({ ...repForm, preco_venda: Number(sugeridoRep.toFixed(2)) })}>Usar</Button>
+                {arena?.modo_precificacao !== "automatico" && (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setRepForm({ ...repForm, preco_venda: Number(sugeridoRep.toFixed(2)) })}>Usar</Button>
+                )}
               </div>
             )}
             <div><Label>Quantidade recebida</Label><Input type="number" value={repForm.quantidade} onChange={e => setRepForm({ ...repForm, quantidade: +e.target.value })} /></div>
