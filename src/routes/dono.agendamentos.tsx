@@ -63,6 +63,18 @@ function somarMinutos(horario: string, minutos: number) {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
+// Distância em linha reta entre duas coordenadas (fórmula de haversine),
+// usada pra filtrar a busca de capitão por proximidade da arena em vez de
+// comparar o texto da cidade (que varia de grafia e nunca bate).
+function distanciaKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
 function AgPage() {
   const { user } = useAuth();
   const [arena, setArena] = useState<any>(null);
@@ -136,16 +148,28 @@ function AgPage() {
     setCapitaoSelecionado(null); setGruposCapitao([]); setGrupoSelecionado("");
   };
 
-  // Busca ao vivo (debounced) conforme digita — só capitães da mesma cidade
-  // da arena, pra não aparecer capitão de outra cidade pra jogar aqui.
+  // Busca ao vivo (debounced) conforme digita. Comparar o texto da cidade
+  // (ex: "Santos Dumont" vs "Santos Dumont - MG") é frágil demais e deixava
+  // de achar gente da própria cidade — em vez disso, quando a arena e o
+  // capitão têm coordenadas, calculamos a distância e priorizamos/mostramos
+  // quem está por perto (raio de RAIO_CAPITAO_KM). Sem coordenadas de um dos
+  // dois lados, não tem como filtrar: mostramos o resultado com a cidade
+  // escrita do lado, pra o dono decidir visualmente.
+  const RAIO_CAPITAO_KM = 100;
   useEffect(() => {
     const q = buscaCapitao.trim();
     if (!vincularCapitao || capitaoSelecionado || !q || !arena) { setCapitaesBusca([]); return; }
     const t = setTimeout(async () => {
-      let query = supabase.from("profiles").select("user_id,nome,whatsapp,foto_url,cidade").eq("role", "capitao").or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(8);
-      if (arena.cidade) query = query.eq("cidade", arena.cidade);
-      const { data } = await query;
-      setCapitaesBusca(data ?? []);
+      const { data } = await supabase.from("profiles").select("user_id,nome,whatsapp,foto_url,cidade,latitude,longitude")
+        .eq("role", "capitao").or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(20);
+      let resultados = data ?? [];
+      if (arena.latitude != null && arena.longitude != null) {
+        resultados = resultados
+          .map((c: any) => ({ ...c, distanciaKm: (c.latitude != null && c.longitude != null) ? distanciaKm(arena.latitude, arena.longitude, c.latitude, c.longitude) : null }))
+          .filter((c: any) => c.distanciaKm == null || c.distanciaKm <= RAIO_CAPITAO_KM)
+          .sort((a: any, b: any) => (a.distanciaKm ?? Infinity) - (b.distanciaKm ?? Infinity));
+      }
+      setCapitaesBusca(resultados.slice(0, 8));
     }, 300);
     return () => clearTimeout(t);
   }, [buscaCapitao, vincularCapitao, capitaoSelecionado, arena]);
@@ -358,8 +382,8 @@ function AgPage() {
                   {!capitaoSelecionado ? (
                     <>
                       <Input placeholder="Nome ou WhatsApp do capitão" value={buscaCapitao} onChange={e => setBuscaCapitao(e.target.value)} />
-                      {!arena?.cidade && (
-                        <p className="text-[11px] text-amber-500">Cadastre a cidade da sua arena pra filtrar só capitães daqui.</p>
+                      {arena?.latitude == null && (
+                        <p className="text-[11px] text-muted-foreground">Cadastre a localização da sua arena pra ordenar por quem está mais perto.</p>
                       )}
                       <div className="space-y-1">
                         {capitaesBusca.map(c => (
@@ -370,13 +394,17 @@ function AgPage() {
                             </Avatar>
                             <div className="min-w-0">
                               <div className="font-medium truncate">{c.nome}</div>
-                              {c.cidade && <div className="text-[11px] text-muted-foreground truncate">{c.cidade}</div>}
+                              {(c.cidade || c.distanciaKm != null) && (
+                                <div className="text-[11px] text-muted-foreground truncate">
+                                  {c.cidade}{c.cidade && c.distanciaKm != null ? " · " : ""}{c.distanciaKm != null ? `${Math.round(c.distanciaKm)} km` : ""}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
                       </div>
                       {capitaesBusca.length === 0 && buscaCapitao.trim() && (
-                        <p className="text-xs text-muted-foreground">Nenhum capitão encontrado{arena?.cidade ? ` em ${arena.cidade}` : ""}.</p>
+                        <p className="text-xs text-muted-foreground">Nenhum capitão encontrado{arena?.latitude != null ? ` num raio de ${RAIO_CAPITAO_KM}km` : ""}.</p>
                       )}
                     </>
                   ) : (
