@@ -155,14 +155,34 @@ function AgPage() {
   // quem está por perto (raio de RAIO_CAPITAO_KM). Sem coordenadas de um dos
   // dois lados, não tem como filtrar: mostramos o resultado com a cidade
   // escrita do lado, pra o dono decidir visualmente.
+  //
+  // IMPORTANTE: "profiles.role" é só a categoria que a pessoa escolheu no
+  // cadastro (jogador/capitão/etc) — não indica se ela realmente capitaneia
+  // algum grupo de verdade. Já vimos um jogador com role='jogador' criar um
+  // grupo e virar capitão de fato sem o role mudar, e o inverso também é
+  // possível. Por isso aqui a gente não filtra por role: busca os perfis por
+  // nome/whatsapp e depois valida quem é capitão de verdade cruzando com
+  // grupo_membros (papel=capitao, status=ativo) e grupos.criado_por — o
+  // mesmo critério já usado em selecionarCapitao.
   const RAIO_CAPITAO_KM = 100;
   useEffect(() => {
     const q = buscaCapitao.trim();
     if (!vincularCapitao || capitaoSelecionado || !q || !arena) { setCapitaesBusca([]); return; }
     const t = setTimeout(async () => {
       const { data } = await supabase.from("profiles").select("user_id,nome,whatsapp,foto_url,cidade,latitude,longitude")
-        .eq("role", "capitao").or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(20);
-      let resultados = data ?? [];
+        .or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(30);
+      const candidatos = data ?? [];
+      if (candidatos.length === 0) { setCapitaesBusca([]); return; }
+      const ids = candidatos.map((c: any) => c.user_id);
+      const [porMembro, porCriador] = await Promise.all([
+        supabase.from("grupo_membros").select("user_id").in("user_id", ids).eq("papel", "capitao").eq("status", "ativo"),
+        supabase.from("grupos").select("criado_por").in("criado_por", ids),
+      ]);
+      const capitaesReais = new Set<string>([
+        ...((porMembro.data ?? []).map((g: any) => g.user_id)),
+        ...((porCriador.data ?? []).map((g: any) => g.criado_por)),
+      ]);
+      let resultados = candidatos.filter((c: any) => capitaesReais.has(c.user_id));
       if (arena.latitude != null && arena.longitude != null) {
         resultados = resultados
           .map((c: any) => ({ ...c, distanciaKm: (c.latitude != null && c.longitude != null) ? distanciaKm(arena.latitude, arena.longitude, c.latitude, c.longitude) : null }))
