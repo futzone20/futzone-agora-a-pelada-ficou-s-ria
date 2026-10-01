@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, History, Calculator, Settings, ImageOff } from "lucide-react";
+import { Plus, History, Calculator, Settings, ImageOff, Boxes, TrendingUp, Wallet } from "lucide-react";
 import { ProdutoFotoPicker } from "@/components/ProdutoFotoPicker";
 import { toast } from "sonner";
 
@@ -44,6 +44,19 @@ function ProdutosPage() {
   const [precifForm, setPrecifForm] = useState({ taxa_cartao_pct: 4, imposto_pct: 6, margem_lucro_pct: 30, modo_precificacao: "manual" });
   const [salvandoPrecif, setSalvandoPrecif] = useState(false);
 
+  // Inventário — itens já vendidos (pra total vendido + histórico por data)
+  const [itensVendidos, setItensVendidos] = useState<any[]>([]);
+  const [openHistoricoVendas, setOpenHistoricoVendas] = useState(false);
+
+  const carregarItensVendidos = async (arenaId: string) => {
+    const { data } = await supabase
+      .from("pdv_itens_venda")
+      .select("*, pdv_vendas!inner(arena_id, criado_em), pdv_produtos(nome)")
+      .eq("pdv_vendas.arena_id", arenaId)
+      .order("criado_em", { foreignTable: "pdv_vendas", ascending: false });
+    setItensVendidos(data ?? []);
+  };
+
   const load = async () => {
     if (!user) return;
     const { data: a } = await supabase.from("arenas").select("*").eq("user_id", user.id).maybeSingle();
@@ -58,8 +71,26 @@ function ProdutosPage() {
     setCats(c ?? []);
     const { data: p } = await supabase.from("pdv_produtos").select("*, pdv_categorias(nome)").eq("arena_id", a.id).order("codigo");
     setProds(p ?? []);
+    await carregarItensVendidos(a.id);
   };
   useEffect(() => { void load(); }, [user?.id]);
+
+  // ---- Inventário: custo em estoque, potencial de venda e total já vendido ----
+  const custoEstoque = useMemo(() => prods.reduce((s, p: any) => s + Number(p.preco_custo) * Number(p.estoque_atual), 0), [prods]);
+  const potencialVenda = useMemo(() => prods.reduce((s, p: any) => s + Number(p.preco) * Number(p.estoque_atual), 0), [prods]);
+  const totalVendido = useMemo(() => itensVendidos.reduce((s, i: any) => s + Number(i.subtotal), 0), [itensVendidos]);
+  const vendasPorData = useMemo(() => {
+    const mapa = new Map<string, { data: string; itens: any[]; total: number }>();
+    itensVendidos.forEach((i: any) => {
+      const d = i.pdv_vendas?.criado_em ? new Date(i.pdv_vendas.criado_em) : null;
+      const chave = d ? d.toLocaleDateString("pt-BR") : "Data desconhecida";
+      if (!mapa.has(chave)) mapa.set(chave, { data: chave, itens: [], total: 0 });
+      const g = mapa.get(chave)!;
+      g.itens.push(i);
+      g.total += Number(i.subtotal);
+    });
+    return Array.from(mapa.values());
+  }, [itensVendidos]);
 
   const criarCat = async () => {
     if (!arena || !novaCat) return;
@@ -174,8 +205,54 @@ function ProdutosPage() {
       <TabsList className="w-full">
         <TabsTrigger value="produtos" className="flex-1">Produtos</TabsTrigger>
         <TabsTrigger value="categorias" className="flex-1">Categorias</TabsTrigger>
+        <TabsTrigger value="inventario" className="flex-1">Inventário</TabsTrigger>
         <TabsTrigger value="precificacao" className="flex-1">Precificação</TabsTrigger>
       </TabsList>
+
+      <TabsContent value="inventario" className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Card className="p-4">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><Boxes className="h-3.5 w-3.5" />Valor em estoque (custo)</div>
+            <div className="text-xl font-bold">{brl(custoEstoque)}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Quanto já está investido no estoque atual.</p>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><TrendingUp className="h-3.5 w-3.5" />Potencial se vender tudo</div>
+            <div className="text-xl font-bold text-emerald-500">{brl(potencialVenda)}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Lucro potencial: {brl(potencialVenda - custoEstoque)}</p>
+          </Card>
+          <Card className="p-4 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setOpenHistoricoVendas(true)}>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1"><Wallet className="h-3.5 w-3.5" />Total já vendido</div>
+            <div className="text-xl font-bold text-primary">{brl(totalVendido)}</div>
+            <p className="text-[11px] text-muted-foreground mt-1">Toque para ver o histórico por data</p>
+          </Card>
+        </div>
+
+        <Dialog open={openHistoricoVendas} onOpenChange={setOpenHistoricoVendas}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Histórico de vendas — {brl(totalVendido)}</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              {vendasPorData.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma venda registrada ainda.</p>}
+              {vendasPorData.map(g => (
+                <Card key={g.data} className="p-3">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="font-bold text-sm">{g.data}</span>
+                    <span className="font-bold text-emerald-500">{brl(g.total)}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {g.itens.map((i: any) => (
+                      <div key={i.id} className="flex justify-between text-xs text-muted-foreground">
+                        <span>{i.quantidade}x {i.pdv_produtos?.nome ?? "Produto removido"}</span>
+                        <span>{brl(i.subtotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </TabsContent>
 
       <TabsContent value="precificacao" className="space-y-3">
         <Card className="p-4 space-y-3">
