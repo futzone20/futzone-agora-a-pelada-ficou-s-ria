@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ContagemCaixa, totalContagem, type ContagemDetalhe } from "@/components/ContagemCaixa";
 import { ComandaDialog } from "@/components/ComandaDialog";
-import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle, ImageOff, Search } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle, ImageOff, Search, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/pdv")({ component: PDV });
@@ -62,6 +62,20 @@ function PDV() {
   const [novaComandaTipo, setNovaComandaTipo] = useState<"grupo" | "separada">("separada");
   const [novaComandaNome, setNovaComandaNome] = useState("");
   const [comandaAberta, setComandaAberta] = useState<any>(null);
+  const [aba, setAba] = useState("produtos");
+
+  const abrirComanda = (c: any) => { setComandaAberta(c); setAba("produtos"); };
+
+  // ----- Máscara do valor em caixa -----
+  const [mostrarCaixa, setMostrarCaixa] = useState(true);
+  useEffect(() => {
+    try { setMostrarCaixa(localStorage.getItem("pdv_mostrar_valor_caixa") !== "0"); } catch { /* ignore */ }
+  }, []);
+  const toggleMostrarCaixa = () => setMostrarCaixa(v => {
+    const next = !v;
+    try { localStorage.setItem("pdv_mostrar_valor_caixa", next ? "1" : "0"); } catch { /* ignore */ }
+    return next;
+  });
 
   const loadComandas = async (arenaId: string) => {
     const { data } = await supabase.from("pdv_comandas").select("*").eq("arena_id", arenaId).order("status").order("aberta_em", { ascending: false });
@@ -278,7 +292,12 @@ function PDV() {
       <Card className="p-3 flex items-center justify-between gap-2 bg-emerald-500/10 border-emerald-500/30">
         <div className="text-sm">
           <div className="font-bold flex items-center gap-1.5"><Unlock className="h-3.5 w-3.5 text-emerald-500" />Caixa aberto</div>
-          <div className="text-xs text-muted-foreground">Desde {new Date(caixa.aberto_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · Em caixa: <b className="text-foreground">{brl(dinheiroCalculado)}</b></div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+            Desde {new Date(caixa.aberto_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · Em caixa: <b className="text-foreground">{mostrarCaixa ? brl(dinheiroCalculado) : "R$ ••••••"}</b>
+            <button type="button" onClick={toggleMostrarCaixa} title={mostrarCaixa ? "Ocultar valor" : "Mostrar valor"} className="text-muted-foreground hover:text-foreground">
+              {mostrarCaixa ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            </button>
+          </div>
         </div>
         <div className="flex gap-1">
           <Button size="sm" variant="outline" onClick={() => setOpenMov("reforco")}><ArrowUpCircle className="h-3.5 w-3.5 mr-1" />Reforço</Button>
@@ -287,7 +306,7 @@ function PDV() {
         </div>
       </Card>
 
-      <Tabs defaultValue="produtos">
+      <Tabs value={aba} onValueChange={setAba}>
         <TabsList className="w-full">
           <TabsTrigger value="produtos" className="flex-1">Produtos</TabsTrigger>
           <TabsTrigger value="abertas" className="flex-1">Comandas abertas</TabsTrigger>
@@ -295,88 +314,100 @@ function PDV() {
         </TabsList>
 
         <TabsContent value="produtos">
-          <div className="grid lg:grid-cols-[1fr_320px] gap-3 items-start">
-            {/* Produtos — lado principal, estilo PDV */}
-            <div className="space-y-2 min-w-0">
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input className="pl-9" placeholder="Buscar produto por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
-              </div>
-
-              {categorias.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-                  <button
-                    type="button"
-                    onClick={() => setCategoriaFiltro("todas")}
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-colors ${categoriaFiltro === "todas" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
-                  >Todas</button>
-                  {categorias.map(c => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setCategoriaFiltro(c)}
-                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-colors ${categoriaFiltro === c ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
-                    >{c}</button>
-                  ))}
+          {comandaAberta ? (
+            <ComandaDialog
+              comanda={comandaAberta}
+              produtos={produtos}
+              arena={arena}
+              user={user}
+              caixa={caixa}
+              onClose={() => setComandaAberta(null)}
+              onChanged={() => { void loadComandas(arena.id); void load(); }}
+            />
+          ) : (
+            <div className="grid lg:grid-cols-[1fr_320px] gap-3 items-start">
+              {/* Produtos — lado principal, estilo PDV */}
+              <div className="space-y-2 min-w-0">
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input className="pl-9" placeholder="Buscar produto por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
-                {filtrados.map(p => {
-                  const noCart = carrinho.find(i => i.produto.id === p.id)?.qtd;
-                  const baixo = p.estoque_atual <= p.estoque_minimo;
-                  const semEstoque = p.estoque_atual <= 0;
-                  return (
-                    <Card
-                      key={p.id}
-                      className={`p-2 cursor-pointer overflow-hidden relative transition-opacity ${baixo ? "border-rose-500/40" : ""} ${semEstoque ? "opacity-50" : "hover:border-primary/50"}`}
-                      onClick={() => add(p)}
-                    >
-                      <div className="aspect-square rounded-md bg-muted mb-1.5 overflow-hidden flex items-center justify-center">
-                        {p.foto_url ? (
-                          <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageOff className="h-6 w-6 text-muted-foreground/50" />
-                        )}
-                      </div>
-                      {noCart ? <span className="absolute top-3 right-3 bg-primary text-primary-foreground text-[11px] font-bold rounded-full h-5 w-5 flex items-center justify-center">{noCart}</span> : null}
-                      <div className="text-[11px] text-muted-foreground">{p.codigo} · {p.pdv_categorias?.nome}</div>
-                      <div className="font-bold text-sm truncate leading-tight">{p.nome}</div>
-                      <div className="text-emerald-500 font-bold text-sm">{brl(Number(p.preco))}</div>
-                      <div className={`text-[11px] ${baixo ? "text-rose-500" : "text-muted-foreground"}`}>Est: {p.estoque_atual}</div>
-                    </Card>
-                  );
-                })}
-                {filtrados.length === 0 && <p className="col-span-full text-sm text-muted-foreground text-center py-6">Nenhum produto encontrado.</p>}
-              </div>
-            </div>
-
-            {/* Pedido — painel lateral fixo */}
-            <Card className="p-3 lg:sticky lg:top-4 bg-card shadow-lg">
-              <div className="flex items-center gap-2 mb-2"><ShoppingCart className="h-4 w-4" /><b>Pedido {carrinho.length > 0 ? `(${carrinho.length})` : ""}</b></div>
-              {carrinho.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-6">Toque em um produto para adicionar ao pedido.</p>
-              ) : (
-                <>
-                  <div className="max-h-[50vh] overflow-y-auto">
-                    {carrinho.map(i => (
-                      <div key={i.produto.id} className="flex items-center justify-between py-1 text-sm">
-                        <span className="truncate flex-1">{i.produto.nome}</span>
-                        <div className="flex items-center gap-1">
-                          <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => dec(i.produto.id)}><Minus className="h-3 w-3" /></Button>
-                          <span className="w-6 text-center">{i.qtd}</span>
-                          <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => add(i.produto)}><Plus className="h-3 w-3" /></Button>
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del(i.produto.id)}><Trash className="h-3 w-3" /></Button>
-                        </div>
-                      </div>
+                {categorias.length > 0 && (
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                    <button
+                      type="button"
+                      onClick={() => setCategoriaFiltro("todas")}
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-colors ${categoriaFiltro === "todas" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                    >Todas</button>
+                    {categorias.map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCategoriaFiltro(c)}
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-colors ${categoriaFiltro === c ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                      >{c}</button>
                     ))}
                   </div>
-                  <div className="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
-                  <Button onClick={() => setOpenPag(true)} className="w-full mt-2">Finalizar</Button>
-                </>
-              )}
-            </Card>
-          </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                  {filtrados.map(p => {
+                    const noCart = carrinho.find(i => i.produto.id === p.id)?.qtd;
+                    const baixo = p.estoque_atual <= p.estoque_minimo;
+                    const semEstoque = p.estoque_atual <= 0;
+                    return (
+                      <Card
+                        key={p.id}
+                        className={`p-2 cursor-pointer overflow-hidden relative transition-opacity ${baixo ? "border-rose-500/40" : ""} ${semEstoque ? "opacity-50" : "hover:border-primary/50"}`}
+                        onClick={() => add(p)}
+                      >
+                        <div className="aspect-square rounded-md bg-muted mb-1.5 overflow-hidden flex items-center justify-center">
+                          {p.foto_url ? (
+                            <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageOff className="h-6 w-6 text-muted-foreground/50" />
+                          )}
+                        </div>
+                        {noCart ? <span className="absolute top-3 right-3 bg-primary text-primary-foreground text-[11px] font-bold rounded-full h-5 w-5 flex items-center justify-center">{noCart}</span> : null}
+                        <div className="text-[11px] text-muted-foreground">{p.codigo} · {p.pdv_categorias?.nome}</div>
+                        <div className="font-bold text-sm truncate leading-tight">{p.nome}</div>
+                        <div className="text-emerald-500 font-bold text-sm">{brl(Number(p.preco))}</div>
+                        <div className={`text-[11px] ${baixo ? "text-rose-500" : "text-muted-foreground"}`}>Est: {p.estoque_atual}</div>
+                      </Card>
+                    );
+                  })}
+                  {filtrados.length === 0 && <p className="col-span-full text-sm text-muted-foreground text-center py-6">Nenhum produto encontrado.</p>}
+                </div>
+              </div>
+
+              {/* Pedido — painel lateral fixo */}
+              <Card className="p-3 lg:sticky lg:top-4 bg-card shadow-lg">
+                <div className="flex items-center gap-2 mb-2"><ShoppingCart className="h-4 w-4" /><b>Pedido {carrinho.length > 0 ? `(${carrinho.length})` : ""}</b></div>
+                {carrinho.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-6">Toque em um produto para adicionar ao pedido.</p>
+                ) : (
+                  <>
+                    <div className="max-h-[50vh] overflow-y-auto">
+                      {carrinho.map(i => (
+                        <div key={i.produto.id} className="flex items-center justify-between py-1 text-sm">
+                          <span className="truncate flex-1">{i.produto.nome}</span>
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => dec(i.produto.id)}><Minus className="h-3 w-3" /></Button>
+                            <span className="w-6 text-center">{i.qtd}</span>
+                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => add(i.produto)}><Plus className="h-3 w-3" /></Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del(i.produto.id)}><Trash className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span>{brl(total)}</span></div>
+                    <Button onClick={() => setOpenPag(true)} className="w-full mt-2">Finalizar</Button>
+                  </>
+                )}
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="abertas" className="space-y-3">
@@ -399,50 +430,40 @@ function PDV() {
           <Button onClick={() => setOpenNovaComanda(true)} className="w-full"><Receipt className="h-4 w-4 mr-1" />Abrir nova comanda</Button>
 
           {comandas.filter(c => c.status !== "fechada").length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comanda aberta.</p>}
-          {comandas.filter(c => c.status !== "fechada").map(c => (
-            <Card key={c.id} className="p-3 cursor-pointer" onClick={() => setComandaAberta(c)}>
-              <div className="flex justify-between items-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+            {comandas.filter(c => c.status !== "fechada").map(c => (
+              <Card key={c.id} className="aspect-square p-3 cursor-pointer flex flex-col justify-between hover:border-primary/50 transition-colors" onClick={() => abrirComanda(c)}>
                 <div>
-                  <div className="font-bold">{c.nome}</div>
-                  <div className="text-xs text-muted-foreground">{c.tipo === "grupo" ? "Grupo" : "Separada"} {c.num_pessoas ? `· ${c.num_pessoas} pessoas` : ""}</div>
+                  <Receipt className="h-5 w-5 text-muted-foreground mb-1.5" />
+                  <div className="font-bold text-sm leading-tight line-clamp-2">{c.nome}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{c.tipo === "grupo" ? "Grupo" : "Separada"}{c.num_pessoas ? ` · ${c.num_pessoas}p` : ""}</div>
                 </div>
                 {c.travada ? (
-                  <span className="text-xs text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />Aguardando pagto</span>
+                  <span className="text-[11px] text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Aguardando</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Aberta</span>
+                  <span className="text-[11px] text-muted-foreground">Aberta</span>
                 )}
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="fechadas" className="space-y-3">
           {comandas.filter(c => c.status === "fechada").length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comanda fechada ainda.</p>}
-          {comandas.filter(c => c.status === "fechada").map(c => (
-            <Card key={c.id} className="p-3 cursor-pointer" onClick={() => setComandaAberta(c)}>
-              <div className="flex justify-between items-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+            {comandas.filter(c => c.status === "fechada").map(c => (
+              <Card key={c.id} className="aspect-square p-3 cursor-pointer flex flex-col justify-between hover:border-primary/50 transition-colors" onClick={() => abrirComanda(c)}>
                 <div>
-                  <div className="font-bold">{c.nome}</div>
-                  <div className="text-xs text-muted-foreground">{c.tipo === "grupo" ? "Grupo" : "Separada"} {c.num_pessoas ? `· ${c.num_pessoas} pessoas` : ""}</div>
+                  <Receipt className="h-5 w-5 text-muted-foreground mb-1.5" />
+                  <div className="font-bold text-sm leading-tight line-clamp-2">{c.nome}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{c.tipo === "grupo" ? "Grupo" : "Separada"}{c.num_pessoas ? ` · ${c.num_pessoas}p` : ""}</div>
                 </div>
-                <span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Fechada</span>
-              </div>
-            </Card>
-          ))}
+                <span className="text-[11px] text-emerald-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Fechada</span>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
-
-      {comandaAberta && (
-        <ComandaDialog
-          comanda={comandaAberta}
-          produtos={produtos}
-          arena={arena}
-          user={user}
-          caixa={caixa}
-          onClose={() => setComandaAberta(null)}
-          onChanged={() => { void loadComandas(arena.id); void load(); }}
-        />
-      )}
 
       <Dialog open={openPag} onOpenChange={setOpenPag}>
         <DialogContent>
