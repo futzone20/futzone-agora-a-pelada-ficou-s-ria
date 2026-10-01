@@ -2937,6 +2937,30 @@ export type Database = {
           },
         ]
       }
+      produtos_galeria_global: {
+        Row: {
+          criado_em: string
+          criado_por: string | null
+          id: string
+          nome: string
+          url: string
+        }
+        Insert: {
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          nome: string
+          url: string
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          nome?: string
+          url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           altura: number | null
