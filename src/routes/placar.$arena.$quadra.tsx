@@ -4,30 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { calcularTabela } from "@/lib/placar";
 import { corTextoLegivel } from "@/lib/sorteio";
 import { Logo } from "@/components/Logo";
-import { Clock, Trophy, Target, Shield, CalendarClock, Radio } from "lucide-react";
+import { Clock, Trophy, Target, Shield, CalendarClock, Radio, Maximize2, Minimize2 } from "lucide-react";
 
 export const Route = createFileRoute("/placar/$arena/$quadra")({ component: TVPlacar });
 
 const TIPO_ICON: Record<string, string> = { gol: "⚽", passe_decisivo: "🤝", defesa: "🧤", falta: "🟨", outro: "•" };
 
-// Tempo que cada anunciante fica em tela antes de revezar pro próximo,
-// quando a quadra tem mais de um cadastrado.
-const INTERVALO_ANUNCIO_MS = 10_000;
-
 // Quanto tempo a tela de "fim de pelada" (campeão/artilheiros/goleiro) fica
 // no ar depois do último gol, caso não comece outra pelada na quadra.
 const JANELA_RESUMO_MS = 10 * 60 * 1000;
 
-function AnuncioTV({ anuncio }: { anuncio: { nome: string; imagem_url: string; link_url: string | null } }) {
-  const img = <img src={anuncio.imagem_url} alt={anuncio.nome} className="h-20 w-full object-cover md:h-24" />;
+function AnuncioTV({ anuncio }: { anuncio: { nome: string; imagem_url: string } }) {
   return (
-    <div className="relative border-t-2 border-amber-400/60 bg-black">
+    <div className="relative shrink-0 border-t-2 border-amber-400/60 bg-black">
       <span className="absolute left-2 top-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
         Publicidade
       </span>
-      {anuncio.link_url ? (
-        <a href={anuncio.link_url} target="_blank" rel="noopener noreferrer" className="block">{img}</a>
-      ) : img}
+      <img src={anuncio.imagem_url} alt={anuncio.nome} className="h-20 w-full object-cover md:h-24" />
     </div>
   );
 }
@@ -43,10 +36,84 @@ function GlowBlobs({ corA, corB }: { corA: string; corB: string }) {
   );
 }
 
+/** Botão discreto de tela cheia, com tentativa automática depois de 10s e no
+ * primeiro clique/tecla — a API de fullscreen exige um gesto do usuário na
+ * maioria dos navegadores, então a tentativa automática só funciona de fato
+ * em navegadores de TV/kiosk mais permissivos; nos demais, o primeiro toque
+ * na tela já resolve. */
+function BotaoTelaCheia() {
+  const [cheio, setCheio] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setCheio(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  useEffect(() => {
+    const tentar = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); };
+    const t = setTimeout(tentar, 10_000);
+    document.addEventListener("click", tentar, { once: true });
+    document.addEventListener("keydown", tentar, { once: true });
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("click", tentar);
+      document.removeEventListener("keydown", tentar);
+    };
+  }, []);
+
+  const alternar = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
+  return (
+    <button
+      onClick={alternar}
+      title={cheio ? "Sair da tela cheia" : "Tela cheia"}
+      className="absolute right-3 top-3 z-20 rounded-full border border-white/15 bg-black/40 p-2 text-white/60 backdrop-blur transition hover:text-white"
+    >
+      {cheio ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+    </button>
+  );
+}
+
+/** Casca comum das 3 telas (ao vivo / resumo / espera): fundo, glow, botão de
+ * tela cheia e o banner de anúncio fixo embaixo. Usa h-screen + overflow
+ * hidden (em vez de min-h-screen) pra nunca deixar o banner ser cortado pela
+ * borda física da TV — o conteúdo do meio é quem rola, se precisar. */
+function TelaTV({ corA, corB, anuncio, children }: { corA: string; corB: string; anuncio: { nome: string; imagem_url: string } | null; children: React.ReactNode }) {
+  return (
+    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-b from-zinc-950 via-zinc-900 to-black text-white">
+      <GlowBlobs corA={corA} corB={corB} />
+      <BotaoTelaCheia />
+      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">{children}</div>
+      {anuncio && <AnuncioTV anuncio={anuncio} />}
+    </div>
+  );
+}
+
 function fmtDataCurta(iso: string) {
   const d = new Date(`${iso}T00:00:00`);
   const dia = d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
   return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Um anunciante "vale" hoje se o dia da semana bate e, conforme o tipo de
+ * campanha, ainda está dentro do período contratado ou não bateu o limite de
+ * inserções (esse último também é reforçado no banco por trigger, que
+ * desativa sozinho — aqui é só a checagem fina do dia a dia). */
+function elegivelHoje(an: any): boolean {
+  const hoje = new Date();
+  if (!(an.dias_semana ?? []).includes(hoje.getDay())) return false;
+  if (an.tipo_duracao === "insercoes") {
+    if (an.limite_insercoes != null && an.insercoes_feitas >= an.limite_insercoes) return false;
+    return true;
+  }
+  const hojeISO = hoje.toISOString().slice(0, 10);
+  if (an.data_inicio && hojeISO < an.data_inicio) return false;
+  if (an.data_fim && hojeISO > an.data_fim) return false;
+  return true;
 }
 
 type Resumo = {
@@ -66,6 +133,7 @@ function TVPlacar() {
   const [now, setNow] = useState(Date.now());
   const [quadraNome, setQuadraNome] = useState<string>("");
   const [quadraPublicaId, setQuadraPublicaId] = useState<string | null>(null);
+  const [anuncioQuadraId, setAnuncioQuadraId] = useState<string | null>(null);
   const [anuncios, setAnuncios] = useState<any[]>([]);
   const [anuncioIdx, setAnuncioIdx] = useState(0);
   const [resumo, setResumo] = useState<Resumo | null>(null);
@@ -128,7 +196,8 @@ function TVPlacar() {
     // ou não, pra a TV também anunciar enquanto está "aguardando".
     const { data: qDono } = await supabase.from("quadras").select("id").eq("quadra_publica_id", q.id).maybeSingle();
     if (qDono) {
-      const { data: vinc } = await supabase.from("tv_anunciante_quadras").select("tv_anunciantes(id,nome,imagem_url,link_url,ativo)").eq("quadra_id", qDono.id);
+      setAnuncioQuadraId(qDono.id);
+      const { data: vinc } = await supabase.from("tv_anunciante_quadras").select("tv_anunciantes(*)").eq("quadra_id", qDono.id);
       const ativos = ((vinc ?? []) as any[]).map((v) => v.tv_anunciantes).filter((a: any) => a?.ativo);
       setAnuncios(ativos);
     }
@@ -198,18 +267,41 @@ function TVPlacar() {
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
 
   // Fallback por tempo: garante que a tela de resumo "expire" pra tela de espera mesmo sem
-  // nenhum evento de realtime novo, e dá uma recarregada periódica pra manter tudo em dia.
+  // nenhum evento de realtime novo, e dá uma recarregada periódica pra manter tudo em dia
+  // (inclusive os anunciantes, caso o dono cadastre um novo ou mude a programação).
   useEffect(() => {
     const t = setInterval(() => void load(), 60_000);
     return () => clearInterval(t);
   }, [arena, quadra]);
 
-  // Revezia entre os anunciantes ativos dessa quadra, quando há mais de um.
+  // Lista de quem pode aparecer agora: se tiver anunciante exclusivo elegível, só eles
+  // entram no rodízio (sem dividir espaço); senão, revezia entre os compartilhados.
+  const rotationList = useMemo(() => {
+    const elegiveis = anuncios.filter(elegivelHoje);
+    const exclusivos = elegiveis.filter((a) => a.modo_exibicao === "exclusivo");
+    const compartilhados = elegiveis.filter((a) => a.modo_exibicao !== "exclusivo");
+    return exclusivos.length ? exclusivos : compartilhados;
+  }, [anuncios]);
+  const rotationKey = rotationList.map((a) => a.id).join(",");
+
+  // Reseta o índice quando a lista de elegíveis muda de verdade (não a cada reload igual).
+  useEffect(() => { setAnuncioIdx(0); }, [rotationKey]);
+
+  // Revezia respeitando o tempo em tela configurado em cada anunciante (padrão 10s), e
+  // registra cada exibição pro contador de inserções / relatório do dono.
   useEffect(() => {
-    if (anuncios.length <= 1) return;
-    const t = setInterval(() => setAnuncioIdx((i) => (i + 1) % anuncios.length), INTERVALO_ANUNCIO_MS);
-    return () => clearInterval(t);
-  }, [anuncios.length]);
+    if (rotationList.length === 0) return;
+    const atualAd = rotationList[anuncioIdx % rotationList.length];
+    if (!atualAd) return;
+    if (anuncioQuadraId) {
+      void supabase.from("tv_anuncio_exibicoes").insert({ tv_anunciante_id: atualAd.id, quadra_id: anuncioQuadraId } as never);
+    }
+    if (rotationList.length <= 1) return;
+    const ms = Math.max(1, atualAd.duracao_segundos || 10) * 1000;
+    const t = setTimeout(() => setAnuncioIdx((i) => (i + 1) % rotationList.length), ms);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rotationKey, anuncioIdx, anuncioQuadraId]);
 
   const atual = useMemo(() => partidas.find((p) => p.status === "em_andamento") || partidas.slice(-1)[0], [partidas]);
   const proxima = useMemo(() => partidas.find((p) => p.status === "aguardando" && (!atual || p.id !== atual.id)), [partidas, atual]);
@@ -226,16 +318,15 @@ function TVPlacar() {
   const corTime = (tid: string) => times.find((t) => t.id === tid)?.cor || "#666";
   const recorde = (tid: string) => tabela[tid] || { v: 0, e: 0, d: 0 };
 
-  const anuncioAtual = anuncios.length > 0 ? anuncios[anuncioIdx % anuncios.length] : null;
+  const anuncioAtual = rotationList.length > 0 ? rotationList[anuncioIdx % rotationList.length] : null;
   const resumoValido = resumo && now < resumo.expiraEm ? resumo : null;
 
   // ---------- Tela de fim de pelada: campeão, artilheiros e goleiro menos vazado ----------
   if (resumoValido) {
     const corDestaque = resumoValido.campeao?.cor || "#f59e0b";
     return (
-      <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-zinc-950 via-zinc-900 to-black text-white">
-        <GlowBlobs corA={corDestaque} corB="#0ea5e9" />
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 p-8 text-center">
+      <TelaTV corA={corDestaque} corB="#0ea5e9" anuncio={anuncioAtual}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-8 overflow-y-auto p-8 text-center">
           <Logo className="h-9" />
           <div className="flex items-center gap-3 text-amber-400">
             <Trophy className="h-9 w-9" />
@@ -283,17 +374,15 @@ function TVPlacar() {
             </div>
           </div>
         </div>
-        {anuncioAtual && <AnuncioTV anuncio={anuncioAtual} />}
-      </div>
+      </TelaTV>
     );
   }
 
   // ---------- Tela de espera: logo em destaque + próximos horários ----------
   if (!pelada || !atual) {
     return (
-      <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-zinc-950 via-zinc-900 to-black text-white">
-        <GlowBlobs corA="#10b981" corB="#6366f1" />
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-5 p-8 text-center">
+      <TelaTV corA="#10b981" corB="#6366f1" anuncio={anuncioAtual}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-8 text-center">
           <Logo className="h-16 drop-shadow-[0_0_50px_rgba(16,185,129,0.55)]" />
           <p className="animate-pulse text-xl text-white/70">Aguardando próxima pelada...</p>
           {quadraNome && <p className="text-xs uppercase tracking-[0.3em] text-white/40">{quadraNome}</p>}
@@ -313,8 +402,7 @@ function TVPlacar() {
             </div>
           )}
         </div>
-        {anuncioAtual && <AnuncioTV anuncio={anuncioAtual} />}
-      </div>
+      </TelaTV>
     );
   }
 
@@ -323,10 +411,8 @@ function TVPlacar() {
   const corB = corTime(atual.time_b_id);
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-zinc-950 via-zinc-900 to-black text-white">
-      <GlowBlobs corA={corA} corB={corB} />
-
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/40 px-6 py-3 backdrop-blur">
+    <TelaTV corA={corA} corB={corB} anuncio={anuncioAtual}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/40 px-6 py-3 backdrop-blur">
         <Logo className="h-7" />
         <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.25em] text-amber-300/90">
           <span>⚡ Aqui é futebol e resenha ⚡</span>
@@ -341,7 +427,7 @@ function TVPlacar() {
         </div>
       </div>
 
-      <div className="relative z-10 grid flex-1 gap-6 p-6 lg:grid-cols-[2fr_1fr]">
+      <div className="grid flex-1 min-h-0 gap-6 overflow-hidden p-6 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-black/30 p-8 backdrop-blur">
           <div className="grid w-full grid-cols-3 items-start gap-6">
             {(() => {
@@ -394,7 +480,7 @@ function TVPlacar() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto pr-1">
           <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-xs font-black uppercase tracking-wider text-white/50">Últimos lances</h3>
@@ -438,8 +524,6 @@ function TVPlacar() {
           )}
         </div>
       </div>
-
-      {anuncioAtual && <AnuncioTV anuncio={anuncioAtual} />}
-    </div>
+    </TelaTV>
   );
 }
