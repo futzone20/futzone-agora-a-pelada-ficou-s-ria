@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { LayoutDashboard, MapPin, Calendar, ShoppingCart, DollarSign, Percent, User, Package, Building } from "lucide-react";
+import { LayoutDashboard, MapPin, Calendar, ShoppingCart, DollarSign, Percent, User, Package, Building, Megaphone } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { RequireAuth } from "@/components/RequireAuth";
 
@@ -11,6 +11,7 @@ export const Route = createFileRoute("/dono")({
         { to: "/dono/arena", label: "Arena", icon: Building },
         { to: "/dono/quadras", label: "Quadras", icon: MapPin },
         { to: "/dono/agendamentos", label: "Agenda", icon: Calendar },
+        { to: "/dono/anunciantes", label: "Anunciantes", icon: Megaphone },
         { to: "/dono/pdv", label: "PDV", icon: ShoppingCart },
         { to: "/dono/produtos", label: "Produtos", icon: Package },
         { to: "/dono/financeiro", label: "Financeiro", icon: DollarSign },
