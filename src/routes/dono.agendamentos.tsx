@@ -32,8 +32,35 @@ const FORMAS = [
 const NOVO_VAZIO = {
   quadra_id: "", data: "", horario_inicio: "", horario_fim: "", cliente_nome: "",
   valor_cobrado: 0, forma_pagamento: "dinheiro", observacoes: "",
-  pagamento_antecipado: false, fixa: false, repeticoes: 8,
+  pagamento_antecipado: false, fixa: false, repeticoes: 8, modalidade: "futebol",
 };
+
+// A mesma quadra pode ser usada pra mais de um esporte (futebol, vôlei,
+// etc.) — cada modalidade tem uma cor fixa própria, sempre a mesma, pra dar
+// pra reconhecer de relance na lista e no calendário qual é qual.
+const MODALIDADES = [
+  { value: "futebol", label: "Futebol", bg: "bg-emerald-500/15", border: "border-emerald-500/40", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
+  { value: "volei", label: "Vôlei", bg: "bg-sky-500/15", border: "border-sky-500/40", text: "text-sky-700 dark:text-sky-300", dot: "bg-sky-500" },
+  { value: "futvolei", label: "FutVôlei", bg: "bg-amber-500/15", border: "border-amber-500/40", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
+  { value: "badminton", label: "Badminton", bg: "bg-violet-500/15", border: "border-violet-500/40", text: "text-violet-700 dark:text-violet-300", dot: "bg-violet-500" },
+  { value: "tenis", label: "Tênis", bg: "bg-rose-500/15", border: "border-rose-500/40", text: "text-rose-700 dark:text-rose-300", dot: "bg-rose-500" },
+] as const;
+function infoModalidade(valor: string) {
+  return MODALIDADES.find(m => m.value === valor) ?? MODALIDADES[0];
+}
+
+// Etiqueta de status dinâmica: cor viva na etiqueta, e o mesmo tom (bem mais
+// opaco) no fundo/borda do card inteiro, pra dar pra reconhecer o estado só
+// de bater o olho na lista ou na grade do calendário.
+const STATUS_INFO: Record<string, { label: string; badge: string; cardBorder: string; cardBg: string }> = {
+  pendente: { label: "Pendente", badge: "bg-amber-500 text-white hover:bg-amber-500", cardBorder: "border-amber-500/30", cardBg: "bg-amber-500/5" },
+  confirmado: { label: "Confirmado", badge: "bg-sky-500 text-white hover:bg-sky-500", cardBorder: "border-sky-500/30", cardBg: "bg-sky-500/5" },
+  concluido: { label: "Concluído", badge: "bg-slate-500 text-white hover:bg-slate-500", cardBorder: "border-slate-500/30", cardBg: "bg-slate-500/5" },
+  cancelado: { label: "Cancelado", badge: "bg-rose-600 text-white hover:bg-rose-600", cardBorder: "border-rose-500/30", cardBg: "bg-rose-500/5" },
+};
+function infoStatus(status: string) {
+  return STATUS_INFO[status] ?? { label: status, badge: "bg-muted text-foreground", cardBorder: "", cardBg: "" };
+}
 
 // Calcula o valor sugerido com base no valor/hora (diurno ou noturno, conforme
 // o horário de início) da quadra e na duração da reserva.
@@ -89,16 +116,6 @@ function horaParaMinutos(hhmm: string) {
   return h * 60 + (m || 0);
 }
 
-// Paleta cíclica por quadra, só pra diferenciar visualmente os blocos na
-// grade — não precisa combinar com o tema, funciona em claro e escuro.
-const PALETA_QUADRAS = [
-  { bg: "bg-emerald-500/15", border: "border-emerald-500/40", text: "text-emerald-700 dark:text-emerald-300" },
-  { bg: "bg-sky-500/15", border: "border-sky-500/40", text: "text-sky-700 dark:text-sky-300" },
-  { bg: "bg-violet-500/15", border: "border-violet-500/40", text: "text-violet-700 dark:text-violet-300" },
-  { bg: "bg-amber-500/15", border: "border-amber-500/40", text: "text-amber-700 dark:text-amber-300" },
-  { bg: "bg-rose-500/15", border: "border-rose-500/40", text: "text-rose-700 dark:text-rose-300" },
-  { bg: "bg-cyan-500/15", border: "border-cyan-500/40", text: "text-cyan-700 dark:text-cyan-300" },
-];
 
 function AgPage() {
   const { user } = useAuth();
@@ -317,7 +334,7 @@ function AgPage() {
     if (vincularCapitao && !vinculando) { toast.error("Selecione o capitão e o grupo dele"); return; }
 
     const base = {
-      arena_id: arena.id, quadra_id: novo.quadra_id,
+      arena_id: arena.id, quadra_id: novo.quadra_id, modalidade: novo.modalidade,
       capitao_id: vinculando ? capitaoSelecionado.user_id : user.id,
       grupo_id: vinculando ? grupoSelecionado : null,
       cliente_nome: vinculando ? capitaoSelecionado.nome : (novo.cliente_nome || null),
@@ -528,7 +545,7 @@ function AgPage() {
     const { error } = await supabase.from("agendamentos").update({
       quadra_id: reagendarForm.quadra_id, data: reagendarForm.data,
       horario_inicio: reagendarForm.horario_inicio, horario_fim: reagendarForm.horario_fim,
-      atualizado_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString(), reagendado_em: new Date().toISOString(),
     } as never).eq("id", reagendarAg.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Reagendado com sucesso");
@@ -538,10 +555,6 @@ function AgPage() {
   if (!arena) return <div className="text-center text-sm text-muted-foreground py-8">Cadastre sua arena primeiro.</div>;
 
   const toYMD = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const corQuadra = (quadraId: string) => {
-    const idx = quadras.findIndex(q => q.id === quadraId);
-    return PALETA_QUADRAS[(idx < 0 ? 0 : idx) % PALETA_QUADRAS.length];
-  };
 
   const filtradosBase = agendamentos.filter(a =>
     (filtroStatus === "todos" || a.status === filtroStatus) &&
@@ -564,6 +577,10 @@ function AgPage() {
   // Antiga com pagamento faltando (geral ou só de um participante) precisa
   // ficar visível — nunca deixar passar batido só porque a data já foi.
   const antigasPendentes = antigas.filter((a: any) => (a.status === "confirmado" || a.status === "concluido") && !a.baixa_dada);
+  // Primeira confirmada entre as próximas = a "próxima" de verdade, pra
+  // destacar com uma etiqueta na lista.
+  const proximoAgendamento = proximas.find((a: any) => a.status === "confirmado");
+  const proximoId = proximoAgendamento?.id ?? null;
 
   const agruparPorDia = (lista: any[]) => {
     const grupos: { data: string; itens: any[] }[] = [];
@@ -606,16 +623,36 @@ function AgPage() {
     const atrasada = a.data < hojeYMD;
     const resumoPart = a.participantes_resumo as { total: number; pagos: number } | null;
     const temDividido = !!resumoPart && resumoPart.total > 0;
+    const modInfo = infoModalidade(a.modalidade);
+    const statusInfo = infoStatus(a.status);
+    const eProximo = a.id === proximoId;
+    const foiReagendado = !!a.reagendado_em;
     return (
-      <Card key={a.id} className={cn("p-3", atrasada && podeDarBaixa && !a.baixa_dada && "border-rose-500/40")}>
-        <div className="flex justify-between items-start">
-          <div>
+      <Card
+        key={a.id}
+        className={cn(
+          "p-3 border",
+          statusInfo.cardBorder,
+          statusInfo.cardBg,
+          // Atrasada com pagamento pendente é o sinal mais importante —
+          // sobrepõe o tom do status com um contorno rosa mais forte.
+          atrasada && podeDarBaixa && !a.baixa_dada && "border-rose-500/60"
+        )}
+      >
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={cn("w-2 h-2 rounded-full shrink-0", modInfo.dot)} />
+              <span className="text-[11px] text-muted-foreground">{modInfo.label}</span>
+              {eProximo && <Badge className="bg-primary text-primary-foreground hover:bg-primary h-4 px-1.5 text-[10px]">Próximo</Badge>}
+              {foiReagendado && <Badge variant="outline" className="h-4 px-1.5 text-[10px] gap-0.5"><RotateCcw className="h-2.5 w-2.5" />Reagendado</Badge>}
+            </div>
             <div className="font-bold">{a.data} · {a.horario_inicio?.slice(0, 5)}–{a.horario_fim?.slice(0, 5)}</div>
             <div className="text-xs text-muted-foreground">{a.quadras?.nome} · {nomeCliente}</div>
             <div className="text-sm mt-1">{brl(Number(a.valor_cobrado || 0))}</div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <Badge variant={a.status === "confirmado" ? "default" : a.status === "cancelado" ? "destructive" : "outline"}>{a.status}</Badge>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <Badge className={cn("hover:opacity-100", statusInfo.badge)}>{statusInfo.label}</Badge>
             {a.baixa_dada ? (
               <span className="text-[11px] text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" />Pago</span>
             ) : podeDarBaixa ? (
@@ -728,12 +765,19 @@ function AgPage() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 px-1 pb-2">
+            {MODALIDADES.map(m => (
+              <div key={m.value} className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className={cn("w-2 h-2 rounded-full", m.dot)} />{m.label}
+              </div>
+            ))}
+          </div>
           <div className="overflow-x-auto">
             <div className="min-w-[640px]">
               <div className="grid grid-cols-[40px_repeat(7,1fr)]">
                 <div />
                 {diasSemana.map(d => (
-                  <div key={toYMD(d)} className={cn("text-center text-xs py-1 rounded-t-md", isSameDay(d, new Date()) && "bg-primary/10 text-primary font-bold")}>
+                  <div key={toYMD(d)} className={cn("text-center text-xs py-1 rounded-t-md", isSameDay(d, hoje) && "bg-primary/10 text-primary font-bold")}>
                     <div className="uppercase opacity-70">{format(d, "EEEEEE", { locale: ptBR })}</div>
                     <div>{d.getDate()}</div>
                   </div>
@@ -756,7 +800,7 @@ function AgPage() {
                         <div key={h} className="absolute left-0 right-0 border-t border-border/50" style={{ top: i * ALTURA_HORA_PX }} />
                       ))}
                       {doDia.map((a: any) => {
-                        const cor = corQuadra(a.quadra_id);
+                        const cor = infoModalidade(a.modalidade);
                         const ini = horaParaMinutos(a.horario_inicio);
                         const fim = horaParaMinutos(a.horario_fim);
                         const top = Math.max(0, ((ini - HORA_GRADE_INICIO * 60) / 60) * ALTURA_HORA_PX);
@@ -790,6 +834,22 @@ function AgPage() {
             <DialogHeader><DialogTitle>Agendar horário manualmente</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Local (quadra)</Label><Select value={novo.quadra_id} onValueChange={v => setNovo({ ...novo, quadra_id: v })}><SelectTrigger><SelectValue placeholder="Selecione a quadra" /></SelectTrigger><SelectContent>{quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}</SelectContent></Select></div>
+              <div>
+                <Label>Modalidade</Label>
+                <Select value={novo.modalidade} onValueChange={v => setNovo({ ...novo, modalidade: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a modalidade" /></SelectTrigger>
+                  <SelectContent>
+                    {MODALIDADES.map(m => (
+                      <SelectItem key={m.value} value={m.value}>
+                        <span className="flex items-center gap-2">
+                          <span className={cn("w-2 h-2 rounded-full", m.dot)} />
+                          {m.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {!vincularCapitao && (
                 <div><Label>Nome do cliente</Label><Input value={novo.cliente_nome} onChange={e => setNovo({ ...novo, cliente_nome: e.target.value })} placeholder="Ex: João (grupo da pelada de sexta)" /></div>
               )}
