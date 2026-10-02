@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { AlertTriangle, Calendar, DollarSign, TrendingDown, TrendingUp } from "lucide-react";
+import { infoModalidade } from "@/lib/agendamentoVisual";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dono/")({ component: DashboardDono });
 
@@ -36,8 +38,17 @@ function DashboardDono() {
       setAgHoje(c1 ?? 0); setAgSemana(c2 ?? 0);
       const { data: prods } = await supabase.from("pdv_produtos").select("id,estoque_atual,estoque_minimo").eq("arena_id", a.id).eq("ativo", true);
       setEstoqueCritico((prods ?? []).filter((p:any)=>p.estoque_atual <= p.estoque_minimo).length);
-      const { data: prox } = await supabase.from("agendamentos").select("id,horario_inicio,quadra_id,capitao_id,valor_cobrado,status,quadras(nome)").eq("arena_id", a.id).eq("data", hoje).order("horario_inicio").limit(5);
-      setProximos(prox ?? []);
+      const { data: prox } = await supabase.from("agendamentos").select("id,horario_inicio,horario_fim,quadra_id,capitao_id,cliente_nome,modalidade,valor_cobrado,status,quadras(nome)").eq("arena_id", a.id).eq("data", hoje).order("horario_inicio").limit(5);
+      const linhasProx = prox ?? [];
+      // Quando não há cliente_nome (reserva vinculada a um capitão), mostra o
+      // nome do capitão em vez de deixar o card sem nenhum nome.
+      const capitaoIds = Array.from(new Set(linhasProx.map((r: any) => r.capitao_id).filter(Boolean)));
+      let nomesPorId: Record<string, string> = {};
+      if (capitaoIds.length > 0) {
+        const { data: perfis } = await supabase.from("profiles").select("user_id,nome").in("user_id", capitaoIds);
+        nomesPorId = Object.fromEntries((perfis ?? []).map((p: any) => [p.user_id, p.nome]));
+      }
+      setProximos(linhasProx.map((r: any) => ({ ...r, nome_exibicao: r.cliente_nome || nomesPorId[r.capitao_id] || null })));
     })();
   }, [user?.id]);
 
@@ -57,9 +68,22 @@ function DashboardDono() {
       </div>
       <div>
         <h3 className="font-bold mb-2">Próximos agendamentos de hoje</h3>
-        {proximos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum agendamento hoje.</p> : proximos.map((a:any)=>(
-          <Card key={a.id} className="p-3 mb-2 flex justify-between items-center"><div><div className="font-bold">{a.horario_inicio?.slice(0,5)}</div><div className="text-xs text-muted-foreground">{a.quadras?.nome}</div></div><div className="text-sm">{brl(Number(a.valor_cobrado||0))}</div></Card>
-        ))}
+        {proximos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum agendamento hoje.</p> : proximos.map((a:any)=>{
+          const mod = infoModalidade(a.modalidade);
+          return (
+            <Card key={a.id} className="p-3 mb-2 flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className={cn("w-2 h-2 rounded-full shrink-0", mod.dot)} />
+                  <span className="text-[11px] text-muted-foreground">{mod.label}</span>
+                </div>
+                <div className="font-bold">{a.horario_inicio?.slice(0,5)}–{a.horario_fim?.slice(0,5)}</div>
+                <div className="text-xs text-muted-foreground">{a.quadras?.nome}{a.nome_exibicao ? ` · ${a.nome_exibicao}` : ""}</div>
+              </div>
+              <div className="text-sm">{brl(Number(a.valor_cobrado||0))}</div>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
