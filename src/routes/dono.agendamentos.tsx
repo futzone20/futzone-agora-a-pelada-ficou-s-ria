@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat, List, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/agendamentos")({ component: AgPage });
@@ -82,6 +83,8 @@ function AgPage() {
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroQuadra, setFiltroQuadra] = useState("todas");
+  const [visao, setVisao] = useState<"lista" | "calendario">("lista");
+  const [dataCalSelecionada, setDataCalSelecionada] = useState<Date | undefined>(undefined);
   const [openBloq, setOpenBloq] = useState(false);
   const [bloq, setBloq] = useState<any>({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "", motivo: "" });
 
@@ -117,8 +120,23 @@ function AgPage() {
     setArena(a);
     const { data: q } = await supabase.from("quadras").select("*").eq("arena_id", a.id);
     setQuadras(q ?? []);
-    const { data: ag } = await supabase.from("agendamentos").select("*, quadras(nome), profiles!agendamentos_capitao_id_fkey(nome)").eq("arena_id", a.id).order("data", { ascending: false }).order("horario_inicio");
-    setAgendamentos(ag ?? []);
+    // Importante: capitao_id referencia auth.users, não profiles — não existe
+    // (nunca existiu) uma foreign key "agendamentos_capitao_id_fkey" ligando
+    // agendamentos a profiles, então o embed `profiles!agendamentos_capitao_id_fkey(nome)`
+    // que estava aqui antes fazia o PostgREST rejeitar a consulta inteira
+    // (relationship not found) — por isso a lista sempre voltava vazia,
+    // mesmo com reservas existindo. Buscamos os nomes à parte e juntamos
+    // no cliente, do mesmo jeito já feito em ConvitesGrupoCard.
+    const { data: ag, error: eAg } = await supabase.from("agendamentos").select("*, quadras(nome)").eq("arena_id", a.id).order("data", { ascending: false }).order("horario_inicio");
+    if (eAg) { toast.error(eAg.message); setAgendamentos([]); return; }
+    const linhas = ag ?? [];
+    const capitaoIds = Array.from(new Set(linhas.map((r: any) => r.capitao_id).filter(Boolean)));
+    let nomesPorId: Record<string, string> = {};
+    if (capitaoIds.length > 0) {
+      const { data: perfis } = await supabase.from("profiles").select("user_id,nome").in("user_id", capitaoIds);
+      nomesPorId = Object.fromEntries((perfis ?? []).map((p: any) => [p.user_id, p.nome]));
+    }
+    setAgendamentos(linhas.map((r: any) => ({ ...r, capitao_nome: nomesPorId[r.capitao_id] || null })));
   };
   useEffect(() => { void load(); }, [user?.id]);
 
@@ -384,10 +402,16 @@ function AgPage() {
 
   if (!arena) return <div className="text-center text-sm text-muted-foreground py-8">Cadastre sua arena primeiro.</div>;
 
-  const filtrados = agendamentos.filter(a =>
+  const toYMD = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const filtradosBase = agendamentos.filter(a =>
     (filtroStatus === "todos" || a.status === filtroStatus) &&
     (filtroQuadra === "todas" || a.quadra_id === filtroQuadra)
   );
+  const datasComAgendamento = new Set(filtradosBase.map((a: any) => a.data));
+  const filtrados = visao === "calendario" && dataCalSelecionada
+    ? filtradosBase.filter((a: any) => a.data === toYMD(dataCalSelecionada))
+    : filtradosBase;
 
   const todosPagos = participantes.length > 0 && participantes.every(p => p.pago);
 
@@ -402,6 +426,32 @@ function AgPage() {
           {quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}
         </SelectContent></Select>
       </div>
+
+      <div className="flex rounded-lg border p-0.5 gap-0.5">
+        <Button type="button" size="sm" variant={visao === "lista" ? "default" : "ghost"} className="flex-1" onClick={() => setVisao("lista")}>
+          <List className="h-3.5 w-3.5 mr-1" />Lista
+        </Button>
+        <Button type="button" size="sm" variant={visao === "calendario" ? "default" : "ghost"} className="flex-1" onClick={() => setVisao("calendario")}>
+          <CalendarDays className="h-3.5 w-3.5 mr-1" />Calendário
+        </Button>
+      </div>
+
+      {visao === "calendario" && (
+        <Card className="p-2 flex flex-col items-center">
+          <Calendar
+            mode="single"
+            selected={dataCalSelecionada}
+            onSelect={setDataCalSelecionada}
+            modifiers={{ comAgendamento: (d: Date) => datasComAgendamento.has(toYMD(d)) }}
+            modifiersClassNames={{ comAgendamento: "font-bold text-primary after:content-[''] after:block after:w-1 after:h-1 after:rounded-full after:bg-primary after:mx-auto after:mt-0.5" }}
+          />
+          {dataCalSelecionada && (
+            <Button type="button" size="sm" variant="ghost" className="w-full" onClick={() => setDataCalSelecionada(undefined)}>
+              Ver todos os dias
+            </Button>
+          )}
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <Dialog open={openNovo} onOpenChange={o => { setOpenNovo(o); if (!o) { setNovo(NOVO_VAZIO); setValorManual(false); resetVinculo(); } }}>
@@ -534,7 +584,7 @@ function AgPage() {
       </div>
 
       {filtrados.map((a: any) => {
-        const nomeCliente = a.cliente_nome || a.profiles?.nome || "—";
+        const nomeCliente = a.cliente_nome || a.capitao_nome || "—";
         const podeDarBaixa = a.status === "confirmado" || a.status === "concluido";
         return (
           <Card key={a.id} className="p-3">
@@ -570,7 +620,11 @@ function AgPage() {
           </Card>
         );
       })}
-      {filtrados.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Sem agendamentos.</p>}
+      {filtrados.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          {visao === "calendario" && dataCalSelecionada ? "Sem agendamentos nesse dia." : "Sem agendamentos."}
+        </p>
+      )}
 
       {/* Dar baixa */}
       <Dialog open={!!baixaAg} onOpenChange={o => !o && setBaixaAg(null)}>
