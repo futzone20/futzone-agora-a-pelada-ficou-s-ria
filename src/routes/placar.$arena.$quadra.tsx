@@ -15,16 +15,22 @@ const TIPO_ICON: Record<string, string> = { gol: "⚽", passe_decisivo: "🤝", 
 const JANELA_RESUMO_MS = 10 * 60 * 1000;
 
 function AnuncioTV({ anuncio }: { anuncio: { nome: string; imagem_url: string } }) {
+  // Sem altura fixa e sem object-fit de propósito: a ImageUploadCropper (em
+  // dono.anunciantes.tsx) já obriga todo banner a ser recortado na proporção
+  // 10:1 no upload, então "w-full h-auto" reproduz essa mesma proporção na
+  // tela — a imagem cai exatamente do tamanho da faixa, preenchendo a
+  // largura toda, sem cortar nada e sem sobrar tarja preta, em qualquer
+  // resolução. (Um h-24/h-28 fixo foi a causa do bug anterior: numa faixa de
+  // largura inteira por ~100px de altura a proporção real é ~17:1, bem
+  // diferente do 4:1 do recorte, e nenhum object-fit resolve esse descasamento
+  // — ou corta, ou sobra preto. O fix de verdade é nunca forçar uma altura
+  // que não seja a da própria proporção do recorte.)
   return (
     <div className="relative shrink-0 border-t-2 border-amber-400/60 bg-black">
       <span className="absolute left-2 top-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
         Publicidade
       </span>
-      {/* object-contain (não cover): o banner é bem mais largo e baixo que a faixa
-          disponível, e com "cover" a imagem era ampliada pra preencher a faixa toda,
-          cortando as bordas do anúncio. Com "contain" o anúncio aparece sempre
-          inteiro, com uma tarja preta fina dos lados se sobrar espaço. */}
-      <img src={anuncio.imagem_url} alt={anuncio.nome} className="h-24 w-full object-contain md:h-28" />
+      <img src={anuncio.imagem_url} alt={anuncio.nome} className="block w-full h-auto" />
     </div>
   );
 }
