@@ -14,16 +14,16 @@ const TIPO_ICON: Record<string, string> = { gol: "⚽", passe_decisivo: "🤝", 
 // no ar depois do último gol, caso não comece outra pelada na quadra.
 const JANELA_RESUMO_MS = 10 * 60 * 1000;
 
-// Faixa padrão do anúncio: 1920x200 — praticamente toda TV/monitor roda a
+// Faixa padrão do anúncio: 1920x250 — praticamente toda TV/monitor roda a
 // página na resolução nativa 1920x1080, então uma altura fixa em px aqui
-// corresponde exatamente aos 200px "reais" da faixa, igual nas 3 telas
+// corresponde exatamente aos 250px "reais" da faixa, igual nas 3 telas
 // (lances, espera, resultado). A ImageUploadCropper (dono.anunciantes.tsx)
-// obriga o recorte a sair nessa mesma proporção (1920/200), então o
+// obriga o recorte a sair nessa mesma proporção (1920/250), então o
 // "object-cover" não precisa ampliar nem cortar nada na prática — só entra
 // como rede de segurança (recorte com milímetro de folga, tela um pouco
 // diferente de 1920 de largura etc.), cortando no máximo uma lasquinha das
 // bordas em vez de distorcer ou sobrar tarja preta.
-const ALTURA_FAIXA_ANUNCIO_PX = 200;
+const ALTURA_FAIXA_ANUNCIO_PX = 250;
 
 function AnuncioTV({ anuncio }: { anuncio: { nome: string; imagem_url: string } }) {
   return (
