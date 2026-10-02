@@ -87,7 +87,7 @@ function TelaTV({ corA, corB, anuncio, children }: { corA: string; corB: string;
     <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-b from-zinc-950 via-zinc-900 to-black text-white">
       <GlowBlobs corA={corA} corB={corB} />
       <BotaoTelaCheia />
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">{children}</div>
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
       {anuncio && <AnuncioTV anuncio={anuncio} />}
     </div>
   );
@@ -428,7 +428,7 @@ function TVPlacar() {
       </div>
 
       <div className="grid flex-1 min-h-0 gap-6 overflow-hidden p-6 lg:grid-cols-[2fr_1fr]">
-        <div className="flex flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-black/30 p-8 backdrop-blur">
+        <div className="flex min-h-0 flex-col items-center justify-center overflow-y-auto rounded-[2rem] border border-white/10 bg-black/30 p-8 backdrop-blur">
           <div className="grid w-full grid-cols-3 items-start gap-6">
             {(() => {
               const r = recorde(atual.time_a_id);
