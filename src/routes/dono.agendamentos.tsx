@@ -201,12 +201,17 @@ function AgPage() {
     }
     // Reserva vinculada a um capitão tem uma pelada por trás — quando ela
     // está "em_andamento" (o capitão já iniciou o jogo), a reserva precisa
-    // mostrar isso na Agenda, não só "confirmado".
+    // mostrar isso na Agenda, não só "confirmado". A policy de SELECT em
+    // "peladas" só libera pra quem é membro do grupo — o dono não é, então
+    // uma consulta direta sempre voltava vazia (mesma categoria de bug de
+    // RLS já corrigida antes pra grupos/grupo_membros). status_peladas_do_dono
+    // roda com privilégio elevado e devolve o status só das peladas que têm
+    // reserva na própria arena do dono.
     let statusPorPelada: Record<string, string> = {};
-    const peladaIds = Array.from(new Set(linhas.map((r: any) => r.pelada_id).filter(Boolean)));
-    if (peladaIds.length > 0) {
-      const { data: pls } = await supabase.from("peladas").select("id,status").in("id", peladaIds);
-      statusPorPelada = Object.fromEntries((pls ?? []).map((p: any) => [p.id, p.status]));
+    const temPeladaVinculada = linhas.some((r: any) => r.pelada_id);
+    if (temPeladaVinculada) {
+      const { data: pls } = await supabase.rpc("status_peladas_do_dono" as any, { _arena_id: a.id } as never);
+      statusPorPelada = Object.fromEntries(((pls as unknown as { id: string; status: string }[]) ?? []).map((p) => [p.id, p.status]));
     }
     setAgendamentos(linhas.map((r: any) => ({
       ...r,
