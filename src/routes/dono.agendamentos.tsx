@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { addDays, format, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { MODALIDADES, infoModalidade, infoStatus } from "@/lib/agendamentoVisual";
 
 export const Route = createFileRoute("/dono/agendamentos")({ component: AgPage });
 
@@ -34,33 +35,6 @@ const NOVO_VAZIO = {
   valor_cobrado: 0, forma_pagamento: "dinheiro", observacoes: "",
   pagamento_antecipado: false, fixa: false, repeticoes: 8, modalidade: "futebol",
 };
-
-// A mesma quadra pode ser usada pra mais de um esporte (futebol, vôlei,
-// etc.) — cada modalidade tem uma cor fixa própria, sempre a mesma, pra dar
-// pra reconhecer de relance na lista e no calendário qual é qual.
-const MODALIDADES = [
-  { value: "futebol", label: "Futebol", bg: "bg-emerald-500/15", border: "border-emerald-500/40", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
-  { value: "volei", label: "Vôlei", bg: "bg-sky-500/15", border: "border-sky-500/40", text: "text-sky-700 dark:text-sky-300", dot: "bg-sky-500" },
-  { value: "futvolei", label: "FutVôlei", bg: "bg-amber-500/15", border: "border-amber-500/40", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
-  { value: "badminton", label: "Badminton", bg: "bg-violet-500/15", border: "border-violet-500/40", text: "text-violet-700 dark:text-violet-300", dot: "bg-violet-500" },
-  { value: "tenis", label: "Tênis", bg: "bg-rose-500/15", border: "border-rose-500/40", text: "text-rose-700 dark:text-rose-300", dot: "bg-rose-500" },
-] as const;
-function infoModalidade(valor: string) {
-  return MODALIDADES.find(m => m.value === valor) ?? MODALIDADES[0];
-}
-
-// Etiqueta de status dinâmica: cor viva na etiqueta, e o mesmo tom (bem mais
-// opaco) no fundo/borda do card inteiro, pra dar pra reconhecer o estado só
-// de bater o olho na lista ou na grade do calendário.
-const STATUS_INFO: Record<string, { label: string; badge: string; cardBorder: string; cardBg: string }> = {
-  pendente: { label: "Pendente", badge: "bg-amber-500 text-white hover:bg-amber-500", cardBorder: "border-amber-500/30", cardBg: "bg-amber-500/5" },
-  confirmado: { label: "Confirmado", badge: "bg-sky-500 text-white hover:bg-sky-500", cardBorder: "border-sky-500/30", cardBg: "bg-sky-500/5" },
-  concluido: { label: "Concluído", badge: "bg-slate-500 text-white hover:bg-slate-500", cardBorder: "border-slate-500/30", cardBg: "bg-slate-500/5" },
-  cancelado: { label: "Cancelado", badge: "bg-rose-600 text-white hover:bg-rose-600", cardBorder: "border-rose-500/30", cardBg: "bg-rose-500/5" },
-};
-function infoStatus(status: string) {
-  return STATUS_INFO[status] ?? { label: status, badge: "bg-muted text-foreground", cardBorder: "", cardBg: "" };
-}
 
 // Calcula o valor sugerido com base no valor/hora (diurno ou noturno, conforme
 // o horário de início) da quadra e na duração da reserva.
@@ -225,13 +199,34 @@ function AgPage() {
         if ((p as any).pago) r.pagos++;
       }
     }
+    // Reserva vinculada a um capitão tem uma pelada por trás — quando ela
+    // está "em_andamento" (o capitão já iniciou o jogo), a reserva precisa
+    // mostrar isso na Agenda, não só "confirmado".
+    let statusPorPelada: Record<string, string> = {};
+    const peladaIds = Array.from(new Set(linhas.map((r: any) => r.pelada_id).filter(Boolean)));
+    if (peladaIds.length > 0) {
+      const { data: pls } = await supabase.from("peladas").select("id,status").in("id", peladaIds);
+      statusPorPelada = Object.fromEntries((pls ?? []).map((p: any) => [p.id, p.status]));
+    }
     setAgendamentos(linhas.map((r: any) => ({
       ...r,
       capitao_nome: nomesPorId[r.capitao_id] || null,
       participantes_resumo: resumoPorAgendamento[r.id] || null,
+      pelada_status: r.pelada_id ? statusPorPelada[r.pelada_id] || null : null,
     })));
   };
   useEffect(() => { void load(); }, [user?.id]);
+
+  // A pelada muda de status (ex: capitão aperta "iniciar") de dentro do
+  // perfil dele, fora dessa tela — sem isso o dono só veria "Em andamento"
+  // depois de sair e voltar na Agenda.
+  useEffect(() => {
+    const ch = supabase.channel("dono-agendamentos-peladas")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "peladas" }, () => void load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Preenche o valor sugerido automaticamente conforme a quadra/horário
   // escolhidos, a menos que o usuário já tenha editado o valor manualmente.
@@ -381,6 +376,9 @@ function AgPage() {
           _horario_inicio: novo.horario_inicio,
           _horario_fim: novo.horario_fim,
           _nome_pelada: `Pelada ${data.split("-").reverse().join("/")}`,
+          // Sem isso a pelada nunca ficava vinculada à quadra do dono, e o
+          // link de placar de TV (/placar/:arena/:quadra) nunca achava o jogo.
+          _quadra_id: novo.quadra_id,
         } as never);
         if (ePelada || !peladaId) { toast.error(ePelada?.message || "Erro ao criar a pelada"); return; }
         const { error } = await supabase.from("agendamentos").insert({ ...base, data, recorrencia_id: recorrenciaId, pelada_id: peladaId as unknown as string } as never);
@@ -627,13 +625,16 @@ function AgPage() {
     const statusInfo = infoStatus(a.status);
     const eProximo = a.id === proximoId;
     const foiReagendado = !!a.reagendado_em;
+    // A pelada vinculada pode estar rolando "ao vivo" nesse exato momento —
+    // isso é mais importante de mostrar do que o status "confirmado" do
+    // agendamento em si, então substitui a etiqueta de status enquanto durar.
+    const emAndamento = a.pelada_status === "em_andamento";
     return (
       <Card
         key={a.id}
         className={cn(
           "p-3 border",
-          statusInfo.cardBorder,
-          statusInfo.cardBg,
+          emAndamento ? "border-emerald-500/50 bg-emerald-500/10" : cn(statusInfo.cardBorder, statusInfo.cardBg),
           // Atrasada com pagamento pendente é o sinal mais importante —
           // sobrepõe o tom do status com um contorno rosa mais forte.
           atrasada && podeDarBaixa && !a.baixa_dada && "border-rose-500/60"
@@ -652,7 +653,13 @@ function AgPage() {
             <div className="text-sm mt-1">{brl(Number(a.valor_cobrado || 0))}</div>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <Badge className={cn("hover:opacity-100", statusInfo.badge)}>{statusInfo.label}</Badge>
+            {emAndamento ? (
+              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />Em andamento
+              </Badge>
+            ) : (
+              <Badge className={cn("hover:opacity-100", statusInfo.badge)}>{statusInfo.label}</Badge>
+            )}
             {a.baixa_dada ? (
               <span className="text-[11px] text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" />Pago</span>
             ) : podeDarBaixa ? (
@@ -810,10 +817,17 @@ function AgPage() {
                             key={a.id}
                             type="button"
                             onClick={() => setDetalheAg(a)}
-                            className={cn("absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-left overflow-hidden", cor.bg, cor.border, cor.text)}
+                            className={cn(
+                              "absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-left overflow-hidden",
+                              cor.bg, cor.border, cor.text,
+                              a.pelada_status === "em_andamento" && "ring-2 ring-emerald-500"
+                            )}
                             style={{ top, height: altura }}
                           >
-                            <div className="text-[10px] font-bold truncate">{a.horario_inicio?.slice(0, 5)} · {a.quadras?.nome}</div>
+                            <div className="text-[10px] font-bold truncate flex items-center gap-1">
+                              {a.pelada_status === "em_andamento" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
+                              {a.horario_inicio?.slice(0, 5)} · {a.quadras?.nome}
+                            </div>
                             <div className="text-[10px] truncate">{a.cliente_nome || a.capitao_nome || "—"}</div>
                           </button>
                         );
