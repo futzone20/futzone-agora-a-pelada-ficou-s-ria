@@ -6,1149 +6,288 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat, List, CalendarDays, ChevronLeft, ChevronRight, Banknote } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ImageUploadCropper } from "@/components/ImageUploadCropper";
+import { Plus, Trash2, Megaphone, BarChart3, Repeat, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { addDays, format, startOfWeek, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { MODALIDADES, infoModalidade, infoStatus } from "@/lib/agendamentoVisual";
 
-export const Route = createFileRoute("/dono/agendamentos")({ component: AgPage });
+export const Route = createFileRoute("/dono/anunciantes")({ component: AnunciantesPage });
 
-function brl(n: number) { return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
-
-const FORMAS = [
-  { value: "dinheiro", label: "Dinheiro" },
-  { value: "pix", label: "PIX" },
-  { value: "cartao_debito", label: "Débito" },
-  { value: "cartao_credito", label: "Crédito" },
+const DIAS = [
+  { v: 0, l: "Dom" }, { v: 1, l: "Seg" }, { v: 2, l: "Ter" }, { v: 3, l: "Qua" },
+  { v: 4, l: "Qui" }, { v: 5, l: "Sex" }, { v: 6, l: "Sáb" },
 ];
 
-const NOVO_VAZIO = {
-  quadra_id: "", data: "", horario_inicio: "", horario_fim: "", cliente_nome: "",
-  valor_cobrado: 0, forma_pagamento: "dinheiro", observacoes: "",
-  pagamento_antecipado: false, fixa: false, repeticoes: 8, modalidade: "futebol",
+const VAZIO = {
+  id: "", nome: "", imagem_url: "", ativo: true, quadraIds: [] as string[],
+  modo_exibicao: "compartilhado" as "compartilhado" | "exclusivo",
+  duracao_segundos: 10,
+  dias_semana: [0, 1, 2, 3, 4, 5, 6] as number[],
+  tipo_duracao: "periodo" as "periodo" | "insercoes",
+  data_inicio: "", data_fim: "",
+  limite_insercoes: "" as string | number,
 };
 
-// Calcula o valor sugerido com base no valor/hora (diurno ou noturno, conforme
-// o horário de início) da quadra e na duração da reserva.
-function minutosEntre(inicio: string, fim: string) {
-  if (!inicio || !fim) return 0;
-  const [h1, m1] = inicio.split(":").map(Number);
-  const [h2, m2] = fim.split(":").map(Number);
-  let min = (h2 * 60 + m2) - (h1 * 60 + m1);
-  if (min <= 0) min += 24 * 60;
-  return min;
-}
-
-function valorHoraQuadra(quadra: any, horario: string) {
-  if (!quadra) return 0;
-  const corte = String(quadra.horario_corte_noturno || "18:00").slice(0, 5);
-  const ehNoturno = horario >= corte;
-  return Number((ehNoturno ? quadra.valor_noturno : quadra.valor_diurno) ?? quadra.valor_padrao ?? 0);
-}
-
-function calcularValorSugerido(quadra: any, horarioInicio: string, horarioFim: string) {
-  if (!quadra || !horarioInicio || !horarioFim) return 0;
-  const valorHora = valorHoraQuadra(quadra, horarioInicio);
-  const minutos = minutosEntre(horarioInicio, horarioFim);
-  return Math.round(valorHora * (minutos / 60) * 100) / 100;
-}
-
-function somarMinutos(horario: string, minutos: number) {
-  const [h, m] = horario.split(":").map(Number);
-  const total = (h * 60 + m + minutos + 24 * 60) % (24 * 60);
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-}
-
-// Distância em linha reta entre duas coordenadas (fórmula de haversine),
-// usada pra filtrar a busca de capitão por proximidade da arena em vez de
-// comparar o texto da cidade (que varia de grafia e nunca bate).
-function distanciaKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.asin(Math.sqrt(a));
-}
-
-// ---- Visão de calendário (grade semanal) ----
-const HORA_GRADE_INICIO = 6; // 06:00
-const HORA_GRADE_FIM = 24; // até 00:00
-const ALTURA_HORA_PX = 48;
-
-function horaParaMinutos(hhmm: string) {
-  if (!hhmm) return 0;
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + (m || 0);
-}
-
-
-function AgPage() {
+function AnunciantesPage() {
   const { user } = useAuth();
   const [arena, setArena] = useState<any>(null);
   const [quadras, setQuadras] = useState<any[]>([]);
-  const [agendamentos, setAgendamentos] = useState<any[]>([]);
-  const [filtroStatus, setFiltroStatus] = useState("todos");
-  const [filtroQuadra, setFiltroQuadra] = useState("todas");
-  const [visao, setVisao] = useState<"lista" | "calendario">("lista");
-  // "Hoje" não pode ficar travado no valor computado quando o componente
-  // montou: como o app é um PWA que fica aberto por horas (ou o dia vira
-  // com a aba em segundo plano), um `new Date()` só no useState inicial
-  // ficava desatualizado — a tira de dias continuava marcando "hoje" no
-  // dia de ontem. Em vez disso, mantemos isso num estado que se atualiza
-  // sozinho (ao focar a aba/voltar de segundo plano, e a cada minuto).
-  const [hoje, setHoje] = useState(() => new Date());
-  useEffect(() => {
-    const atualizarHoje = () => setHoje(new Date());
-    const id = setInterval(atualizarHoje, 60_000);
-    document.addEventListener("visibilitychange", atualizarHoje);
-    window.addEventListener("focus", atualizarHoje);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", atualizarHoje);
-      window.removeEventListener("focus", atualizarHoje);
-    };
-  }, []);
-  // Lista: tira de dias rolável, só pra navegar/pular até um dia (a lista
-  // abaixo sempre mostra próximas + antigas — ver filtrados mais abaixo).
-  // Enquanto o dono não tocar num dia, ela acompanha "hoje" sozinha.
-  const [diaSelecionadoLista, setDiaSelecionadoLista] = useState<Date>(hoje);
-  const [diaEscolhidoManualmente, setDiaEscolhidoManualmente] = useState(false);
-  useEffect(() => { if (!diaEscolhidoManualmente) setDiaSelecionadoLista(hoje); }, [hoje, diaEscolhidoManualmente]);
-  // Calendário: grade semanal (estilo agenda), navegável semana a semana.
-  const [semanaBase, setSemanaBase] = useState<Date>(hoje);
-  const [detalheAg, setDetalheAg] = useState<any>(null);
-  const [openBloq, setOpenBloq] = useState(false);
-  const [bloq, setBloq] = useState<any>({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "", motivo: "" });
-
-  // Agendamento manual
-  const [openNovo, setOpenNovo] = useState(false);
-  const [novo, setNovo] = useState<any>(NOVO_VAZIO);
-  const [valorManual, setValorManual] = useState(false);
-
-  // Vincular a um capitão e um grupo dele (cria a pelada já, em "rascunho"
-  // pendente de configuração, pro capitão só finalizar depois).
-  const [vincularCapitao, setVincularCapitao] = useState(false);
-  const [buscaCapitao, setBuscaCapitao] = useState("");
-  const [capitaesBusca, setCapitaesBusca] = useState<any[]>([]);
-  const [capitaoSelecionado, setCapitaoSelecionado] = useState<any>(null);
-  const [gruposCapitao, setGruposCapitao] = useState<any[]>([]);
-  const [grupoSelecionado, setGrupoSelecionado] = useState("");
-
-  // Reagendar
-  const [reagendarAg, setReagendarAg] = useState<any>(null);
-  const [reagendarForm, setReagendarForm] = useState<any>({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "" });
-
-  // Dar baixa
-  const [baixaAg, setBaixaAg] = useState<any>(null);
-  const [baixaModo, setBaixaModo] = useState<"responsavel" | "dividido">("responsavel");
-  const [baixaForma, setBaixaForma] = useState("dinheiro");
-  const [participantes, setParticipantes] = useState<any[]>([]);
-  const [novoParticipante, setNovoParticipante] = useState("");
-  const [novoParticipanteValor, setNovoParticipanteValor] = useState("");
-  // Mesmo esquema de divisão inteligente da comanda do PDV: quem já pagou
-  // tem o valor travado, quem falta divide automaticamente o que resta
-  // (recalculando a cada pagamento/edição), nunca deixa editar acima do
-  // que ainda falta, e tem calculadora de troco por participante.
-  const [rascunhoValoresBaixa, setRascunhoValoresBaixa] = useState<Record<string, string>>({});
-  const [trocoAbertoBaixa, setTrocoAbertoBaixa] = useState<Record<string, boolean>>({});
-  const [trocoValorBaixa, setTrocoValorBaixa] = useState<Record<string, string>>({});
+  const [anuncios, setAnuncios] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<any>(VAZIO);
+  const [salvando, setSalvando] = useState(false);
+  const [relatorio, setRelatorio] = useState<{ nome: string; dias: { dia: string; total: number }[]; total: number } | null>(null);
 
   const load = async () => {
     if (!user) return;
     const { data: a } = await supabase.from("arenas").select("*").eq("user_id", user.id).maybeSingle();
     if (!a) return;
     setArena(a);
-    const { data: q } = await supabase.from("quadras").select("*").eq("arena_id", a.id);
+    const { data: q } = await supabase.from("quadras").select("id,nome").eq("arena_id", a.id).order("criado_em");
     setQuadras(q ?? []);
-    // Importante: capitao_id referencia auth.users, não profiles — não existe
-    // (nunca existiu) uma foreign key "agendamentos_capitao_id_fkey" ligando
-    // agendamentos a profiles, então o embed `profiles!agendamentos_capitao_id_fkey(nome)`
-    // que estava aqui antes fazia o PostgREST rejeitar a consulta inteira
-    // (relationship not found) — por isso a lista sempre voltava vazia,
-    // mesmo com reservas existindo. Buscamos os nomes à parte e juntamos
-    // no cliente, do mesmo jeito já feito em ConvitesGrupoCard.
-    const { data: ag, error: eAg } = await supabase.from("agendamentos").select("*, quadras(nome)").eq("arena_id", a.id).order("data", { ascending: false }).order("horario_inicio");
-    if (eAg) { toast.error(eAg.message); setAgendamentos([]); return; }
-    const linhas = ag ?? [];
-    const capitaoIds = Array.from(new Set(linhas.map((r: any) => r.capitao_id).filter(Boolean)));
-    let nomesPorId: Record<string, string> = {};
-    if (capitaoIds.length > 0) {
-      const { data: perfis } = await supabase.from("profiles").select("user_id,nome").in("user_id", capitaoIds);
-      nomesPorId = Object.fromEntries((perfis ?? []).map((p: any) => [p.user_id, p.nome]));
-    }
-    // Resumo de participantes (modo dividido) por agendamento, pra sinalizar
-    // na lista — sem isso só dava pra saber "pago/não pago" no geral, e uma
-    // reserva dividida em que 3 de 4 já pagaram parecia igual a uma em que
-    // ninguém pagou nada.
-    let resumoPorAgendamento: Record<string, { total: number; pagos: number }> = {};
-    const agIds = linhas.map((r: any) => r.id);
-    if (agIds.length > 0) {
-      const { data: parts } = await supabase.from("agendamento_participantes").select("agendamento_id,pago").in("agendamento_id", agIds);
-      for (const p of parts ?? []) {
-        const r = (resumoPorAgendamento[(p as any).agendamento_id] ??= { total: 0, pagos: 0 });
-        r.total++;
-        if ((p as any).pago) r.pagos++;
-      }
-    }
-    // Reserva vinculada a um capitão tem uma pelada por trás — quando ela
-    // está "em_andamento" (o capitão já iniciou o jogo), a reserva precisa
-    // mostrar isso na Agenda, não só "confirmado". A policy de SELECT em
-    // "peladas" só libera pra quem é membro do grupo — o dono não é, então
-    // uma consulta direta sempre voltava vazia (mesma categoria de bug de
-    // RLS já corrigida antes pra grupos/grupo_membros). status_peladas_do_dono
-    // roda com privilégio elevado e devolve o status só das peladas que têm
-    // reserva na própria arena do dono.
-    let statusPorPelada: Record<string, string> = {};
-    const temPeladaVinculada = linhas.some((r: any) => r.pelada_id);
-    if (temPeladaVinculada) {
-      const { data: pls } = await supabase.rpc("status_peladas_do_dono" as any, { _arena_id: a.id } as never);
-      statusPorPelada = Object.fromEntries(((pls as unknown as { id: string; status: string }[]) ?? []).map((p) => [p.id, p.status]));
-    }
-    setAgendamentos(linhas.map((r: any) => ({
-      ...r,
-      capitao_nome: nomesPorId[r.capitao_id] || null,
-      participantes_resumo: resumoPorAgendamento[r.id] || null,
-      pelada_status: r.pelada_id ? statusPorPelada[r.pelada_id] || null : null,
-    })));
+    const { data: an } = await supabase.from("tv_anunciantes").select("*, tv_anunciante_quadras(quadra_id)").eq("arena_id", a.id).order("criado_em", { ascending: false });
+    setAnuncios(an ?? []);
   };
   useEffect(() => { void load(); }, [user?.id]);
 
-  // A pelada muda de status (ex: capitão aperta "iniciar") de dentro do
-  // perfil dele, fora dessa tela — sem isso o dono só veria "Em andamento"
-  // depois de sair e voltar na Agenda.
-  useEffect(() => {
-    const ch = supabase.channel("dono-agendamentos-peladas")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "peladas" }, () => void load())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  // Preenche o valor sugerido automaticamente conforme a quadra/horário
-  // escolhidos, a menos que o usuário já tenha editado o valor manualmente.
-  useEffect(() => {
-    if (!openNovo || valorManual) return;
-    const quadra = quadras.find(q => q.id === novo.quadra_id);
-    if (!quadra || !novo.horario_inicio || !novo.horario_fim) return;
-    const sugerido = calcularValorSugerido(quadra, novo.horario_inicio, novo.horario_fim);
-    setNovo((n: any) => ({ ...n, valor_cobrado: sugerido }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openNovo, novo.quadra_id, novo.horario_inicio, novo.horario_fim, valorManual]);
-
-  const updateStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("agendamentos").update({ status, atualizado_em: new Date().toISOString() } as never).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Atualizado"); void load(); }
+  const abrirNovo = () => { setForm({ ...VAZIO, id: crypto.randomUUID() }); setOpen(true); };
+  const abrirEditar = (an: any) => {
+    setForm({
+      id: an.id, nome: an.nome, imagem_url: an.imagem_url, ativo: an.ativo,
+      quadraIds: (an.tv_anunciante_quadras ?? []).map((v: any) => v.quadra_id),
+      modo_exibicao: an.modo_exibicao, duracao_segundos: an.duracao_segundos,
+      dias_semana: an.dias_semana ?? [0, 1, 2, 3, 4, 5, 6],
+      tipo_duracao: an.tipo_duracao, data_inicio: an.data_inicio || "", data_fim: an.data_fim || "",
+      limite_insercoes: an.limite_insercoes ?? "",
+    });
+    setOpen(true);
   };
 
-  const criarBloqueio = async () => {
-    const { error } = await supabase.from("bloqueios_agenda").insert(bloq as never);
-    if (error) toast.error(error.message); else { toast.success("Bloqueio criado"); setOpenBloq(false); setBloq({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "", motivo: "" }); }
+  const toggleQuadra = (id: string) => {
+    setForm((f: any) => ({ ...f, quadraIds: f.quadraIds.includes(id) ? f.quadraIds.filter((x: string) => x !== id) : [...f.quadraIds, id] }));
+  };
+  const toggleDia = (v: number) => {
+    setForm((f: any) => ({ ...f, dias_semana: f.dias_semana.includes(v) ? f.dias_semana.filter((x: number) => x !== v) : [...f.dias_semana, v].sort() }));
   };
 
-  const resetVinculo = () => {
-    setVincularCapitao(false); setBuscaCapitao(""); setCapitaesBusca([]);
-    setCapitaoSelecionado(null); setGruposCapitao([]); setGrupoSelecionado("");
-  };
-
-  // Busca ao vivo (debounced) conforme digita. Comparar o texto da cidade
-  // (ex: "Santos Dumont" vs "Santos Dumont - MG") é frágil demais e deixava
-  // de achar gente da própria cidade — em vez disso, quando a arena e o
-  // capitão têm coordenadas, calculamos a distância e priorizamos/mostramos
-  // quem está por perto (raio de RAIO_CAPITAO_KM). Sem coordenadas de um dos
-  // dois lados, não tem como filtrar: mostramos o resultado com a cidade
-  // escrita do lado, pra o dono decidir visualmente.
-  //
-  // IMPORTANTE: "profiles.role" é só a categoria que a pessoa escolheu no
-  // cadastro (jogador/capitão/etc) — não indica se ela realmente capitaneia
-  // algum grupo de verdade. Já vimos um jogador com role='jogador' criar um
-  // grupo e virar capitão de fato sem o role mudar, e o inverso também é
-  // possível. Por isso aqui a gente não filtra por role: busca os perfis por
-  // nome/whatsapp e depois valida quem é capitão de verdade cruzando com
-  // grupo_membros (papel=capitao, status=ativo) e grupos.criado_por — o
-  // mesmo critério já usado em selecionarCapitao.
-  const RAIO_CAPITAO_KM = 100;
-  useEffect(() => {
-    const q = buscaCapitao.trim();
-    if (!vincularCapitao || capitaoSelecionado || !q || !arena) { setCapitaesBusca([]); return; }
-    const t = setTimeout(async () => {
-      const { data } = await supabase.from("profiles").select("user_id,nome,whatsapp,foto_url,cidade,latitude,longitude")
-        .or(`nome.ilike.%${q}%,whatsapp.ilike.%${q}%`).limit(30);
-      const candidatos = data ?? [];
-      if (candidatos.length === 0) { setCapitaesBusca([]); return; }
-      const ids = candidatos.map((c: any) => c.user_id);
-      // Não dá pra consultar grupo_membros/grupos direto daqui: a RLS dessas
-      // tabelas só libera leitura pra quem é membro do grupo (ou o criador),
-      // e o dono da quadra não é nem um nem outro — a consulta sempre
-      // voltaria vazia mesmo com os dados certos. Por isso usamos a função
-      // ids_capitaes_reais (SECURITY DEFINER), que decide isso com
-      // privilégio elevado e só devolve o id de quem é capitão de verdade.
-      const { data: capitaesData, error: capitaesError } = await supabase.rpc(
-        "ids_capitaes_reais" as any,
-        { _user_ids: ids } as never
-      );
-      if (capitaesError) { setCapitaesBusca([]); return; }
-      const capitaesReais = new Set<string>((capitaesData as any[] ?? []).map((r: any) => r.user_id));
-      let resultados = candidatos.filter((c: any) => capitaesReais.has(c.user_id));
-      if (arena.latitude != null && arena.longitude != null) {
-        resultados = resultados
-          .map((c: any) => ({ ...c, distanciaKm: (c.latitude != null && c.longitude != null) ? distanciaKm(arena.latitude, arena.longitude, c.latitude, c.longitude) : null }))
-          .filter((c: any) => c.distanciaKm == null || c.distanciaKm <= RAIO_CAPITAO_KM)
-          .sort((a: any, b: any) => (a.distanciaKm ?? Infinity) - (b.distanciaKm ?? Infinity));
-      }
-      setCapitaesBusca(resultados.slice(0, 8));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [buscaCapitao, vincularCapitao, capitaoSelecionado, arena]);
-
-  const selecionarCapitao = async (c: any) => {
-    setCapitaoSelecionado(c);
-    setCapitaesBusca([]);
-    setBuscaCapitao("");
-    setGrupoSelecionado("");
-    // Não dá pra buscar isso direto em grupo_membros/grupos: a RLS dessas
-    // tabelas só libera pra quem é membro do grupo (ou o criador), e o dono
-    // da quadra não é nenhum dos dois — por mais certo que esteja o dado,
-    // a consulta sempre voltaria vazia (era exatamente isso que fazia
-    // aparecer "esse capitão não tem nenhum grupo" mesmo quando tinha).
-    // grupos_do_capitao roda com privilégio elevado (SECURITY DEFINER) e
-    // devolve só id/nome dos grupos que esse usuário capitaneia de fato.
-    const { data, error } = await supabase.rpc("grupos_do_capitao" as any, { _user_id: c.user_id } as never);
-    if (error) { setGruposCapitao([]); return; }
-    const grupos = ((data as unknown) as { id: string; nome: string }[] | null) ?? [];
-    setGruposCapitao(grupos);
-    if (grupos.length === 1) setGrupoSelecionado(grupos[0].id);
-  };
-
-  const criarAgendamentoManual = async () => {
-    if (!arena || !user) return;
-    const vinculando = vincularCapitao && !!capitaoSelecionado && !!grupoSelecionado;
-    if (vincularCapitao && !vinculando) { toast.error("Selecione o capitão e o grupo dele"); return; }
-
-    const base = {
-      arena_id: arena.id, quadra_id: novo.quadra_id, modalidade: novo.modalidade,
-      capitao_id: vinculando ? capitaoSelecionado.user_id : user.id,
-      grupo_id: vinculando ? grupoSelecionado : null,
-      cliente_nome: vinculando ? capitaoSelecionado.nome : (novo.cliente_nome || null),
-      horario_inicio: novo.horario_inicio, horario_fim: novo.horario_fim,
-      valor_cobrado: novo.valor_cobrado, observacoes: novo.observacoes || null,
-      status: "confirmado",
-      pagamento_antecipado: !!novo.pagamento_antecipado,
-      forma_pagamento: novo.pagamento_antecipado ? novo.forma_pagamento : null,
-      // Pagamento antecipado = já recebido na hora da reserva: dá baixa de
-      // imediato (gera o lançamento no financeiro via trigger).
-      // modo_cobranca tem DEFAULT 'responsavel' no banco e é NOT NULL — só
-      // mandamos a coluna quando já sabemos que é "responsavel" (pagamento
-      // antecipado); nos outros casos melhor nem enviar e deixar o default
-      // valer, em vez de mandar null (isso quebrava a constraint).
-      ...(novo.pagamento_antecipado ? { modo_cobranca: "responsavel" } : {}),
-      baixa_dada: !!novo.pagamento_antecipado,
-    };
-
-    const datas: string[] = [novo.data];
-    if (novo.fixa) {
-      const [ano, mes, dia] = novo.data.split("-").map(Number);
-      const d0 = new Date(ano, mes - 1, dia);
-      for (let i = 1; i < Math.max(1, Number(novo.repeticoes) || 1); i++) {
-        const d = new Date(d0); d.setDate(d0.getDate() + 7 * i);
-        datas.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
-      }
-    }
-    const recorrenciaId = novo.fixa && datas.length > 1 ? crypto.randomUUID() : null;
-
-    if (vinculando) {
-      // Cada ocorrência vira a própria "pelada" (rascunho) na data certa —
-      // o capitão finaliza a configuração depois, no perfil do grupo dele.
-      for (const data of datas) {
-        // Inserir direto em "peladas" daqui é bloqueado pela RLS: a policy
-        // de INSERT exige que quem está logado seja o próprio capitão do
-        // grupo, e aqui quem está logado é o dono da quadra. Por isso
-        // passamos pela função criar_pelada_rascunho_dono (SECURITY
-        // DEFINER), que valida que o capitão selecionado é mesmo capitão
-        // desse grupo e cria o rascunho com privilégio elevado.
-        const { data: peladaId, error: ePelada } = await supabase.rpc("criar_pelada_rascunho_dono" as any, {
-          _grupo_id: grupoSelecionado,
-          _criado_por: capitaoSelecionado.user_id,
-          _data: data,
-          _horario_inicio: novo.horario_inicio,
-          _horario_fim: novo.horario_fim,
-          _nome_pelada: `Pelada ${data.split("-").reverse().join("/")}`,
-          // Sem isso a pelada nunca ficava vinculada à quadra do dono, e o
-          // link de placar de TV (/placar/:arena/:quadra) nunca achava o jogo.
-          _quadra_id: novo.quadra_id,
-        } as never);
-        if (ePelada || !peladaId) { toast.error(ePelada?.message || "Erro ao criar a pelada"); return; }
-        const { error } = await supabase.from("agendamentos").insert({ ...base, data, recorrencia_id: recorrenciaId, pelada_id: peladaId as unknown as string } as never);
-        if (error) { toast.error(error.message); return; }
-      }
-    } else {
-      const linhas = datas.map(data => ({ ...base, data, recorrencia_id: recorrenciaId } as never));
-      const { error } = await supabase.from("agendamentos").insert(linhas);
-      if (error) { toast.error(error.message); return; }
-    }
-
-    toast.success(datas.length > 1 ? `Agendamento criado — ${datas.length} reservas fixas` : "Agendamento criado");
-    setOpenNovo(false); setNovo(NOVO_VAZIO); setValorManual(false); resetVinculo(); void load();
-  };
-
-  // ---- Dar baixa ----
-  const abrirBaixa = async (ag: any) => {
-    setBaixaAg(ag);
-    setBaixaForma(ag.forma_pagamento || "dinheiro");
-    const { data: ps } = await supabase.from("agendamento_participantes").select("*").eq("agendamento_id", ag.id).order("pago").order("criado_em");
-    setParticipantes(ps ?? []);
-    setBaixaModo(ag.modo_cobranca === "dividido" || (ps && ps.length > 0) ? "dividido" : "responsavel");
-    setNovoParticipante("");
-    setNovoParticipanteValor("");
-    setRascunhoValoresBaixa({}); setTrocoAbertoBaixa({}); setTrocoValorBaixa({});
-  };
-
-  const recarregarParticipantes = async () => {
-    if (!baixaAg) return;
-    const { data: ps } = await supabase.from("agendamento_participantes").select("*").eq("agendamento_id", baixaAg.id).order("pago").order("criado_em");
-    setParticipantes(ps ?? []);
-  };
-
-  // Mesmo esquema de divisão inteligente já usado na comanda do PDV (ver
-  // ComandaDialog): quem já pagou tem o valor travado (coluna "valor"),
-  // quem falta divide automaticamente o que resta — recalculado a cada
-  // pagamento ou edição manual — e nunca pode "pagar" mais do que ainda
-  // falta da conta.
-  const totalBaixa = Number(baixaAg?.valor_cobrado || 0);
-  const cotaBaixa = participantes.length > 0 ? totalBaixa / participantes.length : 0;
-  const pagoSumBaixa = participantes.filter(p => p.pago).reduce((s, p) => s + Number(p.valor ?? cotaBaixa), 0);
-  const restanteBaixa = Math.max(0, totalBaixa - pagoSumBaixa);
-  const naoPagosBaixa = participantes.filter(p => !p.pago);
-  const naoPagosManualBaixa = naoPagosBaixa.filter(p => p.valor != null);
-  const somaManualNaoPagosBaixa = naoPagosManualBaixa.reduce((s, p) => s + Number(p.valor), 0);
-  const naoPagosAutoBaixa = naoPagosBaixa.filter(p => p.valor == null);
-  const restanteAutoBaixa = Math.max(0, restanteBaixa - somaManualNaoPagosBaixa);
-  const valorAutoCadaBaixa = naoPagosAutoBaixa.length > 0 ? restanteAutoBaixa / naoPagosAutoBaixa.length : 0;
-  const valorDeBaixa = (p: any) => {
-    if (p.valor != null) return Number(p.valor);
-    if (p.pago) return cotaBaixa;
-    return valorAutoCadaBaixa;
-  };
-  const somaTotalParticipantesBaixa = pagoSumBaixa + naoPagosBaixa.reduce((s, p) => s + valorDeBaixa(p), 0);
-  const diferencaSomaBaixa = totalBaixa - somaTotalParticipantesBaixa;
-
-  const addParticipante = async () => {
-    if (!baixaAg || !novoParticipante.trim()) return;
-    // Sem valor digitado = automático (divide o que resta); só trava um
-    // valor fixo se o dono realmente digitou um aqui.
-    const valor = novoParticipanteValor.trim() ? Number(novoParticipanteValor) : null;
-    const { error } = await supabase.from("agendamento_participantes").insert({ agendamento_id: baixaAg.id, nome: novoParticipante.trim(), valor } as never);
-    if (error) { toast.error(error.message); return; }
-    setNovoParticipante(""); setNovoParticipanteValor("");
-    void recarregarParticipantes();
-  };
-
-  const togglePago = async (p: any) => {
-    const marcandoComoPago = !p.pago;
-    const payload: Record<string, any> = { pago: marcandoComoPago, pago_em: marcandoComoPago ? new Date().toISOString() : null };
-    // Trava o valor no momento em que marca como pago — senão, ao marcar o
-    // próximo como pago, o valor desse recalcularia e mudaria sozinho o
-    // histórico do que essa pessoa realmente pagou.
-    if (marcandoComoPago && p.valor == null) payload.valor = Number(valorDeBaixa(p).toFixed(2));
-    const { error } = await supabase.from("agendamento_participantes").update(payload as never).eq("id", p.id);
-    if (error) { toast.error(error.message); return; }
-    void recarregarParticipantes();
-  };
-
-  // Ajusta o valor de cada um a qualquer momento (antes de pagar) — nunca
-  // deixa passar do que ainda falta; o resto sempre recalcula sozinho entre
-  // quem ainda não tem valor manual.
-  const atualizarValorParticipanteBaixa = async (p: any, novoValor: string) => {
-    if (novoValor.trim() === "") {
-      const { error } = await supabase.from("agendamento_participantes").update({ valor: null } as never).eq("id", p.id);
-      if (error) { toast.error(error.message); return; }
-      void recarregarParticipantes();
-      return;
-    }
-    let valor = Number(novoValor);
-    if (Number.isNaN(valor) || valor < 0) { toast.error("Valor inválido"); void recarregarParticipantes(); return; }
-    const outrosManuaisSoma = naoPagosManualBaixa.filter(x => x.id !== p.id).reduce((s, x) => s + Number(x.valor), 0);
-    const teto = Math.max(0, restanteBaixa - outrosManuaisSoma);
-    if (valor > teto + 0.009) {
-      toast.error(`Não dá pra cobrar mais do que falta (${brl(teto)})`);
-      valor = Number(teto.toFixed(2));
-    }
-    const { error } = await supabase.from("agendamento_participantes").update({ valor } as never).eq("id", p.id);
-    if (error) { toast.error(error.message); return; }
-    void recarregarParticipantes();
-  };
-
-  const removerParticipante = async (id: string) => {
-    await supabase.from("agendamento_participantes").delete().eq("id", id);
-    void recarregarParticipantes();
-  };
-
-  const confirmarBaixaResponsavel = async () => {
-    if (!baixaAg) return;
-    const { error } = await supabase.from("agendamentos").update({
-      modo_cobranca: "responsavel", forma_pagamento: baixaForma, baixa_dada: true,
-    } as never).eq("id", baixaAg.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Baixa registrada — lançado no financeiro");
-    setBaixaAg(null); void load();
-  };
-
-  const confirmarBaixaDividido = async () => {
-    if (!baixaAg || participantes.length === 0 || participantes.some(p => !p.pago)) return;
-    const { error } = await supabase.from("agendamentos").update({
-      modo_cobranca: "dividido", baixa_dada: true,
-    } as never).eq("id", baixaAg.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Baixa registrada — lançado no financeiro");
-    setBaixaAg(null); void load();
-  };
-
-  // ---- Adicionar tempo ----
-  const adicionarTempo = async (ag: any, minutos: number) => {
-    const quadra = quadras.find(q => q.id === ag.quadra_id);
-    if (!quadra) { toast.error("Quadra não encontrada"); return; }
-    const novoFim = somarMinutos(ag.horario_fim, minutos);
-
-    const { data: outros } = await supabase.from("agendamentos").select("id,horario_inicio,status")
-      .eq("quadra_id", ag.quadra_id).eq("data", ag.data).neq("id", ag.id).in("status", ["pendente", "confirmado"]);
-    const haConflito = (outros ?? []).some((c: any) => c.horario_inicio >= ag.horario_fim && c.horario_inicio < novoFim);
-    if (haConflito) { toast.error("Já existe outro horário marcado logo em seguida nessa quadra."); return; }
-
-    const valorHora = valorHoraQuadra(quadra, ag.horario_fim);
-    const extra = Math.round(valorHora * (minutos / 60) * 100) / 100;
-    const { error } = await supabase.from("agendamentos").update({
-      horario_fim: novoFim, valor_cobrado: Number(ag.valor_cobrado || 0) + extra,
-    } as never).eq("id", ag.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`+${minutos}min adicionados — acréscimo de ${brl(extra)}`);
+  const salvar = async () => {
+    if (!arena || !form.nome.trim() || !form.imagem_url) { toast.error("Preencha o nome e envie uma imagem"); return; }
+    if (form.quadraIds.length === 0) { toast.error("Escolha pelo menos uma quadra"); return; }
+    if (form.dias_semana.length === 0) { toast.error("Escolha pelo menos um dia da semana"); return; }
+    if (form.tipo_duracao === "insercoes" && !form.limite_insercoes) { toast.error("Informe o número de inserções"); return; }
+    setSalvando(true);
+    const editando = anuncios.some((a) => a.id === form.id);
+    const { error } = await supabase.from("tv_anunciantes").upsert({
+      id: form.id, arena_id: arena.id, nome: form.nome.trim(), imagem_url: form.imagem_url, ativo: form.ativo,
+      modo_exibicao: form.modo_exibicao, duracao_segundos: Number(form.duracao_segundos) || 10,
+      dias_semana: form.dias_semana, tipo_duracao: form.tipo_duracao,
+      data_inicio: form.tipo_duracao === "periodo" ? (form.data_inicio || null) : null,
+      data_fim: form.tipo_duracao === "periodo" ? (form.data_fim || null) : null,
+      limite_insercoes: form.tipo_duracao === "insercoes" ? Number(form.limite_insercoes) : null,
+    } as never);
+    if (error) { toast.error(error.message); setSalvando(false); return; }
+    // Mais simples recriar os vínculos do zero do que calcular diff.
+    await supabase.from("tv_anunciante_quadras").delete().eq("tv_anunciante_id", form.id);
+    const { error: eVinc } = await supabase.from("tv_anunciante_quadras").insert(
+      form.quadraIds.map((quadra_id: string) => ({ tv_anunciante_id: form.id, quadra_id })) as never
+    );
+    setSalvando(false);
+    if (eVinc) { toast.error(eVinc.message); return; }
+    toast.success(editando ? "Anunciante atualizado" : "Anunciante criado");
+    setOpen(false);
     void load();
   };
 
-  // ---- Reagendar ----
-  const abrirReagendar = (ag: any) => {
-    setReagendarAg(ag);
-    setReagendarForm({ quadra_id: ag.quadra_id, data: ag.data, horario_inicio: ag.horario_inicio?.slice(0, 5) ?? "", horario_fim: ag.horario_fim?.slice(0, 5) ?? "" });
+  const remover = async (id: string) => {
+    const { error } = await supabase.from("tv_anunciantes").delete().eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Removido"); void load(); }
   };
 
-  const confirmarReagendar = async () => {
-    if (!reagendarAg) return;
-    const { data: outros } = await supabase.from("agendamentos").select("id,horario_inicio,horario_fim")
-      .eq("quadra_id", reagendarForm.quadra_id).eq("data", reagendarForm.data).neq("id", reagendarAg.id).in("status", ["pendente", "confirmado"]);
-    const haConflito = (outros ?? []).some((c: any) => c.horario_inicio < reagendarForm.horario_fim && c.horario_fim > reagendarForm.horario_inicio);
-    if (haConflito) { toast.error("Conflito: já existe reserva nesse horário para essa quadra."); return; }
+  const toggleAtivo = async (an: any) => {
+    await supabase.from("tv_anunciantes").update({ ativo: !an.ativo } as never).eq("id", an.id);
+    void load();
+  };
 
-    const { error } = await supabase.from("agendamentos").update({
-      quadra_id: reagendarForm.quadra_id, data: reagendarForm.data,
-      horario_inicio: reagendarForm.horario_inicio, horario_fim: reagendarForm.horario_fim,
-      atualizado_em: new Date().toISOString(), reagendado_em: new Date().toISOString(),
-    } as never).eq("id", reagendarAg.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Reagendado com sucesso");
-    setReagendarAg(null); void load();
+  const verRelatorio = async (an: any) => {
+    const desde = new Date(); desde.setDate(desde.getDate() - 6); desde.setHours(0, 0, 0, 0);
+    const { data: exs } = await supabase.from("tv_anuncio_exibicoes").select("exibido_em").eq("tv_anunciante_id", an.id).gte("exibido_em", desde.toISOString());
+    const porDia: Record<string, number> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      porDia[d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })] = 0;
+    }
+    (exs ?? []).forEach((e: any) => {
+      const k = new Date(e.exibido_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      if (k in porDia) porDia[k] += 1;
+    });
+    setRelatorio({
+      nome: an.nome,
+      dias: Object.entries(porDia).map(([dia, total]) => ({ dia, total })),
+      total: an.insercoes_feitas ?? 0,
+    });
   };
 
   if (!arena) return <div className="text-center text-sm text-muted-foreground py-8">Cadastre sua arena primeiro.</div>;
 
-  const toYMD = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-  const filtradosBase = agendamentos.filter(a =>
-    (filtroStatus === "todos" || a.status === filtroStatus) &&
-    (filtroQuadra === "todas" || a.quadra_id === filtroQuadra)
-  );
-  const datasComAgendamento = new Set(filtradosBase.map((a: any) => a.data));
-  const hojeYMD = toYMD(hoje);
-
-  // A Lista não filtra mais por um único dia escolhido — ela sempre mostra
-  // as próximas (de hoje em diante, mais cedo primeiro) e as antigas (antes
-  // de hoje, mais recente primeiro), pra reservas passadas não "sumirem" só
-  // porque o dia virou. A tira de dias vira um atalho pra pular até um dia
-  // (rola a lista até lá), não um filtro que esconde o resto.
-  const proximas = filtradosBase
-    .filter((a: any) => a.data >= hojeYMD)
-    .sort((a: any, b: any) => a.data === b.data ? a.horario_inicio.localeCompare(b.horario_inicio) : a.data.localeCompare(b.data));
-  const antigas = filtradosBase
-    .filter((a: any) => a.data < hojeYMD)
-    .sort((a: any, b: any) => a.data === b.data ? a.horario_inicio.localeCompare(b.horario_inicio) : b.data.localeCompare(a.data));
-  // Antiga com pagamento faltando (geral ou só de um participante) precisa
-  // ficar visível — nunca deixar passar batido só porque a data já foi.
-  const antigasPendentes = antigas.filter((a: any) => (a.status === "confirmado" || a.status === "concluido") && !a.baixa_dada);
-  // Primeira confirmada entre as próximas = a "próxima" de verdade, pra
-  // destacar com uma etiqueta na lista.
-  const proximoAgendamento = proximas.find((a: any) => a.status === "confirmado");
-  const proximoId = proximoAgendamento?.id ?? null;
-
-  const agruparPorDia = (lista: any[]) => {
-    const grupos: { data: string; itens: any[] }[] = [];
-    for (const a of lista) {
-      const atual = grupos[grupos.length - 1];
-      if (atual && atual.data === a.data) atual.itens.push(a);
-      else grupos.push({ data: a.data, itens: [a] });
-    }
-    return grupos;
-  };
-  const formatarCabecalhoDia = (ymd: string) => {
-    if (ymd === hojeYMD) return "Hoje";
-    if (ymd === toYMD(addDays(hoje, 1))) return "Amanhã";
-    if (ymd === toYMD(addDays(hoje, -1))) return "Ontem";
-    const [ano, mes, dia] = ymd.split("-").map(Number);
-    const d = new Date(ano, mes - 1, dia);
-    const texto = format(d, "EEEE, d 'de' MMMM", { locale: ptBR });
-    return texto.charAt(0).toUpperCase() + texto.slice(1);
-  };
-
-  // Tira de dias da Lista: janela de 14 dias com o selecionado perto do
-  // início, igual ao padrão de apps de agenda — as setas pulam 7 dias.
-  const diasStrip = Array.from({ length: 14 }, (_, i) => addDays(diaSelecionadoLista, i - 3));
-  const irParaDia = (d: Date) => {
-    setDiaEscolhidoManualmente(true);
-    setDiaSelecionadoLista(d);
-    document.getElementById(`dia-${toYMD(d)}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  // Grade semanal do Calendário.
-  const inicioSemana = startOfWeek(semanaBase, { weekStartsOn: 1 });
-  const diasSemana = Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i));
-  const horasGrade = Array.from({ length: HORA_GRADE_FIM - HORA_GRADE_INICIO }, (_, i) => HORA_GRADE_INICIO + i);
-
-  const todosPagos = participantes.length > 0 && participantes.every(p => p.pago);
-
-  const renderCardAgendamento = (a: any) => {
-    const nomeCliente = a.cliente_nome || a.capitao_nome || "—";
-    const podeDarBaixa = a.status === "confirmado" || a.status === "concluido";
-    const atrasada = a.data < hojeYMD;
-    const resumoPart = a.participantes_resumo as { total: number; pagos: number } | null;
-    const temDividido = !!resumoPart && resumoPart.total > 0;
-    const modInfo = infoModalidade(a.modalidade);
-    const statusInfo = infoStatus(a.status);
-    const eProximo = a.id === proximoId;
-    const foiReagendado = !!a.reagendado_em;
-    // A pelada vinculada pode estar rolando "ao vivo" nesse exato momento —
-    // isso é mais importante de mostrar do que o status "confirmado" do
-    // agendamento em si, então substitui a etiqueta de status enquanto durar.
-    const emAndamento = a.pelada_status === "em_andamento";
-    return (
-      <Card
-        key={a.id}
-        className={cn(
-          "p-3 border",
-          emAndamento ? "border-emerald-500/50 bg-emerald-500/10" : cn(statusInfo.cardBorder, statusInfo.cardBg),
-          // Atrasada com pagamento pendente é o sinal mais importante —
-          // sobrepõe o tom do status com um contorno rosa mais forte.
-          atrasada && podeDarBaixa && !a.baixa_dada && "border-rose-500/60"
-        )}
-      >
-        <div className="flex justify-between items-start gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className={cn("w-2 h-2 rounded-full shrink-0", modInfo.dot)} />
-              <span className="text-[11px] text-muted-foreground">{modInfo.label}</span>
-              {eProximo && <Badge className="bg-primary text-primary-foreground hover:bg-primary h-4 px-1.5 text-[10px]">Próximo</Badge>}
-              {foiReagendado && <Badge variant="outline" className="h-4 px-1.5 text-[10px] gap-0.5"><RotateCcw className="h-2.5 w-2.5" />Reagendado</Badge>}
-            </div>
-            <div className="font-bold">{a.data} · {a.horario_inicio?.slice(0, 5)}–{a.horario_fim?.slice(0, 5)}</div>
-            <div className="text-xs text-muted-foreground">{a.quadras?.nome} · {nomeCliente}</div>
-            <div className="text-sm mt-1">{brl(Number(a.valor_cobrado || 0))}</div>
-          </div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {emAndamento ? (
-              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />Em andamento
-              </Badge>
-            ) : (
-              <Badge className={cn("hover:opacity-100", statusInfo.badge)}>{statusInfo.label}</Badge>
-            )}
-            {a.baixa_dada ? (
-              <span className="text-[11px] text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" />Pago</span>
-            ) : podeDarBaixa ? (
-              <span className={cn("text-[11px] flex items-center gap-0.5", atrasada ? "text-rose-500 font-bold" : "text-amber-500")}>
-                <AlertTriangle className="h-3 w-3" />
-                {atrasada ? "Atrasada — " : ""}
-                {temDividido ? `Faltam ${resumoPart!.total - resumoPart!.pagos} de ${resumoPart!.total} pagar` : "Falta pagar"}
-              </span>
-            ) : null}
-          </div>
-        </div>
-        {a.status === "pendente" && <div className="flex gap-2 mt-2"><Button size="sm" onClick={() => updateStatus(a.id, "confirmado")}>Confirmar</Button><Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button></div>}
-        <div className="flex flex-wrap gap-2 mt-2">
-          {a.status === "confirmado" && <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "concluido")}>Concluir</Button>}
-          {podeDarBaixa && !a.baixa_dada && <Button size="sm" onClick={() => abrirBaixa(a)}><Wallet className="h-3.5 w-3.5 mr-1" />Dar baixa</Button>}
-          {podeDarBaixa && a.baixa_dada && <Button size="sm" variant="ghost" onClick={() => abrirBaixa(a)}>Ver pagamento</Button>}
-          {a.status === "confirmado" && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 30)}><Clock className="h-3.5 w-3.5 mr-1" />+30min</Button>
-              <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 60)}><Clock className="h-3.5 w-3.5 mr-1" />+60min</Button>
-              <Button size="sm" variant="outline" onClick={() => abrirReagendar(a)}><RotateCcw className="h-3.5 w-3.5 mr-1" />Reagendar</Button>
-              <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button>
-            </>
-          )}
-        </div>
-      </Card>
-    );
-  };
-
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <Select value={filtroStatus} onValueChange={setFiltroStatus}><SelectTrigger className="flex-1"><SelectValue /></SelectTrigger><SelectContent>
-          <SelectItem value="todos">Todos status</SelectItem><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="confirmado">Confirmado</SelectItem><SelectItem value="cancelado">Cancelado</SelectItem><SelectItem value="concluido">Concluído</SelectItem>
-        </SelectContent></Select>
-        <Select value={filtroQuadra} onValueChange={setFiltroQuadra}><SelectTrigger className="flex-1"><SelectValue /></SelectTrigger><SelectContent>
-          <SelectItem value="todas">Todas quadras</SelectItem>
-          {quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}
-        </SelectContent></Select>
-      </div>
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="font-bold flex items-center gap-1.5"><Megaphone className="h-4 w-4" />Anunciantes</h3>
+          <p className="text-xs text-muted-foreground">Banners que aparecem no placar de TV das quadras escolhidas.</p>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild><Button size="sm" onClick={abrirNovo}><Plus className="h-4 w-4 mr-1" />Novo</Button></DialogTrigger>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>{anuncios.some((a) => a.id === form.id) ? "Editar anunciante" : "Novo anunciante"}</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div><Label>Nome do anunciante</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Lanchonete do Zé" /></div>
 
-      <div className="flex rounded-lg border p-0.5 gap-0.5">
-        <Button type="button" size="sm" variant={visao === "lista" ? "default" : "ghost"} className="flex-1" onClick={() => setVisao("lista")}>
-          <List className="h-3.5 w-3.5 mr-1" />Lista
-        </Button>
-        <Button type="button" size="sm" variant={visao === "calendario" ? "default" : "ghost"} className="flex-1" onClick={() => setVisao("calendario")}>
-          <CalendarDays className="h-3.5 w-3.5 mr-1" />Calendário
-        </Button>
-      </div>
+              <ImageUploadCropper
+                label="Banner"
+                value={form.imagem_url}
+                onChange={(url) => setForm({ ...form, imagem_url: url })}
+                arenaId={arena.id}
+                fileSlot={`anuncio-${form.id}`}
+                aspect={10}
+                dimensionsHint="Recomendado: faixa bem larga e baixa, tipo 1600x160px (proporção 10:1) — assim ela preenche a tela toda na TV, sem cortar e sem sobrar tarja preta"
+              />
 
-      {visao === "lista" && (
-        <Card className="p-2 space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => irParaDia(addDays(diaSelecionadoLista, -7))}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-sm font-medium capitalize">{format(diaSelecionadoLista, "MMMM yyyy", { locale: ptBR })}</div>
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => irParaDia(addDays(diaSelecionadoLista, 7))}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {diasStrip.map(d => {
-              const ymd = toYMD(d);
-              const selecionado = ymd === toYMD(diaSelecionadoLista);
-              const ehHoje = isSameDay(d, hoje);
-              const temAg = datasComAgendamento.has(ymd);
-              return (
-                <button
-                  key={ymd}
-                  type="button"
-                  onClick={() => irParaDia(d)}
-                  className={cn(
-                    "flex flex-col items-center justify-center shrink-0 w-12 h-16 rounded-xl border text-xs gap-0.5 transition-colors",
-                    selecionado ? "bg-primary text-primary-foreground border-primary" : ehHoje ? "border-primary/60" : "hover:bg-muted"
-                  )}
-                >
-                  <span className="uppercase opacity-70">{format(d, "EEEEEE", { locale: ptBR })}</span>
-                  <span className="text-base font-bold">{d.getDate()}</span>
-                  <span className={cn("w-1 h-1 rounded-full", temAg ? (selecionado ? "bg-primary-foreground" : "bg-primary") : "bg-transparent")} />
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[11px] text-muted-foreground px-1">Toque num dia pra pular até ele na lista abaixo.</p>
-        </Card>
-      )}
-
-      {visao === "lista" && antigasPendentes.length > 0 && (
-        <Card className="p-3 border-rose-500/40 bg-rose-500/5 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
-          <p className="text-xs text-rose-600 dark:text-rose-400">
-            {antigasPendentes.length === 1
-              ? "1 reserva antiga ainda está com pagamento pendente."
-              : `${antigasPendentes.length} reservas antigas ainda estão com pagamento pendente.`}
-          </p>
-        </Card>
-      )}
-
-      {visao === "calendario" && (
-        <Card className="p-2">
-          <div className="flex items-center justify-between px-1 pb-2">
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSemanaBase(d => addDays(d, -7))}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-sm font-medium capitalize">
-              {format(inicioSemana, "d MMM", { locale: ptBR })} – {format(addDays(inicioSemana, 6), "d MMM yyyy", { locale: ptBR })}
-            </div>
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSemanaBase(d => addDays(d, 7))}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 px-1 pb-2">
-            {MODALIDADES.map(m => (
-              <div key={m.value} className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <span className={cn("w-2 h-2 rounded-full", m.dot)} />{m.label}
+              <div>
+                <Label>Como aparece na TV</Label>
+                <div className="mt-1.5 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setForm({ ...form, modo_exibicao: "compartilhado" })}
+                    className={`rounded-lg border p-2.5 text-left text-xs ${form.modo_exibicao === "compartilhado" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    <div className="flex items-center gap-1.5 font-bold"><Repeat className="h-3.5 w-3.5" />Compartilhado</div>
+                    <p className="mt-0.5 text-muted-foreground">Reveza com os outros anunciantes compartilhados.</p>
+                  </button>
+                  <button type="button" onClick={() => setForm({ ...form, modo_exibicao: "exclusivo" })}
+                    className={`rounded-lg border p-2.5 text-left text-xs ${form.modo_exibicao === "exclusivo" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    <div className="flex items-center gap-1.5 font-bold"><Lock className="h-3.5 w-3.5" />Exclusivo</div>
+                    <p className="mt-0.5 text-muted-foreground">Aparece sempre, sem dividir espaço.</p>
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
-          <div className="overflow-x-auto">
-            <div className="min-w-[640px]">
-              <div className="grid grid-cols-[40px_repeat(7,1fr)]">
-                <div />
-                {diasSemana.map(d => (
-                  <div key={toYMD(d)} className={cn("text-center text-xs py-1 rounded-t-md", isSameDay(d, hoje) && "bg-primary/10 text-primary font-bold")}>
-                    <div className="uppercase opacity-70">{format(d, "EEEEEE", { locale: ptBR })}</div>
-                    <div>{d.getDate()}</div>
+
+              <div>
+                <Label>Tempo em tela</Label>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <Input type="number" min={1} className="w-24" value={form.duracao_segundos} onChange={(e) => setForm({ ...form, duracao_segundos: e.target.value })} />
+                  <span className="text-xs text-muted-foreground">segundos (padrão: 10)</span>
+                </div>
+              </div>
+
+              <div>
+                <Label>Dias da semana</Label>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {DIAS.map((d) => (
+                    <button key={d.v} type="button" onClick={() => toggleDia(d.v)}
+                      className={`rounded-full border px-3 py-1 text-xs font-bold ${form.dias_semana.includes(d.v) ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"}`}>
+                      {d.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Duração da campanha</Label>
+                <div className="mt-1.5 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setForm({ ...form, tipo_duracao: "periodo" })}
+                    className={`rounded-lg border p-2.5 text-left text-xs font-bold ${form.tipo_duracao === "periodo" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    Por período
+                  </button>
+                  <button type="button" onClick={() => setForm({ ...form, tipo_duracao: "insercoes" })}
+                    className={`rounded-lg border p-2.5 text-left text-xs font-bold ${form.tipo_duracao === "insercoes" ? "border-primary bg-primary/10" : "border-border"}`}>
+                    Por inserções
+                  </button>
+                </div>
+                {form.tipo_duracao === "periodo" ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div><Label className="text-xs text-muted-foreground">Início (opcional)</Label><Input type="date" value={form.data_inicio} onChange={(e) => setForm({ ...form, data_inicio: e.target.value })} /></div>
+                    <div><Label className="text-xs text-muted-foreground">Fim (opcional)</Label><Input type="date" value={form.data_fim} onChange={(e) => setForm({ ...form, data_fim: e.target.value })} /></div>
                   </div>
-                ))}
+                ) : (
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground">Número de inserções contratadas</Label>
+                    <Input type="number" min={1} value={form.limite_insercoes} onChange={(e) => setForm({ ...form, limite_insercoes: e.target.value })} placeholder="Ex: 500" />
+                    {anuncios.some((a) => a.id === form.id) && (
+                      <p className="mt-1 text-xs text-muted-foreground">Já exibido {anuncios.find((a) => a.id === form.id)?.insercoes_feitas ?? 0} vez(es). Desativa sozinho ao bater o limite.</p>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-[40px_repeat(7,1fr)]">
-                <div>
-                  {horasGrade.map(h => (
-                    <div key={h} className="text-[10px] text-muted-foreground text-right pr-1 -translate-y-2" style={{ height: ALTURA_HORA_PX }}>
-                      {String(h).padStart(2, "0")}:00
+
+              <div>
+                <Label>Aparece nas quadras</Label>
+                <div className="space-y-1.5 mt-1.5">
+                  {quadras.map((q) => (
+                    <label key={q.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={form.quadraIds.includes(q.id)} onCheckedChange={() => toggleQuadra(q.id)} />
+                      {q.nome}
+                    </label>
+                  ))}
+                  {quadras.length === 0 && <p className="text-xs text-muted-foreground">Cadastre uma quadra primeiro em "Quadras".</p>}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <Label>Ativo</Label>
+                <Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} />
+              </div>
+
+              <Button onClick={salvar} disabled={salvando} className="w-full">{salvando ? "Salvando..." : "Salvar"}</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {anuncios.map((an) => (
+        <Card key={an.id} className="p-3">
+          <div className="flex gap-3">
+            <img src={an.imagem_url} alt={an.nome} className="w-24 h-14 object-cover rounded-md border border-border shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm truncate">{an.nome}</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                <span>{(an.tv_anunciante_quadras ?? []).length} quadra(s)</span>
+                <span>· {an.modo_exibicao === "exclusivo" ? "Exclusivo" : "Compartilhado"}</span>
+                <span>· {an.duracao_segundos}s em tela</span>
+                <span>· {an.tipo_duracao === "insercoes" ? `${an.insercoes_feitas}/${an.limite_insercoes ?? "?"} inserções` : "por período"}</span>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Switch checked={an.ativo} onCheckedChange={() => toggleAtivo(an)} />
+              <Button size="sm" variant="ghost" onClick={() => abrirEditar(an)}>Editar</Button>
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Button size="sm" variant="outline" onClick={() => verRelatorio(an)}><BarChart3 className="h-3.5 w-3.5 mr-1" />Relatório</Button>
+            <Button size="sm" variant="outline" className="text-rose-500" onClick={() => remover(an.id)}><Trash2 className="h-3.5 w-3.5 mr-1" />Remover</Button>
+          </div>
+        </Card>
+      ))}
+      {anuncios.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum anunciante cadastrado ainda.</p>}
+
+      <Dialog open={!!relatorio} onOpenChange={(v) => !v && setRelatorio(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Relatório · {relatorio?.nome}</DialogTitle></DialogHeader>
+          {relatorio && (
+            <div className="space-y-3">
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-3xl font-black text-primary">{relatorio.total}</div>
+                <div className="text-xs text-muted-foreground">exibições no total</div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Últimos 7 dias</Label>
+                <div className="mt-1.5 space-y-1">
+                  {relatorio.dias.map((d) => (
+                    <div key={d.dia} className="flex items-center justify-between rounded bg-secondary/40 px-2.5 py-1.5 text-sm">
+                      <span>{d.dia}</span><span className="font-bold">{d.total}</span>
                     </div>
                   ))}
                 </div>
-                {diasSemana.map(d => {
-                  const ymd = toYMD(d);
-                  const doDia = filtradosBase.filter((a: any) => a.data === ymd);
-                  return (
-                    <div key={ymd} className="relative border-l" style={{ height: ALTURA_HORA_PX * horasGrade.length }}>
-                      {horasGrade.map((h, i) => (
-                        <div key={h} className="absolute left-0 right-0 border-t border-border/50" style={{ top: i * ALTURA_HORA_PX }} />
-                      ))}
-                      {doDia.map((a: any) => {
-                        const cor = infoModalidade(a.modalidade);
-                        const ini = horaParaMinutos(a.horario_inicio);
-                        const fim = horaParaMinutos(a.horario_fim);
-                        const top = Math.max(0, ((ini - HORA_GRADE_INICIO * 60) / 60) * ALTURA_HORA_PX);
-                        const altura = Math.max(18, ((fim - ini) / 60) * ALTURA_HORA_PX - 2);
-                        return (
-                          <button
-                            key={a.id}
-                            type="button"
-                            onClick={() => setDetalheAg(a)}
-                            className={cn(
-                              "absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-left overflow-hidden",
-                              cor.bg, cor.border, cor.text,
-                              a.pelada_status === "em_andamento" && "ring-2 ring-emerald-500"
-                            )}
-                            style={{ top, height: altura }}
-                          >
-                            <div className="text-[10px] font-bold truncate flex items-center gap-1">
-                              {a.pelada_status === "em_andamento" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
-                              {a.horario_inicio?.slice(0, 5)} · {a.quadras?.nome}
-                            </div>
-                            <div className="text-[10px] truncate">{a.cliente_nome || a.capitao_nome || "—"}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
               </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-2 gap-2">
-        <Dialog open={openNovo} onOpenChange={o => { setOpenNovo(o); if (!o) { setNovo(NOVO_VAZIO); setValorManual(false); resetVinculo(); } }}>
-          <DialogTrigger asChild><Button><CalendarPlus className="h-4 w-4 mr-1" />Novo agendamento</Button></DialogTrigger>
-          <DialogContent className="max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Agendar horário manualmente</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>Local (quadra)</Label><Select value={novo.quadra_id} onValueChange={v => setNovo({ ...novo, quadra_id: v })}><SelectTrigger><SelectValue placeholder="Selecione a quadra" /></SelectTrigger><SelectContent>{quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}</SelectContent></Select></div>
-              <div>
-                <Label>Modalidade</Label>
-                <Select value={novo.modalidade} onValueChange={v => setNovo({ ...novo, modalidade: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione a modalidade" /></SelectTrigger>
-                  <SelectContent>
-                    {MODALIDADES.map(m => (
-                      <SelectItem key={m.value} value={m.value}>
-                        <span className="flex items-center gap-2">
-                          <span className={cn("w-2 h-2 rounded-full", m.dot)} />
-                          {m.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {!vincularCapitao && (
-                <div><Label>Nome do cliente</Label><Input value={novo.cliente_nome} onChange={e => setNovo({ ...novo, cliente_nome: e.target.value })} placeholder="Ex: João (grupo da pelada de sexta)" /></div>
-              )}
-
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label>Vincular a um capitão?</Label>
-                  <p className="text-[11px] text-muted-foreground">Já cria a pelada pro grupo dele, pendente de configuração</p>
-                </div>
-                <Switch checked={vincularCapitao} onCheckedChange={v => { setVincularCapitao(v); if (!v) resetVinculo(); }} />
-              </div>
-              {vincularCapitao && (
-                <div className="space-y-2 rounded-lg border p-3">
-                  {!capitaoSelecionado ? (
-                    <>
-                      <Input placeholder="Nome ou WhatsApp do capitão" value={buscaCapitao} onChange={e => setBuscaCapitao(e.target.value)} />
-                      {arena?.latitude == null && (
-                        <p className="text-[11px] text-muted-foreground">Cadastre a localização da sua arena pra ordenar por quem está mais perto.</p>
-                      )}
-                      <div className="space-y-1">
-                        {capitaesBusca.map(c => (
-                          <div key={c.user_id} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-muted text-sm" onClick={() => selecionarCapitao(c)}>
-                            <Avatar className="h-7 w-7">
-                              {c.foto_url ? <AvatarImage src={c.foto_url} /> : null}
-                              <AvatarFallback className="text-xs">{c.nome?.[0]}</AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0">
-                              <div className="font-medium truncate">{c.nome}</div>
-                              {(c.cidade || c.distanciaKm != null) && (
-                                <div className="text-[11px] text-muted-foreground truncate">
-                                  {c.cidade}{c.cidade && c.distanciaKm != null ? " · " : ""}{c.distanciaKm != null ? `${Math.round(c.distanciaKm)} km` : ""}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {capitaesBusca.length === 0 && buscaCapitao.trim() && (
-                        <p className="text-xs text-muted-foreground">Nenhum capitão encontrado{arena?.latitude != null ? ` num raio de ${RAIO_CAPITAO_KM}km` : ""}.</p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm flex-1 min-w-0">
-                          <Avatar className="h-7 w-7">
-                            {capitaoSelecionado.foto_url ? <AvatarImage src={capitaoSelecionado.foto_url} /> : null}
-                            <AvatarFallback className="text-xs">{capitaoSelecionado.nome?.[0]}</AvatarFallback>
-                          </Avatar>
-                          <b className="truncate">{capitaoSelecionado.nome}</b>
-                        </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => { setCapitaoSelecionado(null); setGruposCapitao([]); setGrupoSelecionado(""); }}>Trocar</Button>
-                      </div>
-                      {gruposCapitao.length === 0 && <p className="text-xs text-amber-500">Esse capitão não tem nenhum grupo — não é possível vincular.</p>}
-                      {gruposCapitao.length > 1 && (
-                        <div><Label>Qual grupo dele?</Label><Select value={grupoSelecionado} onValueChange={setGrupoSelecionado}><SelectTrigger><SelectValue placeholder="Selecione o grupo" /></SelectTrigger><SelectContent>{gruposCapitao.map(g => <SelectItem key={g.id} value={g.id}>{g.nome}</SelectItem>)}</SelectContent></Select></div>
-                      )}
-                      {gruposCapitao.length === 1 && <p className="text-xs text-muted-foreground">Grupo: <b className="text-foreground">{gruposCapitao[0].nome}</b></p>}
-                    </>
-                  )}
-                </div>
-              )}
-
-              <div><Label>Data</Label><Input type="date" value={novo.data} onChange={e => setNovo({ ...novo, data: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label>Início</Label><Input type="time" value={novo.horario_inicio} onChange={e => setNovo({ ...novo, horario_inicio: e.target.value })} /></div>
-                <div><Label>Fim</Label><Input type="time" value={novo.horario_fim} onChange={e => setNovo({ ...novo, horario_fim: e.target.value })} /></div>
-              </div>
-              <div>
-                <Label>Valor cobrado</Label>
-                <Input type="number" step="0.01" value={novo.valor_cobrado} onChange={e => { setValorManual(true); setNovo({ ...novo, valor_cobrado: +e.target.value }); }} />
-                <p className="text-[11px] text-muted-foreground mt-1">Preenchido automaticamente conforme o valor diurno/noturno da quadra — pode editar se quiser.</p>
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label>Pagamento antecipado?</Label>
-                  <p className="text-[11px] text-muted-foreground">O cliente já pagou ao agendar</p>
-                </div>
-                <Switch checked={novo.pagamento_antecipado} onCheckedChange={v => setNovo({ ...novo, pagamento_antecipado: v })} />
-              </div>
-              {novo.pagamento_antecipado && (
-                <div><Label>Forma de pagamento</Label><Select value={novo.forma_pagamento} onValueChange={v => setNovo({ ...novo, forma_pagamento: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
-              )}
-
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <Label>Pelada fixa?</Label>
-                  <p className="text-[11px] text-muted-foreground">Repete semanalmente neste mesmo dia e horário</p>
-                </div>
-                <Switch checked={novo.fixa} onCheckedChange={v => setNovo({ ...novo, fixa: v })} />
-              </div>
-              {novo.fixa && (
-                <div><Label>Quantas semanas repetir</Label><Input type="number" min={2} value={novo.repeticoes} onChange={e => setNovo({ ...novo, repeticoes: +e.target.value })} /></div>
-              )}
-
-              <div><Label>Observações (opcional)</Label><Input value={novo.observacoes} onChange={e => setNovo({ ...novo, observacoes: e.target.value })} /></div>
-              {!novo.pagamento_antecipado && <p className="text-xs text-muted-foreground">O pagamento só entra no financeiro quando você "Dar baixa" depois de criado.</p>}
-              <Button onClick={criarAgendamentoManual} className="w-full" disabled={!novo.quadra_id || !novo.data || !novo.horario_inicio || !novo.horario_fim || (vincularCapitao && (!capitaoSelecionado || !grupoSelecionado))}>
-                {novo.fixa ? <><Repeat className="h-4 w-4 mr-1" />Agendar fixo</> : "Agendar"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={openBloq} onOpenChange={setOpenBloq}>
-          <DialogTrigger asChild><Button variant="outline"><Lock className="h-4 w-4 mr-1" />Bloquear horário</Button></DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Bloquear horário</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>Quadra</Label><Select value={bloq.quadra_id} onValueChange={v => setBloq({ ...bloq, quadra_id: v })}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}</SelectContent></Select></div>
-              <div><Label>Data</Label><Input type="date" value={bloq.data} onChange={e => setBloq({ ...bloq, data: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label>Início</Label><Input type="time" value={bloq.horario_inicio} onChange={e => setBloq({ ...bloq, horario_inicio: e.target.value })} /></div>
-                <div><Label>Fim</Label><Input type="time" value={bloq.horario_fim} onChange={e => setBloq({ ...bloq, horario_fim: e.target.value })} /></div>
-              </div>
-              <div><Label>Motivo</Label><Input value={bloq.motivo} onChange={e => setBloq({ ...bloq, motivo: e.target.value })} /></div>
-              <Button onClick={criarBloqueio} className="w-full" disabled={!bloq.quadra_id || !bloq.data || !bloq.horario_inicio}><Plus className="h-4 w-4 mr-1" />Bloquear</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {visao === "lista" && (
-        <div className="space-y-4">
-          {proximas.length === 0 && antigas.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Sem agendamentos.</p>
-          )}
-          {agruparPorDia(proximas).map(grupo => (
-            <div key={grupo.data} id={`dia-${grupo.data}`} className="space-y-2">
-              <h3 className="text-xs font-bold uppercase text-muted-foreground tracking-wide">{formatarCabecalhoDia(grupo.data)}</h3>
-              {grupo.itens.map(renderCardAgendamento)}
-            </div>
-          ))}
-          {antigas.length > 0 && (
-            <div className="pt-3 border-t space-y-3">
-              <h3 className="text-xs font-bold uppercase text-muted-foreground tracking-wide">Antigas</h3>
-              {agruparPorDia(antigas).map(grupo => (
-                <div key={grupo.data} id={`dia-${grupo.data}`} className="space-y-2">
-                  <h4 className="text-[11px] font-semibold text-muted-foreground">{formatarCabecalhoDia(grupo.data)}</h4>
-                  {grupo.itens.map(renderCardAgendamento)}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Clicar num bloco da grade do Calendário abre os detalhes/ações aqui */}
-      <Dialog open={!!detalheAg} onOpenChange={o => !o && setDetalheAg(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Detalhes da reserva</DialogTitle></DialogHeader>
-          {detalheAg && renderCardAgendamento(detalheAg)}
-        </DialogContent>
-      </Dialog>
-
-      {/* Dar baixa */}
-      <Dialog open={!!baixaAg} onOpenChange={o => !o && setBaixaAg(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Dar baixa — {brl(Number(baixaAg?.valor_cobrado || 0))}</DialogTitle></DialogHeader>
-          {baixaAg && (
-            <div className="space-y-3">
-              {baixaAg.baixa_dada ? (
-                <div className="rounded-lg bg-emerald-500/10 text-emerald-500 text-sm font-bold text-center p-3 flex items-center justify-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4" />Pagamento já registrado
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Button type="button" variant={baixaModo === "responsavel" ? "default" : "outline"} className="flex-1" onClick={() => setBaixaModo("responsavel")}>Um responsável</Button>
-                  <Button type="button" variant={baixaModo === "dividido" ? "default" : "outline"} className="flex-1" onClick={() => setBaixaModo("dividido")}>Dividir entre participantes</Button>
-                </div>
-              )}
-
-              {baixaModo === "responsavel" && (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Recebeu o valor total de um responsável pelo grupo? Marque como pago.</p>
-                  {!baixaAg.baixa_dada && (
-                    <>
-                      <div><Label>Forma de pagamento</Label><Select value={baixaForma} onValueChange={setBaixaForma}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
-                      <Button onClick={confirmarBaixaResponsavel} className="w-full">Marcar como recebido — {brl(Number(baixaAg.valor_cobrado || 0))}</Button>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {baixaModo === "dividido" && (
-                <div className="space-y-3">
-                  {participantes.length > 0 && (
-                    <Card className="p-3 space-y-1 text-sm">
-                      <div className="flex justify-between"><span>{participantes.length} pessoas · parte igual seria</span><b>{brl(cotaBaixa)}</b></div>
-                      <div className="border-t border-border pt-1 flex justify-between"><span className="text-emerald-500">Pago</span><span className="text-emerald-500 font-bold">{brl(pagoSumBaixa)}</span></div>
-                      <div className="flex justify-between"><span className="text-amber-500">Restante</span><span className="text-amber-500 font-bold">{brl(restanteBaixa)}</span></div>
-                      {Math.abs(diferencaSomaBaixa) >= 0.01 && (
-                        <div className="text-[11px] text-rose-500 pt-1 border-t border-border">
-                          Valores manuais somam acima do total — {brl(-diferencaSomaBaixa)} sobrando.
-                        </div>
-                      )}
-                    </Card>
-                  )}
-                  {!baixaAg.baixa_dada && (
-                    <div className="flex gap-2">
-                      <Input placeholder="Nome do participante" value={novoParticipante} onChange={e => setNovoParticipante(e.target.value)} onKeyDown={e => e.key === "Enter" && addParticipante()} className="flex-1" />
-                      <Input type="number" step="0.01" placeholder={brl(cotaBaixa)} value={novoParticipanteValor} onChange={e => setNovoParticipanteValor(e.target.value)} className="w-24" onKeyDown={e => e.key === "Enter" && addParticipante()} />
-                      <Button type="button" onClick={addParticipante}><Plus className="h-4 w-4" /></Button>
-                    </div>
-                  )}
-                  {!baixaAg.baixa_dada && participantes.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground -mt-1">Por padrão o que falta é dividido igual entre quem não pagou — edite o valor se alguém for pagar mais ou menos (o resto recalcula sozinho).</p>
-                  )}
-                  <div className="space-y-1.5">
-                    {participantes.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">Nenhum participante adicionado ainda.</p>}
-                    {participantes.map(p => (
-                      <div key={p.id} className="space-y-1">
-                        <div className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
-                          <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
-                            <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} disabled={baixaAg.baixa_dada} />
-                            <span className={`truncate ${p.pago ? "" : "font-bold"}`}>{p.nome}</span>
-                          </label>
-                          {baixaAg.baixa_dada || p.pago ? (
-                            <span className="text-xs text-muted-foreground shrink-0">{brl(valorDeBaixa(p))}</span>
-                          ) : (
-                            <>
-                              <Input
-                                type="number" step="0.01"
-                                className="h-7 w-20 text-right text-xs shrink-0"
-                                value={rascunhoValoresBaixa[p.id] !== undefined ? rascunhoValoresBaixa[p.id] : valorDeBaixa(p).toFixed(2)}
-                                onChange={e => setRascunhoValoresBaixa(r => ({ ...r, [p.id]: e.target.value }))}
-                                onBlur={e => { void atualizarValorParticipanteBaixa(p, e.target.value); setRascunhoValoresBaixa(r => { const n = { ...r }; delete n[p.id]; return n; }); }}
-                              />
-                              <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" title="Calcular troco" onClick={() => setTrocoAbertoBaixa(t => ({ ...t, [p.id]: !t[p.id] }))}><Banknote className="h-3 w-3" /></Button>
-                            </>
-                          )}
-                          {!baixaAg.baixa_dada && !p.pago && (
-                            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>
-                          )}
-                        </div>
-                        {!baixaAg.baixa_dada && !p.pago && trocoAbertoBaixa[p.id] && (
-                          <div className="rounded-lg bg-muted p-2 ml-1 space-y-1.5">
-                            <Label className="text-[11px]">Troco pra {p.nome} (deve {brl(valorDeBaixa(p))})</Label>
-                            <Input
-                              type="number" step="0.01" placeholder="Valor recebido em dinheiro" className="h-7 text-xs"
-                              value={trocoValorBaixa[p.id] ?? ""} onChange={e => setTrocoValorBaixa(v => ({ ...v, [p.id]: e.target.value }))}
-                            />
-                            {trocoValorBaixa[p.id] && (
-                              Number(trocoValorBaixa[p.id]) >= valorDeBaixa(p) ? (
-                                <div className="text-xs font-semibold text-emerald-600">Troco: {brl(Number(trocoValorBaixa[p.id]) - valorDeBaixa(p))}</div>
-                              ) : (
-                                <div className="text-xs font-semibold text-rose-500">Falta {brl(valorDeBaixa(p) - Number(trocoValorBaixa[p.id]))}</div>
-                              )
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {!baixaAg.baixa_dada && (
-                    <Button onClick={confirmarBaixaDividido} disabled={!todosPagos} className="w-full">
-                      {todosPagos ? `Confirmar baixa — ${brl(Number(baixaAg.valor_cobrado || 0))}` : `Faltam ${participantes.filter(p => !p.pago).length} pagar`}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Reagendar */}
-      <Dialog open={!!reagendarAg} onOpenChange={o => !o && setReagendarAg(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Reagendar</DialogTitle></DialogHeader>
-          {reagendarAg && (
-            <div className="space-y-3">
-              <div><Label>Local (quadra)</Label><Select value={reagendarForm.quadra_id} onValueChange={v => setReagendarForm({ ...reagendarForm, quadra_id: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{quadras.map(q => <SelectItem key={q.id} value={q.id}>{q.nome}</SelectItem>)}</SelectContent></Select></div>
-              <div><Label>Data</Label><Input type="date" value={reagendarForm.data} onChange={e => setReagendarForm({ ...reagendarForm, data: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label>Início</Label><Input type="time" value={reagendarForm.horario_inicio} onChange={e => setReagendarForm({ ...reagendarForm, horario_inicio: e.target.value })} /></div>
-                <div><Label>Fim</Label><Input type="time" value={reagendarForm.horario_fim} onChange={e => setReagendarForm({ ...reagendarForm, horario_fim: e.target.value })} /></div>
-              </div>
-              <Button onClick={confirmarReagendar} className="w-full" disabled={!reagendarForm.quadra_id || !reagendarForm.data || !reagendarForm.horario_inicio || !reagendarForm.horario_fim}>Confirmar novo horário</Button>
             </div>
           )}
         </DialogContent>
