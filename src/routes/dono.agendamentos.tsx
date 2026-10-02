@@ -12,9 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar } from "@/components/ui/calendar";
-import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat, List, CalendarDays } from "lucide-react";
+import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { addDays, format, startOfWeek, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dono/agendamentos")({ component: AgPage });
 
@@ -76,6 +78,28 @@ function distanciaKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
+// ---- Visão de calendário (grade semanal) ----
+const HORA_GRADE_INICIO = 6; // 06:00
+const HORA_GRADE_FIM = 24; // até 00:00
+const ALTURA_HORA_PX = 48;
+
+function horaParaMinutos(hhmm: string) {
+  if (!hhmm) return 0;
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+// Paleta cíclica por quadra, só pra diferenciar visualmente os blocos na
+// grade — não precisa combinar com o tema, funciona em claro e escuro.
+const PALETA_QUADRAS = [
+  { bg: "bg-emerald-500/15", border: "border-emerald-500/40", text: "text-emerald-700 dark:text-emerald-300" },
+  { bg: "bg-sky-500/15", border: "border-sky-500/40", text: "text-sky-700 dark:text-sky-300" },
+  { bg: "bg-violet-500/15", border: "border-violet-500/40", text: "text-violet-700 dark:text-violet-300" },
+  { bg: "bg-amber-500/15", border: "border-amber-500/40", text: "text-amber-700 dark:text-amber-300" },
+  { bg: "bg-rose-500/15", border: "border-rose-500/40", text: "text-rose-700 dark:text-rose-300" },
+  { bg: "bg-cyan-500/15", border: "border-cyan-500/40", text: "text-cyan-700 dark:text-cyan-300" },
+];
+
 function AgPage() {
   const { user } = useAuth();
   const [arena, setArena] = useState<any>(null);
@@ -84,7 +108,11 @@ function AgPage() {
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroQuadra, setFiltroQuadra] = useState("todas");
   const [visao, setVisao] = useState<"lista" | "calendario">("lista");
-  const [dataCalSelecionada, setDataCalSelecionada] = useState<Date | undefined>(undefined);
+  // Lista: tira de dias rolável, com o dia escolhido filtrando a lista abaixo.
+  const [diaSelecionadoLista, setDiaSelecionadoLista] = useState<Date>(new Date());
+  // Calendário: grade semanal (estilo agenda), navegável semana a semana.
+  const [semanaBase, setSemanaBase] = useState<Date>(new Date());
+  const [detalheAg, setDetalheAg] = useState<any>(null);
   const [openBloq, setOpenBloq] = useState(false);
   const [bloq, setBloq] = useState<any>({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "", motivo: "" });
 
@@ -403,17 +431,70 @@ function AgPage() {
   if (!arena) return <div className="text-center text-sm text-muted-foreground py-8">Cadastre sua arena primeiro.</div>;
 
   const toYMD = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const corQuadra = (quadraId: string) => {
+    const idx = quadras.findIndex(q => q.id === quadraId);
+    return PALETA_QUADRAS[(idx < 0 ? 0 : idx) % PALETA_QUADRAS.length];
+  };
 
   const filtradosBase = agendamentos.filter(a =>
     (filtroStatus === "todos" || a.status === filtroStatus) &&
     (filtroQuadra === "todas" || a.quadra_id === filtroQuadra)
   );
   const datasComAgendamento = new Set(filtradosBase.map((a: any) => a.data));
-  const filtrados = visao === "calendario" && dataCalSelecionada
-    ? filtradosBase.filter((a: any) => a.data === toYMD(dataCalSelecionada))
+  // Na Lista, o dia escolhido na tira de cima filtra a lista abaixo. No
+  // Calendário a grade mostra a semana inteira — o filtro por dia não entra.
+  const filtrados = visao === "lista"
+    ? filtradosBase.filter((a: any) => a.data === toYMD(diaSelecionadoLista))
     : filtradosBase;
 
+  // Tira de dias da Lista: janela de 14 dias com o selecionado perto do
+  // início, igual ao padrão de apps de agenda — as setas pulam 7 dias.
+  const diasStrip = Array.from({ length: 14 }, (_, i) => addDays(diaSelecionadoLista, i - 3));
+
+  // Grade semanal do Calendário.
+  const inicioSemana = startOfWeek(semanaBase, { weekStartsOn: 1 });
+  const diasSemana = Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i));
+  const horasGrade = Array.from({ length: HORA_GRADE_FIM - HORA_GRADE_INICIO }, (_, i) => HORA_GRADE_INICIO + i);
+
   const todosPagos = participantes.length > 0 && participantes.every(p => p.pago);
+
+  const renderCardAgendamento = (a: any) => {
+    const nomeCliente = a.cliente_nome || a.capitao_nome || "—";
+    const podeDarBaixa = a.status === "confirmado" || a.status === "concluido";
+    return (
+      <Card key={a.id} className="p-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="font-bold">{a.data} · {a.horario_inicio?.slice(0, 5)}–{a.horario_fim?.slice(0, 5)}</div>
+            <div className="text-xs text-muted-foreground">{a.quadras?.nome} · {nomeCliente}</div>
+            <div className="text-sm mt-1">{brl(Number(a.valor_cobrado || 0))}</div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Badge variant={a.status === "confirmado" ? "default" : a.status === "cancelado" ? "destructive" : "outline"}>{a.status}</Badge>
+            {a.baixa_dada ? (
+              <span className="text-[11px] text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" />Pago</span>
+            ) : podeDarBaixa ? (
+              <span className="text-[11px] text-amber-500 flex items-center gap-0.5"><AlertTriangle className="h-3 w-3" />Falta pagar</span>
+            ) : null}
+          </div>
+        </div>
+        {a.status === "pendente" && <div className="flex gap-2 mt-2"><Button size="sm" onClick={() => updateStatus(a.id, "confirmado")}>Confirmar</Button><Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button></div>}
+        <div className="flex flex-wrap gap-2 mt-2">
+          {a.status === "confirmado" && <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "concluido")}>Concluir</Button>}
+          {podeDarBaixa && !a.baixa_dada && <Button size="sm" onClick={() => abrirBaixa(a)}><Wallet className="h-3.5 w-3.5 mr-1" />Dar baixa</Button>}
+          {podeDarBaixa && a.baixa_dada && <Button size="sm" variant="ghost" onClick={() => abrirBaixa(a)}>Ver pagamento</Button>}
+          {a.status === "confirmado" && (
+            <>
+              <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 30)}><Clock className="h-3.5 w-3.5 mr-1" />+30min</Button>
+              <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 60)}><Clock className="h-3.5 w-3.5 mr-1" />+60min</Button>
+              <Button size="sm" variant="outline" onClick={() => abrirReagendar(a)}><RotateCcw className="h-3.5 w-3.5 mr-1" />Reagendar</Button>
+              <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button>
+            </>
+          )}
+        </div>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -436,20 +517,108 @@ function AgPage() {
         </Button>
       </div>
 
-      {visao === "calendario" && (
-        <Card className="p-2 flex flex-col items-center">
-          <Calendar
-            mode="single"
-            selected={dataCalSelecionada}
-            onSelect={setDataCalSelecionada}
-            modifiers={{ comAgendamento: (d: Date) => datasComAgendamento.has(toYMD(d)) }}
-            modifiersClassNames={{ comAgendamento: "font-bold text-primary after:content-[''] after:block after:w-1 after:h-1 after:rounded-full after:bg-primary after:mx-auto after:mt-0.5" }}
-          />
-          {dataCalSelecionada && (
-            <Button type="button" size="sm" variant="ghost" className="w-full" onClick={() => setDataCalSelecionada(undefined)}>
-              Ver todos os dias
+      {visao === "lista" && (
+        <Card className="p-2 space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDiaSelecionadoLista(d => addDays(d, -7))}>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          )}
+            <div className="text-sm font-medium capitalize">{format(diaSelecionadoLista, "MMMM yyyy", { locale: ptBR })}</div>
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDiaSelecionadoLista(d => addDays(d, 7))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {diasStrip.map(d => {
+              const ymd = toYMD(d);
+              const selecionado = ymd === toYMD(diaSelecionadoLista);
+              const hoje = isSameDay(d, new Date());
+              const temAg = datasComAgendamento.has(ymd);
+              return (
+                <button
+                  key={ymd}
+                  type="button"
+                  onClick={() => setDiaSelecionadoLista(d)}
+                  className={cn(
+                    "flex flex-col items-center justify-center shrink-0 w-12 h-16 rounded-xl border text-xs gap-0.5 transition-colors",
+                    selecionado ? "bg-primary text-primary-foreground border-primary" : hoje ? "border-primary/60" : "hover:bg-muted"
+                  )}
+                >
+                  <span className="uppercase opacity-70">{format(d, "EEEEEE", { locale: ptBR })}</span>
+                  <span className="text-base font-bold">{d.getDate()}</span>
+                  <span className={cn("w-1 h-1 rounded-full", temAg ? (selecionado ? "bg-primary-foreground" : "bg-primary") : "bg-transparent")} />
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {visao === "calendario" && (
+        <Card className="p-2">
+          <div className="flex items-center justify-between px-1 pb-2">
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSemanaBase(d => addDays(d, -7))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-sm font-medium capitalize">
+              {format(inicioSemana, "d MMM", { locale: ptBR })} – {format(addDays(inicioSemana, 6), "d MMM yyyy", { locale: ptBR })}
+            </div>
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSemanaBase(d => addDays(d, 7))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-[640px]">
+              <div className="grid grid-cols-[40px_repeat(7,1fr)]">
+                <div />
+                {diasSemana.map(d => (
+                  <div key={toYMD(d)} className={cn("text-center text-xs py-1 rounded-t-md", isSameDay(d, new Date()) && "bg-primary/10 text-primary font-bold")}>
+                    <div className="uppercase opacity-70">{format(d, "EEEEEE", { locale: ptBR })}</div>
+                    <div>{d.getDate()}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-[40px_repeat(7,1fr)]">
+                <div>
+                  {horasGrade.map(h => (
+                    <div key={h} className="text-[10px] text-muted-foreground text-right pr-1 -translate-y-2" style={{ height: ALTURA_HORA_PX }}>
+                      {String(h).padStart(2, "0")}:00
+                    </div>
+                  ))}
+                </div>
+                {diasSemana.map(d => {
+                  const ymd = toYMD(d);
+                  const doDia = filtradosBase.filter((a: any) => a.data === ymd);
+                  return (
+                    <div key={ymd} className="relative border-l" style={{ height: ALTURA_HORA_PX * horasGrade.length }}>
+                      {horasGrade.map((h, i) => (
+                        <div key={h} className="absolute left-0 right-0 border-t border-border/50" style={{ top: i * ALTURA_HORA_PX }} />
+                      ))}
+                      {doDia.map((a: any) => {
+                        const cor = corQuadra(a.quadra_id);
+                        const ini = horaParaMinutos(a.horario_inicio);
+                        const fim = horaParaMinutos(a.horario_fim);
+                        const top = Math.max(0, ((ini - HORA_GRADE_INICIO * 60) / 60) * ALTURA_HORA_PX);
+                        const altura = Math.max(18, ((fim - ini) / 60) * ALTURA_HORA_PX - 2);
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => setDetalheAg(a)}
+                            className={cn("absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 text-left overflow-hidden", cor.bg, cor.border, cor.text)}
+                            style={{ top, height: altura }}
+                          >
+                            <div className="text-[10px] font-bold truncate">{a.horario_inicio?.slice(0, 5)} · {a.quadras?.nome}</div>
+                            <div className="text-[10px] truncate">{a.cliente_nome || a.capitao_nome || "—"}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </Card>
       )}
 
@@ -583,48 +752,22 @@ function AgPage() {
         </Dialog>
       </div>
 
-      {filtrados.map((a: any) => {
-        const nomeCliente = a.cliente_nome || a.capitao_nome || "—";
-        const podeDarBaixa = a.status === "confirmado" || a.status === "concluido";
-        return (
-          <Card key={a.id} className="p-3">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-bold">{a.data} · {a.horario_inicio?.slice(0, 5)}–{a.horario_fim?.slice(0, 5)}</div>
-                <div className="text-xs text-muted-foreground">{a.quadras?.nome} · {nomeCliente}</div>
-                <div className="text-sm mt-1">{brl(Number(a.valor_cobrado || 0))}</div>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <Badge variant={a.status === "confirmado" ? "default" : a.status === "cancelado" ? "destructive" : "outline"}>{a.status}</Badge>
-                {a.baixa_dada ? (
-                  <span className="text-[11px] text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" />Pago</span>
-                ) : podeDarBaixa ? (
-                  <span className="text-[11px] text-amber-500 flex items-center gap-0.5"><AlertTriangle className="h-3 w-3" />Falta pagar</span>
-                ) : null}
-              </div>
-            </div>
-            {a.status === "pendente" && <div className="flex gap-2 mt-2"><Button size="sm" onClick={() => updateStatus(a.id, "confirmado")}>Confirmar</Button><Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button></div>}
-            <div className="flex flex-wrap gap-2 mt-2">
-              {a.status === "confirmado" && <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "concluido")}>Concluir</Button>}
-              {podeDarBaixa && !a.baixa_dada && <Button size="sm" onClick={() => abrirBaixa(a)}><Wallet className="h-3.5 w-3.5 mr-1" />Dar baixa</Button>}
-              {podeDarBaixa && a.baixa_dada && <Button size="sm" variant="ghost" onClick={() => abrirBaixa(a)}>Ver pagamento</Button>}
-              {a.status === "confirmado" && (
-                <>
-                  <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 30)}><Clock className="h-3.5 w-3.5 mr-1" />+30min</Button>
-                  <Button size="sm" variant="outline" onClick={() => adicionarTempo(a, 60)}><Clock className="h-3.5 w-3.5 mr-1" />+60min</Button>
-                  <Button size="sm" variant="outline" onClick={() => abrirReagendar(a)}><RotateCcw className="h-3.5 w-3.5 mr-1" />Reagendar</Button>
-                  <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, "cancelado")}>Cancelar</Button>
-                </>
-              )}
-            </div>
-          </Card>
-        );
-      })}
-      {filtrados.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">
-          {visao === "calendario" && dataCalSelecionada ? "Sem agendamentos nesse dia." : "Sem agendamentos."}
-        </p>
+      {visao === "lista" && (
+        <>
+          {filtrados.map(renderCardAgendamento)}
+          {filtrados.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Sem agendamentos nesse dia.</p>
+          )}
+        </>
       )}
+
+      {/* Clicar num bloco da grade do Calendário abre os detalhes/ações aqui */}
+      <Dialog open={!!detalheAg} onOpenChange={o => !o && setDetalheAg(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Detalhes da reserva</DialogTitle></DialogHeader>
+          {detalheAg && renderCardAgendamento(detalheAg)}
+        </DialogContent>
+      </Dialog>
 
       {/* Dar baixa */}
       <Dialog open={!!baixaAg} onOpenChange={o => !o && setBaixaAg(null)}>
