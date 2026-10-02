@@ -151,8 +151,8 @@ function AnunciantesPage() {
                 onChange={(url) => setForm({ ...form, imagem_url: url })}
                 arenaId={arena.id}
                 fileSlot={`anuncio-${form.id}`}
-                aspect={1920 / 200}
-                dimensionsHint="Tamanho padrão da faixa: 1920x200px — essa é a mesma faixa em qualquer tela da TV (lances, espera ou resultado)"
+                aspect={1920 / 250}
+                dimensionsHint="Tamanho padrão da faixa: 1920x250px — essa é a mesma faixa em qualquer tela da TV (lances, espera ou resultado)"
               />
 
               <div>
