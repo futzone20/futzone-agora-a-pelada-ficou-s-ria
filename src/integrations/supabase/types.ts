@@ -3308,6 +3308,7 @@ export type Database = {
           id: string
           jogadores_por_time: number
           nome: string
+          quadra_publica_id: string | null
           slug: string
           tipo_superficie: string
           valor_diurno: number | null
@@ -3324,6 +3325,7 @@ export type Database = {
           id?: string
           jogadores_por_time?: number
           nome: string
+          quadra_publica_id?: string | null
           slug: string
           tipo_superficie?: string
           valor_diurno?: number | null
@@ -3340,6 +3342,7 @@ export type Database = {
           id?: string
           jogadores_por_time?: number
           nome?: string
+          quadra_publica_id?: string | null
           slug?: string
           tipo_superficie?: string
           valor_diurno?: number | null
@@ -3352,6 +3355,13 @@ export type Database = {
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quadras_quadra_publica_id_fkey"
+            columns: ["quadra_publica_id"]
+            isOneToOne: false
+            referencedRelation: "quadras_publicas"
             referencedColumns: ["id"]
           },
         ]
@@ -3958,6 +3968,74 @@ export type Database = {
             columns: ["grupo_id"]
             isOneToOne: false
             referencedRelation: "grupos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tv_anunciantes: {
+        Row: {
+          arena_id: string
+          ativo: boolean
+          criado_em: string
+          id: string
+          imagem_url: string
+          link_url: string | null
+          nome: string
+        }
+        Insert: {
+          arena_id: string
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          imagem_url: string
+          link_url?: string | null
+          nome: string
+        }
+        Update: {
+          arena_id?: string
+          ativo?: boolean
+          criado_em?: string
+          id?: string
+          imagem_url?: string
+          link_url?: string | null
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_anunciantes_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tv_anunciante_quadras: {
+        Row: {
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Insert: {
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Update: {
+          quadra_id?: string
+          tv_anunciante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_anunciante_quadras_quadra_id_fkey"
+            columns: ["quadra_id"]
+            isOneToOne: false
+            referencedRelation: "quadras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tv_anunciante_quadras_tv_anunciante_id_fkey"
+            columns: ["tv_anunciante_id"]
+            isOneToOne: false
+            referencedRelation: "tv_anunciantes"
             referencedColumns: ["id"]
           },
         ]
