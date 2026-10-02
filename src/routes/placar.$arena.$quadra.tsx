@@ -20,7 +20,11 @@ function AnuncioTV({ anuncio }: { anuncio: { nome: string; imagem_url: string } 
       <span className="absolute left-2 top-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
         Publicidade
       </span>
-      <img src={anuncio.imagem_url} alt={anuncio.nome} className="h-20 w-full object-cover md:h-24" />
+      {/* object-contain (não cover): o banner é bem mais largo e baixo que a faixa
+          disponível, e com "cover" a imagem era ampliada pra preencher a faixa toda,
+          cortando as bordas do anúncio. Com "contain" o anúncio aparece sempre
+          inteiro, com uma tarja preta fina dos lados se sobrar espaço. */}
+      <img src={anuncio.imagem_url} alt={anuncio.nome} className="h-24 w-full object-contain md:h-28" />
     </div>
   );
 }
