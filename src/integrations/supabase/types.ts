@@ -3977,28 +3977,49 @@ export type Database = {
           arena_id: string
           ativo: boolean
           criado_em: string
+          data_fim: string | null
+          data_inicio: string | null
+          dias_semana: number[]
+          duracao_segundos: number
           id: string
           imagem_url: string
-          link_url: string | null
+          insercoes_feitas: number
+          limite_insercoes: number | null
+          modo_exibicao: string
           nome: string
+          tipo_duracao: string
         }
         Insert: {
           arena_id: string
           ativo?: boolean
           criado_em?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          dias_semana?: number[]
+          duracao_segundos?: number
           id?: string
           imagem_url: string
-          link_url?: string | null
+          insercoes_feitas?: number
+          limite_insercoes?: number | null
+          modo_exibicao?: string
           nome: string
+          tipo_duracao?: string
         }
         Update: {
           arena_id?: string
           ativo?: boolean
           criado_em?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          dias_semana?: number[]
+          duracao_segundos?: number
           id?: string
           imagem_url?: string
-          link_url?: string | null
+          insercoes_feitas?: number
+          limite_insercoes?: number | null
+          modo_exibicao?: string
           nome?: string
+          tipo_duracao?: string
         }
         Relationships: [
           {
@@ -4006,6 +4027,42 @@ export type Database = {
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tv_anuncio_exibicoes: {
+        Row: {
+          exibido_em: string
+          id: string
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Insert: {
+          exibido_em?: string
+          id?: string
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Update: {
+          exibido_em?: string
+          id?: string
+          quadra_id?: string
+          tv_anunciante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_anuncio_exibicoes_quadra_id_fkey"
+            columns: ["quadra_id"]
+            isOneToOne: false
+            referencedRelation: "quadras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tv_anuncio_exibicoes_tv_anunciante_id_fkey"
+            columns: ["tv_anunciante_id"]
+            isOneToOne: false
+            referencedRelation: "tv_anunciantes"
             referencedColumns: ["id"]
           },
         ]
