@@ -14,23 +14,24 @@ const TIPO_ICON: Record<string, string> = { gol: "⚽", passe_decisivo: "🤝", 
 // no ar depois do último gol, caso não comece outra pelada na quadra.
 const JANELA_RESUMO_MS = 10 * 60 * 1000;
 
+// Faixa padrão do anúncio: 1920x200 — praticamente toda TV/monitor roda a
+// página na resolução nativa 1920x1080, então uma altura fixa em px aqui
+// corresponde exatamente aos 200px "reais" da faixa, igual nas 3 telas
+// (lances, espera, resultado). A ImageUploadCropper (dono.anunciantes.tsx)
+// obriga o recorte a sair nessa mesma proporção (1920/200), então o
+// "object-cover" não precisa ampliar nem cortar nada na prática — só entra
+// como rede de segurança (recorte com milímetro de folga, tela um pouco
+// diferente de 1920 de largura etc.), cortando no máximo uma lasquinha das
+// bordas em vez de distorcer ou sobrar tarja preta.
+const ALTURA_FAIXA_ANUNCIO_PX = 200;
+
 function AnuncioTV({ anuncio }: { anuncio: { nome: string; imagem_url: string } }) {
-  // Sem altura fixa e sem object-fit de propósito: a ImageUploadCropper (em
-  // dono.anunciantes.tsx) já obriga todo banner a ser recortado na proporção
-  // 10:1 no upload, então "w-full h-auto" reproduz essa mesma proporção na
-  // tela — a imagem cai exatamente do tamanho da faixa, preenchendo a
-  // largura toda, sem cortar nada e sem sobrar tarja preta, em qualquer
-  // resolução. (Um h-24/h-28 fixo foi a causa do bug anterior: numa faixa de
-  // largura inteira por ~100px de altura a proporção real é ~17:1, bem
-  // diferente do 4:1 do recorte, e nenhum object-fit resolve esse descasamento
-  // — ou corta, ou sobra preto. O fix de verdade é nunca forçar uma altura
-  // que não seja a da própria proporção do recorte.)
   return (
-    <div className="relative shrink-0 border-t-2 border-amber-400/60 bg-black">
+    <div className="relative shrink-0 border-t-2 border-amber-400/60 bg-black" style={{ height: ALTURA_FAIXA_ANUNCIO_PX }}>
       <span className="absolute left-2 top-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
         Publicidade
       </span>
-      <img src={anuncio.imagem_url} alt={anuncio.nome} className="block w-full h-auto" />
+      <img src={anuncio.imagem_url} alt={anuncio.nome} className="block h-full w-full object-cover" />
     </div>
   );
 }
