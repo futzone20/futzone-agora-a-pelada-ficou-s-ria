@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { Lock, Plus, CalendarPlus, Wallet, CheckCircle2, AlertTriangle, Trash2, Clock, RotateCcw, Repeat, List, CalendarDays, ChevronLeft, ChevronRight, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import { addDays, format, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -108,10 +108,32 @@ function AgPage() {
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroQuadra, setFiltroQuadra] = useState("todas");
   const [visao, setVisao] = useState<"lista" | "calendario">("lista");
-  // Lista: tira de dias rolável, com o dia escolhido filtrando a lista abaixo.
-  const [diaSelecionadoLista, setDiaSelecionadoLista] = useState<Date>(new Date());
+  // "Hoje" não pode ficar travado no valor computado quando o componente
+  // montou: como o app é um PWA que fica aberto por horas (ou o dia vira
+  // com a aba em segundo plano), um `new Date()` só no useState inicial
+  // ficava desatualizado — a tira de dias continuava marcando "hoje" no
+  // dia de ontem. Em vez disso, mantemos isso num estado que se atualiza
+  // sozinho (ao focar a aba/voltar de segundo plano, e a cada minuto).
+  const [hoje, setHoje] = useState(() => new Date());
+  useEffect(() => {
+    const atualizarHoje = () => setHoje(new Date());
+    const id = setInterval(atualizarHoje, 60_000);
+    document.addEventListener("visibilitychange", atualizarHoje);
+    window.addEventListener("focus", atualizarHoje);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", atualizarHoje);
+      window.removeEventListener("focus", atualizarHoje);
+    };
+  }, []);
+  // Lista: tira de dias rolável, só pra navegar/pular até um dia (a lista
+  // abaixo sempre mostra próximas + antigas — ver filtrados mais abaixo).
+  // Enquanto o dono não tocar num dia, ela acompanha "hoje" sozinha.
+  const [diaSelecionadoLista, setDiaSelecionadoLista] = useState<Date>(hoje);
+  const [diaEscolhidoManualmente, setDiaEscolhidoManualmente] = useState(false);
+  useEffect(() => { if (!diaEscolhidoManualmente) setDiaSelecionadoLista(hoje); }, [hoje, diaEscolhidoManualmente]);
   // Calendário: grade semanal (estilo agenda), navegável semana a semana.
-  const [semanaBase, setSemanaBase] = useState<Date>(new Date());
+  const [semanaBase, setSemanaBase] = useState<Date>(hoje);
   const [detalheAg, setDetalheAg] = useState<any>(null);
   const [openBloq, setOpenBloq] = useState(false);
   const [bloq, setBloq] = useState<any>({ quadra_id: "", data: "", horario_inicio: "", horario_fim: "", motivo: "" });
@@ -140,6 +162,14 @@ function AgPage() {
   const [baixaForma, setBaixaForma] = useState("dinheiro");
   const [participantes, setParticipantes] = useState<any[]>([]);
   const [novoParticipante, setNovoParticipante] = useState("");
+  const [novoParticipanteValor, setNovoParticipanteValor] = useState("");
+  // Mesmo esquema de divisão inteligente da comanda do PDV: quem já pagou
+  // tem o valor travado, quem falta divide automaticamente o que resta
+  // (recalculando a cada pagamento/edição), nunca deixa editar acima do
+  // que ainda falta, e tem calculadora de troco por participante.
+  const [rascunhoValoresBaixa, setRascunhoValoresBaixa] = useState<Record<string, string>>({});
+  const [trocoAbertoBaixa, setTrocoAbertoBaixa] = useState<Record<string, boolean>>({});
+  const [trocoValorBaixa, setTrocoValorBaixa] = useState<Record<string, string>>({});
 
   const load = async () => {
     if (!user) return;
@@ -164,7 +194,25 @@ function AgPage() {
       const { data: perfis } = await supabase.from("profiles").select("user_id,nome").in("user_id", capitaoIds);
       nomesPorId = Object.fromEntries((perfis ?? []).map((p: any) => [p.user_id, p.nome]));
     }
-    setAgendamentos(linhas.map((r: any) => ({ ...r, capitao_nome: nomesPorId[r.capitao_id] || null })));
+    // Resumo de participantes (modo dividido) por agendamento, pra sinalizar
+    // na lista — sem isso só dava pra saber "pago/não pago" no geral, e uma
+    // reserva dividida em que 3 de 4 já pagaram parecia igual a uma em que
+    // ninguém pagou nada.
+    let resumoPorAgendamento: Record<string, { total: number; pagos: number }> = {};
+    const agIds = linhas.map((r: any) => r.id);
+    if (agIds.length > 0) {
+      const { data: parts } = await supabase.from("agendamento_participantes").select("agendamento_id,pago").in("agendamento_id", agIds);
+      for (const p of parts ?? []) {
+        const r = (resumoPorAgendamento[(p as any).agendamento_id] ??= { total: 0, pagos: 0 });
+        r.total++;
+        if ((p as any).pago) r.pagos++;
+      }
+    }
+    setAgendamentos(linhas.map((r: any) => ({
+      ...r,
+      capitao_nome: nomesPorId[r.capitao_id] || null,
+      participantes_resumo: resumoPorAgendamento[r.id] || null,
+    })));
   };
   useEffect(() => { void load(); }, [user?.id]);
 
@@ -339,6 +387,8 @@ function AgPage() {
     setParticipantes(ps ?? []);
     setBaixaModo(ag.modo_cobranca === "dividido" || (ps && ps.length > 0) ? "dividido" : "responsavel");
     setNovoParticipante("");
+    setNovoParticipanteValor("");
+    setRascunhoValoresBaixa({}); setTrocoAbertoBaixa({}); setTrocoValorBaixa({});
   };
 
   const recarregarParticipantes = async () => {
@@ -347,15 +397,72 @@ function AgPage() {
     setParticipantes(ps ?? []);
   };
 
+  // Mesmo esquema de divisão inteligente já usado na comanda do PDV (ver
+  // ComandaDialog): quem já pagou tem o valor travado (coluna "valor"),
+  // quem falta divide automaticamente o que resta — recalculado a cada
+  // pagamento ou edição manual — e nunca pode "pagar" mais do que ainda
+  // falta da conta.
+  const totalBaixa = Number(baixaAg?.valor_cobrado || 0);
+  const cotaBaixa = participantes.length > 0 ? totalBaixa / participantes.length : 0;
+  const pagoSumBaixa = participantes.filter(p => p.pago).reduce((s, p) => s + Number(p.valor ?? cotaBaixa), 0);
+  const restanteBaixa = Math.max(0, totalBaixa - pagoSumBaixa);
+  const naoPagosBaixa = participantes.filter(p => !p.pago);
+  const naoPagosManualBaixa = naoPagosBaixa.filter(p => p.valor != null);
+  const somaManualNaoPagosBaixa = naoPagosManualBaixa.reduce((s, p) => s + Number(p.valor), 0);
+  const naoPagosAutoBaixa = naoPagosBaixa.filter(p => p.valor == null);
+  const restanteAutoBaixa = Math.max(0, restanteBaixa - somaManualNaoPagosBaixa);
+  const valorAutoCadaBaixa = naoPagosAutoBaixa.length > 0 ? restanteAutoBaixa / naoPagosAutoBaixa.length : 0;
+  const valorDeBaixa = (p: any) => {
+    if (p.valor != null) return Number(p.valor);
+    if (p.pago) return cotaBaixa;
+    return valorAutoCadaBaixa;
+  };
+  const somaTotalParticipantesBaixa = pagoSumBaixa + naoPagosBaixa.reduce((s, p) => s + valorDeBaixa(p), 0);
+  const diferencaSomaBaixa = totalBaixa - somaTotalParticipantesBaixa;
+
   const addParticipante = async () => {
     if (!baixaAg || !novoParticipante.trim()) return;
-    await supabase.from("agendamento_participantes").insert({ agendamento_id: baixaAg.id, nome: novoParticipante.trim() } as never);
-    setNovoParticipante("");
+    // Sem valor digitado = automático (divide o que resta); só trava um
+    // valor fixo se o dono realmente digitou um aqui.
+    const valor = novoParticipanteValor.trim() ? Number(novoParticipanteValor) : null;
+    const { error } = await supabase.from("agendamento_participantes").insert({ agendamento_id: baixaAg.id, nome: novoParticipante.trim(), valor } as never);
+    if (error) { toast.error(error.message); return; }
+    setNovoParticipante(""); setNovoParticipanteValor("");
     void recarregarParticipantes();
   };
 
   const togglePago = async (p: any) => {
-    await supabase.from("agendamento_participantes").update({ pago: !p.pago, pago_em: !p.pago ? new Date().toISOString() : null } as never).eq("id", p.id);
+    const marcandoComoPago = !p.pago;
+    const payload: Record<string, any> = { pago: marcandoComoPago, pago_em: marcandoComoPago ? new Date().toISOString() : null };
+    // Trava o valor no momento em que marca como pago — senão, ao marcar o
+    // próximo como pago, o valor desse recalcularia e mudaria sozinho o
+    // histórico do que essa pessoa realmente pagou.
+    if (marcandoComoPago && p.valor == null) payload.valor = Number(valorDeBaixa(p).toFixed(2));
+    const { error } = await supabase.from("agendamento_participantes").update(payload as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
+    void recarregarParticipantes();
+  };
+
+  // Ajusta o valor de cada um a qualquer momento (antes de pagar) — nunca
+  // deixa passar do que ainda falta; o resto sempre recalcula sozinho entre
+  // quem ainda não tem valor manual.
+  const atualizarValorParticipanteBaixa = async (p: any, novoValor: string) => {
+    if (novoValor.trim() === "") {
+      const { error } = await supabase.from("agendamento_participantes").update({ valor: null } as never).eq("id", p.id);
+      if (error) { toast.error(error.message); return; }
+      void recarregarParticipantes();
+      return;
+    }
+    let valor = Number(novoValor);
+    if (Number.isNaN(valor) || valor < 0) { toast.error("Valor inválido"); void recarregarParticipantes(); return; }
+    const outrosManuaisSoma = naoPagosManualBaixa.filter(x => x.id !== p.id).reduce((s, x) => s + Number(x.valor), 0);
+    const teto = Math.max(0, restanteBaixa - outrosManuaisSoma);
+    if (valor > teto + 0.009) {
+      toast.error(`Não dá pra cobrar mais do que falta (${brl(teto)})`);
+      valor = Number(teto.toFixed(2));
+    }
+    const { error } = await supabase.from("agendamento_participantes").update({ valor } as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
     void recarregarParticipantes();
   };
 
@@ -441,15 +548,50 @@ function AgPage() {
     (filtroQuadra === "todas" || a.quadra_id === filtroQuadra)
   );
   const datasComAgendamento = new Set(filtradosBase.map((a: any) => a.data));
-  // Na Lista, o dia escolhido na tira de cima filtra a lista abaixo. No
-  // Calendário a grade mostra a semana inteira — o filtro por dia não entra.
-  const filtrados = visao === "lista"
-    ? filtradosBase.filter((a: any) => a.data === toYMD(diaSelecionadoLista))
-    : filtradosBase;
+  const hojeYMD = toYMD(hoje);
+
+  // A Lista não filtra mais por um único dia escolhido — ela sempre mostra
+  // as próximas (de hoje em diante, mais cedo primeiro) e as antigas (antes
+  // de hoje, mais recente primeiro), pra reservas passadas não "sumirem" só
+  // porque o dia virou. A tira de dias vira um atalho pra pular até um dia
+  // (rola a lista até lá), não um filtro que esconde o resto.
+  const proximas = filtradosBase
+    .filter((a: any) => a.data >= hojeYMD)
+    .sort((a: any, b: any) => a.data === b.data ? a.horario_inicio.localeCompare(b.horario_inicio) : a.data.localeCompare(b.data));
+  const antigas = filtradosBase
+    .filter((a: any) => a.data < hojeYMD)
+    .sort((a: any, b: any) => a.data === b.data ? a.horario_inicio.localeCompare(b.horario_inicio) : b.data.localeCompare(a.data));
+  // Antiga com pagamento faltando (geral ou só de um participante) precisa
+  // ficar visível — nunca deixar passar batido só porque a data já foi.
+  const antigasPendentes = antigas.filter((a: any) => (a.status === "confirmado" || a.status === "concluido") && !a.baixa_dada);
+
+  const agruparPorDia = (lista: any[]) => {
+    const grupos: { data: string; itens: any[] }[] = [];
+    for (const a of lista) {
+      const atual = grupos[grupos.length - 1];
+      if (atual && atual.data === a.data) atual.itens.push(a);
+      else grupos.push({ data: a.data, itens: [a] });
+    }
+    return grupos;
+  };
+  const formatarCabecalhoDia = (ymd: string) => {
+    if (ymd === hojeYMD) return "Hoje";
+    if (ymd === toYMD(addDays(hoje, 1))) return "Amanhã";
+    if (ymd === toYMD(addDays(hoje, -1))) return "Ontem";
+    const [ano, mes, dia] = ymd.split("-").map(Number);
+    const d = new Date(ano, mes - 1, dia);
+    const texto = format(d, "EEEE, d 'de' MMMM", { locale: ptBR });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  };
 
   // Tira de dias da Lista: janela de 14 dias com o selecionado perto do
   // início, igual ao padrão de apps de agenda — as setas pulam 7 dias.
   const diasStrip = Array.from({ length: 14 }, (_, i) => addDays(diaSelecionadoLista, i - 3));
+  const irParaDia = (d: Date) => {
+    setDiaEscolhidoManualmente(true);
+    setDiaSelecionadoLista(d);
+    document.getElementById(`dia-${toYMD(d)}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Grade semanal do Calendário.
   const inicioSemana = startOfWeek(semanaBase, { weekStartsOn: 1 });
@@ -461,8 +603,11 @@ function AgPage() {
   const renderCardAgendamento = (a: any) => {
     const nomeCliente = a.cliente_nome || a.capitao_nome || "—";
     const podeDarBaixa = a.status === "confirmado" || a.status === "concluido";
+    const atrasada = a.data < hojeYMD;
+    const resumoPart = a.participantes_resumo as { total: number; pagos: number } | null;
+    const temDividido = !!resumoPart && resumoPart.total > 0;
     return (
-      <Card key={a.id} className="p-3">
+      <Card key={a.id} className={cn("p-3", atrasada && podeDarBaixa && !a.baixa_dada && "border-rose-500/40")}>
         <div className="flex justify-between items-start">
           <div>
             <div className="font-bold">{a.data} · {a.horario_inicio?.slice(0, 5)}–{a.horario_fim?.slice(0, 5)}</div>
@@ -474,7 +619,11 @@ function AgPage() {
             {a.baixa_dada ? (
               <span className="text-[11px] text-emerald-500 flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" />Pago</span>
             ) : podeDarBaixa ? (
-              <span className="text-[11px] text-amber-500 flex items-center gap-0.5"><AlertTriangle className="h-3 w-3" />Falta pagar</span>
+              <span className={cn("text-[11px] flex items-center gap-0.5", atrasada ? "text-rose-500 font-bold" : "text-amber-500")}>
+                <AlertTriangle className="h-3 w-3" />
+                {atrasada ? "Atrasada — " : ""}
+                {temDividido ? `Faltam ${resumoPart!.total - resumoPart!.pagos} de ${resumoPart!.total} pagar` : "Falta pagar"}
+              </span>
             ) : null}
           </div>
         </div>
@@ -520,11 +669,11 @@ function AgPage() {
       {visao === "lista" && (
         <Card className="p-2 space-y-2">
           <div className="flex items-center justify-between px-1">
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDiaSelecionadoLista(d => addDays(d, -7))}>
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => irParaDia(addDays(diaSelecionadoLista, -7))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="text-sm font-medium capitalize">{format(diaSelecionadoLista, "MMMM yyyy", { locale: ptBR })}</div>
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDiaSelecionadoLista(d => addDays(d, 7))}>
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => irParaDia(addDays(diaSelecionadoLista, 7))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -532,16 +681,16 @@ function AgPage() {
             {diasStrip.map(d => {
               const ymd = toYMD(d);
               const selecionado = ymd === toYMD(diaSelecionadoLista);
-              const hoje = isSameDay(d, new Date());
+              const ehHoje = isSameDay(d, hoje);
               const temAg = datasComAgendamento.has(ymd);
               return (
                 <button
                   key={ymd}
                   type="button"
-                  onClick={() => setDiaSelecionadoLista(d)}
+                  onClick={() => irParaDia(d)}
                   className={cn(
                     "flex flex-col items-center justify-center shrink-0 w-12 h-16 rounded-xl border text-xs gap-0.5 transition-colors",
-                    selecionado ? "bg-primary text-primary-foreground border-primary" : hoje ? "border-primary/60" : "hover:bg-muted"
+                    selecionado ? "bg-primary text-primary-foreground border-primary" : ehHoje ? "border-primary/60" : "hover:bg-muted"
                   )}
                 >
                   <span className="uppercase opacity-70">{format(d, "EEEEEE", { locale: ptBR })}</span>
@@ -551,6 +700,18 @@ function AgPage() {
               );
             })}
           </div>
+          <p className="text-[11px] text-muted-foreground px-1">Toque num dia pra pular até ele na lista abaixo.</p>
+        </Card>
+      )}
+
+      {visao === "lista" && antigasPendentes.length > 0 && (
+        <Card className="p-3 border-rose-500/40 bg-rose-500/5 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
+          <p className="text-xs text-rose-600 dark:text-rose-400">
+            {antigasPendentes.length === 1
+              ? "1 reserva antiga ainda está com pagamento pendente."
+              : `${antigasPendentes.length} reservas antigas ainda estão com pagamento pendente.`}
+          </p>
         </Card>
       )}
 
@@ -753,12 +914,28 @@ function AgPage() {
       </div>
 
       {visao === "lista" && (
-        <>
-          {filtrados.map(renderCardAgendamento)}
-          {filtrados.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Sem agendamentos nesse dia.</p>
+        <div className="space-y-4">
+          {proximas.length === 0 && antigas.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Sem agendamentos.</p>
           )}
-        </>
+          {agruparPorDia(proximas).map(grupo => (
+            <div key={grupo.data} id={`dia-${grupo.data}`} className="space-y-2">
+              <h3 className="text-xs font-bold uppercase text-muted-foreground tracking-wide">{formatarCabecalhoDia(grupo.data)}</h3>
+              {grupo.itens.map(renderCardAgendamento)}
+            </div>
+          ))}
+          {antigas.length > 0 && (
+            <div className="pt-3 border-t space-y-3">
+              <h3 className="text-xs font-bold uppercase text-muted-foreground tracking-wide">Antigas</h3>
+              {agruparPorDia(antigas).map(grupo => (
+                <div key={grupo.data} id={`dia-${grupo.data}`} className="space-y-2">
+                  <h4 className="text-[11px] font-semibold text-muted-foreground">{formatarCabecalhoDia(grupo.data)}</h4>
+                  {grupo.itens.map(renderCardAgendamento)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Clicar num bloco da grade do Calendário abre os detalhes/ações aqui */}
@@ -800,31 +977,77 @@ function AgPage() {
 
               {baixaModo === "dividido" && (
                 <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Adicione cada participante e marque quem já pagou. A baixa só pode ser confirmada quando todos estiverem pagos.</p>
+                  {participantes.length > 0 && (
+                    <Card className="p-3 space-y-1 text-sm">
+                      <div className="flex justify-between"><span>{participantes.length} pessoas · parte igual seria</span><b>{brl(cotaBaixa)}</b></div>
+                      <div className="border-t border-border pt-1 flex justify-between"><span className="text-emerald-500">Pago</span><span className="text-emerald-500 font-bold">{brl(pagoSumBaixa)}</span></div>
+                      <div className="flex justify-between"><span className="text-amber-500">Restante</span><span className="text-amber-500 font-bold">{brl(restanteBaixa)}</span></div>
+                      {Math.abs(diferencaSomaBaixa) >= 0.01 && (
+                        <div className="text-[11px] text-rose-500 pt-1 border-t border-border">
+                          Valores manuais somam acima do total — {brl(-diferencaSomaBaixa)} sobrando.
+                        </div>
+                      )}
+                    </Card>
+                  )}
                   {!baixaAg.baixa_dada && (
                     <div className="flex gap-2">
-                      <Input placeholder="Nome do participante" value={novoParticipante} onChange={e => setNovoParticipante(e.target.value)} onKeyDown={e => e.key === "Enter" && addParticipante()} />
+                      <Input placeholder="Nome do participante" value={novoParticipante} onChange={e => setNovoParticipante(e.target.value)} onKeyDown={e => e.key === "Enter" && addParticipante()} className="flex-1" />
+                      <Input type="number" step="0.01" placeholder={brl(cotaBaixa)} value={novoParticipanteValor} onChange={e => setNovoParticipanteValor(e.target.value)} className="w-24" onKeyDown={e => e.key === "Enter" && addParticipante()} />
                       <Button type="button" onClick={addParticipante}><Plus className="h-4 w-4" /></Button>
                     </div>
+                  )}
+                  {!baixaAg.baixa_dada && participantes.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground -mt-1">Por padrão o que falta é dividido igual entre quem não pagou — edite o valor se alguém for pagar mais ou menos (o resto recalcula sozinho).</p>
                   )}
                   <div className="space-y-1.5">
                     {participantes.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">Nenhum participante adicionado ainda.</p>}
                     {participantes.map(p => (
-                      <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
-                        <label className="flex items-center gap-2 flex-1 cursor-pointer">
-                          <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} disabled={baixaAg.baixa_dada} />
-                          <span className={p.pago ? "" : "font-bold"}>{p.nome}</span>
-                        </label>
-                        {!p.pago && <span className="text-[11px] text-amber-500">pendente</span>}
-                        {!baixaAg.baixa_dada && (
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>
+                      <div key={p.id} className="space-y-1">
+                        <div className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-sm ${p.pago ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+                          <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
+                            <Checkbox checked={p.pago} onCheckedChange={() => togglePago(p)} disabled={baixaAg.baixa_dada} />
+                            <span className={`truncate ${p.pago ? "" : "font-bold"}`}>{p.nome}</span>
+                          </label>
+                          {baixaAg.baixa_dada || p.pago ? (
+                            <span className="text-xs text-muted-foreground shrink-0">{brl(valorDeBaixa(p))}</span>
+                          ) : (
+                            <>
+                              <Input
+                                type="number" step="0.01"
+                                className="h-7 w-20 text-right text-xs shrink-0"
+                                value={rascunhoValoresBaixa[p.id] !== undefined ? rascunhoValoresBaixa[p.id] : valorDeBaixa(p).toFixed(2)}
+                                onChange={e => setRascunhoValoresBaixa(r => ({ ...r, [p.id]: e.target.value }))}
+                                onBlur={e => { void atualizarValorParticipanteBaixa(p, e.target.value); setRascunhoValoresBaixa(r => { const n = { ...r }; delete n[p.id]; return n; }); }}
+                              />
+                              <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" title="Calcular troco" onClick={() => setTrocoAbertoBaixa(t => ({ ...t, [p.id]: !t[p.id] }))}><Banknote className="h-3 w-3" /></Button>
+                            </>
+                          )}
+                          {!baixaAg.baixa_dada && !p.pago && (
+                            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removerParticipante(p.id)}><Trash2 className="h-3 w-3" /></Button>
+                          )}
+                        </div>
+                        {!baixaAg.baixa_dada && !p.pago && trocoAbertoBaixa[p.id] && (
+                          <div className="rounded-lg bg-muted p-2 ml-1 space-y-1.5">
+                            <Label className="text-[11px]">Troco pra {p.nome} (deve {brl(valorDeBaixa(p))})</Label>
+                            <Input
+                              type="number" step="0.01" placeholder="Valor recebido em dinheiro" className="h-7 text-xs"
+                              value={trocoValorBaixa[p.id] ?? ""} onChange={e => setTrocoValorBaixa(v => ({ ...v, [p.id]: e.target.value }))}
+                            />
+                            {trocoValorBaixa[p.id] && (
+                              Number(trocoValorBaixa[p.id]) >= valorDeBaixa(p) ? (
+                                <div className="text-xs font-semibold text-emerald-600">Troco: {brl(Number(trocoValorBaixa[p.id]) - valorDeBaixa(p))}</div>
+                              ) : (
+                                <div className="text-xs font-semibold text-rose-500">Falta {brl(valorDeBaixa(p) - Number(trocoValorBaixa[p.id]))}</div>
+                              )
+                            )}
+                          </div>
                         )}
                       </div>
                     ))}
                   </div>
                   {!baixaAg.baixa_dada && (
                     <Button onClick={confirmarBaixaDividido} disabled={!todosPagos} className="w-full">
-                      {todosPagos ? `Confirmar baixa — ${brl(Number(baixaAg.valor_cobrado || 0))}` : "Falta alguém pagar"}
+                      {todosPagos ? `Confirmar baixa — ${brl(Number(baixaAg.valor_cobrado || 0))}` : `Faltam ${participantes.filter(p => !p.pago).length} pagar`}
                     </Button>
                   )}
                 </div>
