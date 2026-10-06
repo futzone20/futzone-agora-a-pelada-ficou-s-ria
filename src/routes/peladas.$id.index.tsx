@@ -836,16 +836,34 @@ function PeladaDetail() {
           // "Ver times sorteados". O comportamento durante a partida (mais abaixo,
           // no `else`/continuação) não muda em nada.
           if (pelada.status !== "em_andamento") {
-            const timesDeFora = temRodizio ? times.filter((t) => estaDeFora(t)) : [];
+            // O card "Começam jogando" precisa refletir exatamente a mesma
+            // escolha que o seletor manual "Quem começa jogando? (escolha 2)"
+            // e que `iniciarPelada` realmente usam — timesIniciaisEscolhidos,
+            // com fallback para escolherTimesIniciais(). A lógica antiga
+            // (temRodizio/foraPrimeira) assumia sempre exatamente 1 time de
+            // fora, o que só é verdade com exatamente 3 times; com 4+ times
+            // ela mostrava 3 times "começando" em vez de 2.
+            const idsIniciais = times.length > 2
+              ? (timesIniciaisEscolhidos.length === 2
+                  ? new Set(timesIniciaisEscolhidos)
+                  : new Set(
+                      escolherTimesIniciais(
+                        times,
+                        new Set(times.filter((t) => t.membros.some((m) => m.eh_goleiro)).map((t) => t.id))
+                      ).jogam.map((t) => t.id)
+                    ))
+              : new Set(times.map((t) => t.id));
+            const comecamAgora = times.filter((t) => idsIniciais.has(t.id));
+            const timesDeFora = times.filter((t) => !idsIniciais.has(t.id));
             return (
               <div className="space-y-3">
                 <div className="rounded-2xl border border-[#00FF87]/40 bg-[#00FF87]/5 p-4">
                   <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#00FF87]">
                     <CircleDot className="h-4 w-4" /> Começam jogando
                   </div>
-                  <div className="mb-3 text-[11px] text-[#888]">{jogamPrimeiro.length} {jogamPrimeiro.length === 1 ? "time em campo" : "times em campo"}</div>
-                  <div className={`grid gap-2 ${jogamPrimeiro.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
-                    {jogamPrimeiro.map((t) => (
+                  <div className="mb-3 text-[11px] text-[#888]">{comecamAgora.length} {comecamAgora.length === 1 ? "time em campo" : "times em campo"}</div>
+                  <div className={`grid gap-2 ${comecamAgora.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {comecamAgora.map((t) => (
                       <div key={t.id} className="rounded-xl border p-3 text-center" style={{ borderColor: t.cor, backgroundColor: `${t.cor}15` }}>
                         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: t.cor }}>
                           <Shirt className="h-5 w-5 text-white" />
