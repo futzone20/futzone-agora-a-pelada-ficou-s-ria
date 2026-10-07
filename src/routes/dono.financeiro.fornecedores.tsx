@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Package, Link2 } from "lucide-react";
 import { toast } from "sonner";
-import { brl } from "@/lib/financeiro";
+import { brl } from "@/lib/financeiro-utils";
 
 export const Route = createFileRoute("/dono/financeiro/fornecedores")({ component: FornecedoresPage });
 

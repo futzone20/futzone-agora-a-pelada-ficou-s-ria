@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ArrowDownCircle, ArrowUpCircle, Download } from "lucide-react";
-import { brl, carregarDespesasPeriodo, formaLabel, hojeISO, inicioMesISO, ORIGEM_ENTRADA_LABEL, origemEntrada } from "@/lib/financeiro";
+import { brl, carregarDespesasPeriodo, formaLabel, hojeISO, inicioMesISO, ORIGEM_ENTRADA_LABEL, origemEntrada } from "@/lib/financeiro-utils";
 
 export const Route = createFileRoute("/dono/financeiro/")({ component: FinanceiroResumo });
 

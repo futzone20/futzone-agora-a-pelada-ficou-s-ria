@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep shared finance helpers in `src/lib/financeiro-utils.ts` and use that exact import casing; a distinct lowercase filename avoids case-only rename synchronization failures during deployment.
