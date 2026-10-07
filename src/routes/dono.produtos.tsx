@@ -10,7 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, History, Calculator, Settings, ImageOff, Boxes, TrendingUp, Wallet } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, History, Calculator, Settings, ImageOff, Boxes, TrendingUp, Wallet, Pencil, Trash2 } from "lucide-react";
 import { ProdutoFotoPicker } from "@/components/ProdutoFotoPicker";
 import { toast } from "sonner";
 
@@ -38,6 +39,13 @@ function ProdutosPage() {
 
   // Histórico de custo
   const [histProduto, setHistProduto] = useState<any>(null);
+
+  // Edição e exclusão de produto
+  const [editProduto, setEditProduto] = useState<any>(null);
+  const [editForm, setEditForm] = useState<any>(PFORM_VAZIO);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [excluirProduto, setExcluirProduto] = useState<any>(null);
+  const [excluindo, setExcluindo] = useState(false);
   const [historico, setHistorico] = useState<any[]>([]);
 
   // Configurações de precificação (taxa de cartão, imposto, margem, modo automático/manual)
@@ -160,11 +168,46 @@ function ProdutosPage() {
 
   const toggleProd = async (p: any) => { await supabase.from("pdv_produtos").update({ ativo: !p.ativo } as never).eq("id", p.id); void load(); };
 
-  const ajustar = async (p: any) => {
-    const v = prompt(`Ajuste de estoque para ${p.nome} (use + ou -):`); if (!v) return;
-    const delta = parseInt(v, 10); if (isNaN(delta)) return;
-    await supabase.from("pdv_produtos").update({ estoque_atual: Math.max(0, p.estoque_atual + delta) } as never).eq("id", p.id);
-    void load();
+  const abrirEdicao = (p: any) => {
+    setEditProduto(p);
+    setEditForm({
+      nome: p.nome, categoria_id: p.categoria_id, preco: Number(p.preco) || 0, preco_custo: Number(p.preco_custo) || 0,
+      estoque_atual: p.estoque_atual, estoque_minimo: p.estoque_minimo, foto_url: p.foto_url || "",
+    });
+  };
+
+  const salvarEdicao = async () => {
+    if (!editProduto || !editForm.nome.trim()) return;
+    setSalvandoEdicao(true);
+    const { error } = await supabase.from("pdv_produtos").update({
+      nome: editForm.nome.trim(), preco: editForm.preco, preco_custo: editForm.preco_custo,
+      estoque_atual: Math.max(0, Math.trunc(Number(editForm.estoque_atual) || 0)),
+      estoque_minimo: Math.max(0, Math.trunc(Number(editForm.estoque_minimo) || 0)),
+      foto_url: editForm.foto_url || null,
+    } as never).eq("id", editProduto.id);
+    setSalvandoEdicao(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Produto atualizado");
+    setEditProduto(null); void load();
+  };
+
+  const confirmarExclusao = async () => {
+    if (!excluirProduto) return;
+    setExcluindo(true);
+    const { error } = await supabase.from("pdv_produtos").delete().eq("id", excluirProduto.id);
+    setExcluindo(false);
+    if (error) {
+      // 23503 = violação de chave estrangeira: o produto já aparece em vendas/comandas
+      if ((error as any).code === "23503") {
+        toast.error("Este produto já tem vendas registradas e não pode ser excluído. Desative-o (chave verde) para ele sumir do PDV.");
+      } else {
+        toast.error(error.message);
+      }
+      setExcluirProduto(null);
+      return;
+    }
+    toast.success("Produto excluído");
+    setExcluirProduto(null); void load();
   };
 
   const abrirReposicao = (p: any) => {
@@ -352,15 +395,59 @@ function ProdutosPage() {
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <Switch checked={p.ativo} onCheckedChange={() => toggleProd(p)} />
-                  <Button size="sm" variant="outline" onClick={() => ajustar(p)}>Ajuste</Button>
+                  <Button size="sm" variant="outline" onClick={() => abrirEdicao(p)}><Pencil className="h-3 w-3 mr-1" />Editar</Button>
                   <Button size="sm" variant="outline" onClick={() => abrirReposicao(p)}>Repor estoque</Button>
                   <Button size="sm" variant="ghost" className="text-xs h-6 px-2" onClick={() => verHistorico(p)}><History className="h-3 w-3 mr-1" />Histórico</Button>
+                  <Button size="sm" variant="ghost" className="text-xs h-6 px-2 text-rose-500 hover:text-rose-500" onClick={() => setExcluirProduto(p)}><Trash2 className="h-3 w-3 mr-1" />Excluir</Button>
                 </div>
               </div>
             </Card>
           );
         })}
       </TabsContent>
+
+      {/* Edição de produto */}
+      <Dialog open={!!editProduto} onOpenChange={o => !o && setEditProduto(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Editar produto — {editProduto?.codigo}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Nome</Label><Input value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} /></div>
+            <ProdutoFotoPicker value={editForm.foto_url} nomeSugestao={editForm.nome} onChange={url => setEditForm({ ...editForm, foto_url: url })} />
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Preço de custo</Label><Input type="number" step="0.01" value={editForm.preco_custo} onChange={e => setEditForm({ ...editForm, preco_custo: +e.target.value })} /></div>
+              <div><Label>Preço de venda</Label><Input type="number" step="0.01" value={editForm.preco} onChange={e => setEditForm({ ...editForm, preco: +e.target.value })} /></div>
+            </div>
+            {Number(editForm.preco_custo) > 0 && (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border p-2 text-xs">
+                <div className="flex items-center gap-1 text-muted-foreground"><Calculator className="h-3.5 w-3.5" />Preço sugerido: <b className="text-foreground">{brl(precoSugerido(Number(editForm.preco_custo) || 0))}</b></div>
+                <Button type="button" size="sm" variant="outline" onClick={() => setEditForm({ ...editForm, preco: Number(precoSugerido(Number(editForm.preco_custo) || 0).toFixed(2)) })}>Usar</Button>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Estoque atual</Label><Input type="number" value={editForm.estoque_atual} onChange={e => setEditForm({ ...editForm, estoque_atual: +e.target.value })} /></div>
+              <div><Label>Mínimo</Label><Input type="number" value={editForm.estoque_minimo} onChange={e => setEditForm({ ...editForm, estoque_minimo: +e.target.value })} /></div>
+            </div>
+            <p className="text-xs text-muted-foreground">Para corrigir o estoque (contagem, perda, quebra), é só alterar o número em "Estoque atual". Para compra nova com custo diferente, use "Repor estoque".</p>
+            <Button onClick={salvarEdicao} disabled={salvandoEdicao || !editForm.nome.trim()} className="w-full">{salvandoEdicao ? "Salvando..." : "Salvar alterações"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de exclusão de produto */}
+      <AlertDialog open={!!excluirProduto} onOpenChange={o => !o && setExcluirProduto(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {excluirProduto?.nome}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O produto some do cadastro e do PDV. Se ele já tiver vendas registradas, a exclusão não é permitida — nesse caso, desative-o pela chave verde.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={excluindo} onClick={(e) => { e.preventDefault(); void confirmarExclusao(); }} className="bg-rose-600 hover:bg-rose-700">{excluindo ? "Excluindo..." : "Excluir"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reposição de estoque com novo preço de custo */}
       <Dialog open={!!repProduto} onOpenChange={o => !o && setRepProduto(null)}>
