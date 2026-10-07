@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ContagemCaixa, totalContagem, type ContagemDetalhe } from "@/components/ContagemCaixa";
 import { ComandaDialog } from "@/components/ComandaDialog";
-import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle, ImageOff, Search, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash, Lock, Unlock, ArrowDownCircle, ArrowUpCircle, History, Receipt, CheckCircle2, AlertTriangle, ImageOff, Search, Eye, EyeOff, ArrowLeft, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dono/pdv")({ component: PDV });
@@ -56,6 +56,7 @@ function PDV() {
   const [resultadoFechamento, setResultadoFechamento] = useState<any>(null);
   const [openHistorico, setOpenHistorico] = useState(false);
   const [historicoSessoes, setHistoricoSessoes] = useState<any[]>([]);
+  const [openVendas, setOpenVendas] = useState(false);
 
   // ----- Comandas -----
   const [comandas, setComandas] = useState<any[]>([]);
@@ -269,6 +270,7 @@ function PDV() {
           </div>
           <Button onClick={() => setOpenAbertura(true)} className="w-full"><Unlock className="h-4 w-4 mr-2" />Abrir caixa</Button>
           <Button variant="ghost" size="sm" onClick={verHistorico}><History className="h-4 w-4 mr-2" />Ver histórico de caixas</Button>
+          <Button variant="ghost" size="sm" onClick={() => setOpenVendas(true)}><ListOrdered className="h-4 w-4 mr-2" />Vendas realizadas</Button>
         </Card>
 
         <Dialog open={openAbertura} onOpenChange={setOpenAbertura}>
@@ -284,6 +286,7 @@ function PDV() {
         </Dialog>
 
         <HistoricoCaixaDialog open={openHistorico} onOpenChange={setOpenHistorico} sessoes={historicoSessoes} />
+        <VendasDialog open={openVendas} onOpenChange={setOpenVendas} arenaId={arena.id} onChanged={load} />
       </div>
     );
   }
@@ -577,7 +580,11 @@ function PDV() {
       </Dialog>
 
       <HistoricoCaixaDialog open={openHistorico} onOpenChange={setOpenHistorico} sessoes={historicoSessoes} />
-      <div className="text-center"><Button variant="ghost" size="sm" onClick={verHistorico}><History className="h-4 w-4 mr-2" />Histórico de caixas</Button></div>
+      <VendasDialog open={openVendas} onOpenChange={setOpenVendas} arenaId={arena.id} onChanged={load} />
+      <div className="text-center">
+        <Button variant="ghost" size="sm" onClick={verHistorico}><History className="h-4 w-4 mr-2" />Histórico de caixas</Button>
+        <Button variant="ghost" size="sm" onClick={() => setOpenVendas(true)}><ListOrdered className="h-4 w-4 mr-2" />Vendas realizadas</Button>
+      </div>
     </div>
   );
 }
@@ -600,6 +607,68 @@ function HistoricoCaixaDialog({ open, onOpenChange, sessoes }: { open: boolean; 
               <div className="text-xs text-muted-foreground">
                 {new Date(s.aberto_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} às {s.fechado_em ? new Date(s.fechado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "-"}
                 {" · "}Abertura {brl(s.valor_abertura)} · Fechamento {brl(s.valor_contado_fechamento)}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function VendasDialog({ open, onOpenChange, arenaId, onChanged }: { open: boolean; onOpenChange: (v: boolean) => void; arenaId: string; onChanged: () => void | Promise<void> }) {
+  const [vendas, setVendas] = useState<any[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const [excluindo, setExcluindo] = useState<string | null>(null);
+
+  const carregar = async () => {
+    setCarregando(true);
+    const { data } = await supabase
+      .from("pdv_vendas")
+      .select("*, pdv_itens_venda(quantidade, subtotal, pdv_produtos(nome))")
+      .eq("arena_id", arenaId)
+      .order("criado_em", { ascending: false })
+      .limit(50);
+    setVendas(data ?? []);
+    setCarregando(false);
+  };
+  useEffect(() => { if (open) void carregar(); }, [open]);
+
+  const excluir = async (v: any) => {
+    const ok = window.confirm(
+      `Excluir a venda de ${brl(v.total)}?\n\nO estoque dos itens volta, e o valor sai do financeiro e do caixa (cashback também é estornado). Isso não pode ser desfeito.`
+    );
+    if (!ok) return;
+    setExcluindo(v.id);
+    const { error } = await supabase.rpc("excluir_venda_pdv", { _venda_id: v.id });
+    setExcluindo(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Venda excluída e estoque devolvido");
+    setVendas(vs => vs.filter(x => x.id !== v.id));
+    await onChanged();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Vendas realizadas</DialogTitle></DialogHeader>
+        <p className="text-xs text-muted-foreground">Últimas 50 vendas. Ao excluir, o estoque volta e o valor é removido do financeiro e do caixa.</p>
+        <div className="space-y-2">
+          {carregando && <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>}
+          {!carregando && vendas.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma venda registrada.</p>}
+          {vendas.map(v => (
+            <Card key={v.id} className="p-2.5 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold">{brl(v.total)} <span className="text-xs font-normal text-muted-foreground">· {FORMAS_LABEL[v.forma_pagamento] || v.forma_pagamento}</span></div>
+                  <div className="text-xs text-muted-foreground">{new Date(v.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
+                  <div className="text-xs mt-1 text-muted-foreground">
+                    {(v.pdv_itens_venda ?? []).map((i: any) => `${i.quantidade}x ${i.pdv_produtos?.nome ?? "item"}`).join(", ") || "Sem itens"}
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="shrink-0 text-rose-500" disabled={excluindo === v.id} onClick={() => excluir(v)}>
+                  <Trash className="h-3.5 w-3.5 mr-1" />{excluindo === v.id ? "..." : "Excluir"}
+                </Button>
               </div>
             </Card>
           ))}
