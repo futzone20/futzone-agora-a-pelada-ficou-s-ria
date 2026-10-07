@@ -30,7 +30,13 @@ function DashboardDono() {
       const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
       const { data: lan } = await supabase.from("financeiro_lancamentos").select("tipo,valor").eq("arena_id", a.id).gte("data_lancamento", ini.toISOString().slice(0,10));
       setReceita((lan ?? []).filter((l:any)=>l.tipo==="receita").reduce((s:number,l:any)=>s+Number(l.valor),0));
-      setDespesa((lan ?? []).filter((l:any)=>l.tipo==="despesa").reduce((s:number,l:any)=>s+Number(l.valor),0));
+      // Despesas do mês: parcelas das saídas pelo vencimento + despesas antigas lançadas à mão
+      const fimMes = new Date(ini.getFullYear(), ini.getMonth() + 1, 0).toISOString().slice(0,10);
+      const { data: parc } = await supabase.from("saida_parcelas").select("valor").eq("arena_id", a.id).gte("vencimento", ini.toISOString().slice(0,10)).lte("vencimento", fimMes);
+      setDespesa(
+        (lan ?? []).filter((l:any)=>l.tipo==="despesa").reduce((s:number,l:any)=>s+Number(l.valor),0) +
+        (parc ?? []).reduce((s:number,p:any)=>s+Number(p.valor),0)
+      );
       const hoje = new Date().toISOString().slice(0,10);
       const semana = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
       const { count: c1 } = await supabase.from("agendamentos").select("id", { count: "exact", head: true }).eq("arena_id", a.id).eq("data", hoje);
