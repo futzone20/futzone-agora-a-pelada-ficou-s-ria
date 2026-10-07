@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
-import { brl, FORMAS_PAGAMENTO, formaLabel, hojeISO, inicioMesISO, ORIGEM_ENTRADA_LABEL, origemEntrada, type OrigemEntrada } from "@/lib/financeiro";
+import { brl, FORMAS_PAGAMENTO, formaLabel, hojeISO, inicioMesISO, ORIGEM_ENTRADA_LABEL, origemEntrada, type OrigemEntrada } from "@/lib/financeiro-utils";
 
 export const Route = createFileRoute("/dono/financeiro/entradas")({ component: EntradasPage });
 

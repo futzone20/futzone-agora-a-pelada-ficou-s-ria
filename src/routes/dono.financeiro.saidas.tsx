@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { brl, carregarDespesasPeriodo, FORMAS_PAGAMENTO, formaLabel, hojeISO, inicioMesISO } from "@/lib/financeiro";
+import { brl, carregarDespesasPeriodo, FORMAS_PAGAMENTO, formaLabel, hojeISO, inicioMesISO } from "@/lib/financeiro-utils";
 
 export const Route = createFileRoute("/dono/financeiro/saidas")({ component: SaidasPage });
 
