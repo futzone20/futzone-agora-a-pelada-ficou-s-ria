@@ -14,7 +14,12 @@ export const Route = createFileRoute("/dono")({
         { to: "/dono/anunciantes", label: "Anunciantes", icon: Megaphone },
         { to: "/dono/pdv", label: "PDV", icon: ShoppingCart },
         { to: "/dono/produtos", label: "Produtos", icon: Package },
-        { to: "/dono/financeiro", label: "Financeiro", icon: DollarSign },
+        { to: "/dono/financeiro", label: "Financeiro", icon: DollarSign, children: [
+          { to: "/dono/financeiro", label: "Resumo" },
+          { to: "/dono/financeiro/entradas", label: "Entradas" },
+          { to: "/dono/financeiro/saidas", label: "Saídas" },
+          { to: "/dono/financeiro/fornecedores", label: "Fornecedores" },
+        ] },
         { to: "/dono/cashback", label: "Cashback", icon: Percent },
         { to: "/dono/perfil", label: "Perfil", icon: User },
       ] as any}>
