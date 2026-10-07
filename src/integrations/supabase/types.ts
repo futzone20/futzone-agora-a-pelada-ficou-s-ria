@@ -4172,6 +4172,7 @@ export type Database = {
         Returns: undefined
       }
       atualizar_status_mrcoins: { Args: never; Returns: undefined }
+      excluir_venda_pdv: { Args: { _venda_id: string }; Returns: undefined }
       buscar_indicacao_por_codigo: {
         Args: { _codigo: string }
         Returns: {
