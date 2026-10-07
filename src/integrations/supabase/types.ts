@@ -14,6 +14,192 @@ export type Database = {
   }
   public: {
     Tables: {
+      fornecedores: {
+        Row: {
+          arena_id: string
+          ativo: boolean
+          criado_em: string
+          documento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          telefone: string | null
+        }
+        Insert: {
+          arena_id: string
+          ativo?: boolean
+          criado_em?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          telefone?: string | null
+        }
+        Update: {
+          arena_id?: string
+          ativo?: boolean
+          criado_em?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      fornecedor_itens: {
+        Row: {
+          arena_id: string
+          ativo: boolean
+          criado_em: string
+          fornecedor_id: string
+          id: string
+          nome: string
+          preco_referencia: number
+          produto_id: string | null
+        }
+        Insert: {
+          arena_id: string
+          ativo?: boolean
+          criado_em?: string
+          fornecedor_id: string
+          id?: string
+          nome: string
+          preco_referencia?: number
+          produto_id?: string | null
+        }
+        Update: {
+          arena_id?: string
+          ativo?: boolean
+          criado_em?: string
+          fornecedor_id?: string
+          id?: string
+          nome?: string
+          preco_referencia?: number
+          produto_id?: string | null
+        }
+        Relationships: []
+      }
+      saidas: {
+        Row: {
+          arena_id: string
+          categoria: string | null
+          criado_em: string
+          data_compra: string
+          descricao: string
+          forma_pagamento: string
+          fornecedor_id: string | null
+          id: string
+          num_parcelas: number
+          observacao: string | null
+          parcelado: boolean
+          valor_total: number
+        }
+        Insert: {
+          arena_id: string
+          categoria?: string | null
+          criado_em?: string
+          data_compra?: string
+          descricao: string
+          forma_pagamento: string
+          fornecedor_id?: string | null
+          id?: string
+          num_parcelas?: number
+          observacao?: string | null
+          parcelado?: boolean
+          valor_total: number
+        }
+        Update: {
+          arena_id?: string
+          categoria?: string | null
+          criado_em?: string
+          data_compra?: string
+          descricao?: string
+          forma_pagamento?: string
+          fornecedor_id?: string | null
+          id?: string
+          num_parcelas?: number
+          observacao?: string | null
+          parcelado?: boolean
+          valor_total?: number
+        }
+        Relationships: []
+      }
+      saida_itens: {
+        Row: {
+          descricao: string
+          fornecedor_item_id: string | null
+          id: string
+          produto_id: string | null
+          quantidade: number
+          saida_id: string
+          subtotal: number
+          valor_unitario: number
+          vincular_estoque: boolean
+        }
+        Insert: {
+          descricao: string
+          fornecedor_item_id?: string | null
+          id?: string
+          produto_id?: string | null
+          quantidade: number
+          saida_id: string
+          subtotal: number
+          valor_unitario: number
+          vincular_estoque?: boolean
+        }
+        Update: {
+          descricao?: string
+          fornecedor_item_id?: string | null
+          id?: string
+          produto_id?: string | null
+          quantidade?: number
+          saida_id?: string
+          subtotal?: number
+          valor_unitario?: number
+          vincular_estoque?: boolean
+        }
+        Relationships: []
+      }
+      saida_parcelas: {
+        Row: {
+          arena_id: string
+          id: string
+          numero: number
+          pago: boolean
+          pago_em: string | null
+          saida_id: string
+          total_parcelas: number
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          arena_id: string
+          id?: string
+          numero: number
+          pago?: boolean
+          pago_em?: string | null
+          saida_id: string
+          total_parcelas: number
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          arena_id?: string
+          id?: string
+          numero?: number
+          pago?: boolean
+          pago_em?: string | null
+          saida_id?: string
+          total_parcelas?: number
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: []
+      }
       _backfill_convite_grupo_controle: {
         Row: {
           grupo_membro_id: string
@@ -1298,6 +1484,7 @@ export type Database = {
           criado_em: string
           data_lancamento: string
           descricao: string
+          forma_pagamento: string | null
           id: string
           origem: string
           origem_id: string | null
@@ -1310,6 +1497,7 @@ export type Database = {
           criado_em?: string
           data_lancamento?: string
           descricao: string
+          forma_pagamento?: string | null
           id?: string
           origem?: string
           origem_id?: string | null
@@ -1322,6 +1510,7 @@ export type Database = {
           criado_em?: string
           data_lancamento?: string
           descricao?: string
+          forma_pagamento?: string | null
           id?: string
           origem?: string
           origem_id?: string | null
@@ -4172,6 +4361,16 @@ export type Database = {
         Returns: undefined
       }
       atualizar_status_mrcoins: { Args: never; Returns: undefined }
+      criar_saida: {
+        Args: {
+          _arena_id: string; _fornecedor_id: string | null; _descricao: string; _categoria: string | null
+          _forma_pagamento: string; _data_compra: string; _parcelado: boolean; _num_parcelas: number
+          _primeiro_vencimento: string; _ja_pago: boolean; _observacao: string | null; _valor_total: number; _itens: Json
+        }
+        Returns: string
+      }
+      pagar_parcela_saida: { Args: { _parcela_id: string; _pago: boolean }; Returns: undefined }
+      excluir_saida: { Args: { _saida_id: string }; Returns: undefined }
       excluir_venda_pdv: { Args: { _venda_id: string }; Returns: undefined }
       buscar_indicacao_por_codigo: {
         Args: { _codigo: string }
