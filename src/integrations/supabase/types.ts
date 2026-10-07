@@ -14,192 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      fornecedores: {
-        Row: {
-          arena_id: string
-          ativo: boolean
-          criado_em: string
-          documento: string | null
-          email: string | null
-          id: string
-          nome: string
-          observacoes: string | null
-          telefone: string | null
-        }
-        Insert: {
-          arena_id: string
-          ativo?: boolean
-          criado_em?: string
-          documento?: string | null
-          email?: string | null
-          id?: string
-          nome: string
-          observacoes?: string | null
-          telefone?: string | null
-        }
-        Update: {
-          arena_id?: string
-          ativo?: boolean
-          criado_em?: string
-          documento?: string | null
-          email?: string | null
-          id?: string
-          nome?: string
-          observacoes?: string | null
-          telefone?: string | null
-        }
-        Relationships: []
-      }
-      fornecedor_itens: {
-        Row: {
-          arena_id: string
-          ativo: boolean
-          criado_em: string
-          fornecedor_id: string
-          id: string
-          nome: string
-          preco_referencia: number
-          produto_id: string | null
-        }
-        Insert: {
-          arena_id: string
-          ativo?: boolean
-          criado_em?: string
-          fornecedor_id: string
-          id?: string
-          nome: string
-          preco_referencia?: number
-          produto_id?: string | null
-        }
-        Update: {
-          arena_id?: string
-          ativo?: boolean
-          criado_em?: string
-          fornecedor_id?: string
-          id?: string
-          nome?: string
-          preco_referencia?: number
-          produto_id?: string | null
-        }
-        Relationships: []
-      }
-      saidas: {
-        Row: {
-          arena_id: string
-          categoria: string | null
-          criado_em: string
-          data_compra: string
-          descricao: string
-          forma_pagamento: string
-          fornecedor_id: string | null
-          id: string
-          num_parcelas: number
-          observacao: string | null
-          parcelado: boolean
-          valor_total: number
-        }
-        Insert: {
-          arena_id: string
-          categoria?: string | null
-          criado_em?: string
-          data_compra?: string
-          descricao: string
-          forma_pagamento: string
-          fornecedor_id?: string | null
-          id?: string
-          num_parcelas?: number
-          observacao?: string | null
-          parcelado?: boolean
-          valor_total: number
-        }
-        Update: {
-          arena_id?: string
-          categoria?: string | null
-          criado_em?: string
-          data_compra?: string
-          descricao?: string
-          forma_pagamento?: string
-          fornecedor_id?: string | null
-          id?: string
-          num_parcelas?: number
-          observacao?: string | null
-          parcelado?: boolean
-          valor_total?: number
-        }
-        Relationships: []
-      }
-      saida_itens: {
-        Row: {
-          descricao: string
-          fornecedor_item_id: string | null
-          id: string
-          produto_id: string | null
-          quantidade: number
-          saida_id: string
-          subtotal: number
-          valor_unitario: number
-          vincular_estoque: boolean
-        }
-        Insert: {
-          descricao: string
-          fornecedor_item_id?: string | null
-          id?: string
-          produto_id?: string | null
-          quantidade: number
-          saida_id: string
-          subtotal: number
-          valor_unitario: number
-          vincular_estoque?: boolean
-        }
-        Update: {
-          descricao?: string
-          fornecedor_item_id?: string | null
-          id?: string
-          produto_id?: string | null
-          quantidade?: number
-          saida_id?: string
-          subtotal?: number
-          valor_unitario?: number
-          vincular_estoque?: boolean
-        }
-        Relationships: []
-      }
-      saida_parcelas: {
-        Row: {
-          arena_id: string
-          id: string
-          numero: number
-          pago: boolean
-          pago_em: string | null
-          saida_id: string
-          total_parcelas: number
-          valor: number
-          vencimento: string
-        }
-        Insert: {
-          arena_id: string
-          id?: string
-          numero: number
-          pago?: boolean
-          pago_em?: string | null
-          saida_id: string
-          total_parcelas: number
-          valor: number
-          vencimento: string
-        }
-        Update: {
-          arena_id?: string
-          id?: string
-          numero?: number
-          pago?: boolean
-          pago_em?: string | null
-          saida_id?: string
-          total_parcelas?: number
-          valor?: number
-          vencimento?: string
-        }
-        Relationships: []
-      }
       _backfill_convite_grupo_controle: {
         Row: {
           grupo_membro_id: string
@@ -558,107 +372,6 @@ export type Database = {
           },
         ]
       }
-      agendamentos: {
-        Row: {
-          arena_id: string
-          atualizado_em: string
-          baixa_dada: boolean
-          baixa_em: string | null
-          capitao_id: string
-          cliente_nome: string | null
-          criado_em: string
-          data: string
-          forma_pagamento: string | null
-          grupo_id: string | null
-          horario_fim: string
-          horario_inicio: string
-          id: string
-          modo_cobranca: string
-          observacoes: string | null
-          pagamento_antecipado: boolean
-          pelada_id: string | null
-          quadra_id: string
-          recorrencia_id: string | null
-          status: string
-          valor_cobrado: number | null
-        }
-        Insert: {
-          arena_id: string
-          atualizado_em?: string
-          baixa_dada?: boolean
-          baixa_em?: string | null
-          capitao_id: string
-          cliente_nome?: string | null
-          criado_em?: string
-          data: string
-          forma_pagamento?: string | null
-          grupo_id?: string | null
-          horario_fim: string
-          horario_inicio: string
-          id?: string
-          modo_cobranca?: string
-          observacoes?: string | null
-          pagamento_antecipado?: boolean
-          pelada_id?: string | null
-          quadra_id: string
-          recorrencia_id?: string | null
-          status?: string
-          valor_cobrado?: number | null
-        }
-        Update: {
-          arena_id?: string
-          atualizado_em?: string
-          baixa_dada?: boolean
-          baixa_em?: string | null
-          capitao_id?: string
-          cliente_nome?: string | null
-          criado_em?: string
-          data?: string
-          forma_pagamento?: string | null
-          grupo_id?: string | null
-          horario_fim?: string
-          horario_inicio?: string
-          id?: string
-          modo_cobranca?: string
-          observacoes?: string | null
-          pagamento_antecipado?: boolean
-          pelada_id?: string | null
-          quadra_id?: string
-          recorrencia_id?: string | null
-          status?: string
-          valor_cobrado?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agendamentos_arena_id_fkey"
-            columns: ["arena_id"]
-            isOneToOne: false
-            referencedRelation: "arenas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agendamentos_grupo_id_fkey"
-            columns: ["grupo_id"]
-            isOneToOne: false
-            referencedRelation: "grupos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agendamentos_pelada_id_fkey"
-            columns: ["pelada_id"]
-            isOneToOne: false
-            referencedRelation: "peladas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agendamentos_quadra_id_fkey"
-            columns: ["quadra_id"]
-            isOneToOne: false
-            referencedRelation: "quadras"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       agendamento_participantes: {
         Row: {
           agendamento_id: string
@@ -693,6 +406,113 @@ export type Database = {
             columns: ["agendamento_id"]
             isOneToOne: false
             referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agendamentos: {
+        Row: {
+          arena_id: string
+          atualizado_em: string
+          baixa_dada: boolean
+          baixa_em: string | null
+          capitao_id: string
+          cliente_nome: string | null
+          criado_em: string
+          data: string
+          forma_pagamento: string | null
+          grupo_id: string | null
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          modalidade: string
+          modo_cobranca: string
+          observacoes: string | null
+          pagamento_antecipado: boolean
+          pelada_id: string | null
+          quadra_id: string
+          reagendado_em: string | null
+          recorrencia_id: string | null
+          status: string
+          valor_cobrado: number | null
+        }
+        Insert: {
+          arena_id: string
+          atualizado_em?: string
+          baixa_dada?: boolean
+          baixa_em?: string | null
+          capitao_id: string
+          cliente_nome?: string | null
+          criado_em?: string
+          data: string
+          forma_pagamento?: string | null
+          grupo_id?: string | null
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          modalidade?: string
+          modo_cobranca?: string
+          observacoes?: string | null
+          pagamento_antecipado?: boolean
+          pelada_id?: string | null
+          quadra_id: string
+          reagendado_em?: string | null
+          recorrencia_id?: string | null
+          status?: string
+          valor_cobrado?: number | null
+        }
+        Update: {
+          arena_id?: string
+          atualizado_em?: string
+          baixa_dada?: boolean
+          baixa_em?: string | null
+          capitao_id?: string
+          cliente_nome?: string | null
+          criado_em?: string
+          data?: string
+          forma_pagamento?: string | null
+          grupo_id?: string | null
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          modalidade?: string
+          modo_cobranca?: string
+          observacoes?: string | null
+          pagamento_antecipado?: boolean
+          pelada_id?: string | null
+          quadra_id?: string
+          reagendado_em?: string | null
+          recorrencia_id?: string | null
+          status?: string
+          valor_cobrado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_pelada_id_fkey"
+            columns: ["pelada_id"]
+            isOneToOne: false
+            referencedRelation: "peladas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_quadra_id_fkey"
+            columns: ["quadra_id"]
+            isOneToOne: false
+            referencedRelation: "quadras"
             referencedColumns: ["id"]
           },
         ]
@@ -1030,6 +850,129 @@ export type Database = {
             columns: ["quadra_id"]
             isOneToOne: false
             referencedRelation: "quadras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caixa_movimentos: {
+        Row: {
+          arena_id: string
+          caixa_sessao_id: string
+          criado_em: string
+          descricao: string | null
+          forma_pagamento: string | null
+          id: string
+          operador_id: string | null
+          tipo: string
+          valor: number
+          venda_id: string | null
+        }
+        Insert: {
+          arena_id: string
+          caixa_sessao_id: string
+          criado_em?: string
+          descricao?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          operador_id?: string | null
+          tipo: string
+          valor: number
+          venda_id?: string | null
+        }
+        Update: {
+          arena_id?: string
+          caixa_sessao_id?: string
+          criado_em?: string
+          descricao?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          operador_id?: string | null
+          tipo?: string
+          valor?: number
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_movimentos_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_movimentos_caixa_sessao_id_fkey"
+            columns: ["caixa_sessao_id"]
+            isOneToOne: false
+            referencedRelation: "caixa_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_movimentos_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caixa_sessoes: {
+        Row: {
+          aberto_em: string
+          abertura_detalhe: Json | null
+          arena_id: string
+          criado_em: string
+          diferenca: number | null
+          fechado_em: string | null
+          fechamento_detalhe: Json | null
+          id: string
+          observacoes: string | null
+          operador_abertura_id: string
+          operador_fechamento_id: string | null
+          status: string
+          valor_abertura: number
+          valor_calculado_fechamento: number | null
+          valor_contado_fechamento: number | null
+        }
+        Insert: {
+          aberto_em?: string
+          abertura_detalhe?: Json | null
+          arena_id: string
+          criado_em?: string
+          diferenca?: number | null
+          fechado_em?: string | null
+          fechamento_detalhe?: Json | null
+          id?: string
+          observacoes?: string | null
+          operador_abertura_id: string
+          operador_fechamento_id?: string | null
+          status?: string
+          valor_abertura?: number
+          valor_calculado_fechamento?: number | null
+          valor_contado_fechamento?: number | null
+        }
+        Update: {
+          aberto_em?: string
+          abertura_detalhe?: Json | null
+          arena_id?: string
+          criado_em?: string
+          diferenca?: number | null
+          fechado_em?: string | null
+          fechamento_detalhe?: Json | null
+          id?: string
+          observacoes?: string | null
+          operador_abertura_id?: string
+          operador_fechamento_id?: string | null
+          status?: string
+          valor_abertura?: number
+          valor_calculado_fechamento?: number | null
+          valor_contado_fechamento?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_sessoes_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
             referencedColumns: ["id"]
           },
         ]
@@ -1520,6 +1463,105 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "financeiro_lancamentos_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedor_itens: {
+        Row: {
+          arena_id: string
+          ativo: boolean
+          criado_em: string
+          fornecedor_id: string
+          id: string
+          nome: string
+          preco_referencia: number
+          produto_id: string | null
+        }
+        Insert: {
+          arena_id: string
+          ativo?: boolean
+          criado_em?: string
+          fornecedor_id: string
+          id?: string
+          nome: string
+          preco_referencia?: number
+          produto_id?: string | null
+        }
+        Update: {
+          arena_id?: string
+          ativo?: boolean
+          criado_em?: string
+          fornecedor_id?: string
+          id?: string
+          nome?: string
+          preco_referencia?: number
+          produto_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedor_itens_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fornecedor_itens_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fornecedor_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedores: {
+        Row: {
+          arena_id: string
+          ativo: boolean
+          criado_em: string
+          documento: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          telefone: string | null
+        }
+        Insert: {
+          arena_id: string
+          ativo?: boolean
+          criado_em?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          telefone?: string | null
+        }
+        Update: {
+          arena_id?: string
+          ativo?: boolean
+          criado_em?: string
+          documento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          telefone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedores_arena_id_fkey"
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "arenas"
@@ -2480,81 +2522,37 @@ export type Database = {
           },
         ]
       }
-      pdv_comandas: {
+      pdv_categorias: {
         Row: {
-          aberta_em: string
           arena_id: string
-          baixa_dada: boolean
-          caixa_sessao_id: string | null
-          fechada_em: string | null
-          forma_pagamento: string | null
+          ativo: boolean
+          codigo: number
+          criado_em: string
           id: string
           nome: string
-          num_pessoas: number | null
-          observacoes: string | null
-          operador_abertura_id: string
-          operador_fechamento_id: string | null
-          status: string
-          tipo: string
-          travada: boolean
-          venda_id: string | null
         }
         Insert: {
-          aberta_em?: string
           arena_id: string
-          baixa_dada?: boolean
-          caixa_sessao_id?: string | null
-          fechada_em?: string | null
-          forma_pagamento?: string | null
+          ativo?: boolean
+          codigo: number
+          criado_em?: string
           id?: string
           nome: string
-          num_pessoas?: number | null
-          observacoes?: string | null
-          operador_abertura_id: string
-          operador_fechamento_id?: string | null
-          status?: string
-          tipo: string
-          travada?: boolean
-          venda_id?: string | null
         }
         Update: {
-          aberta_em?: string
           arena_id?: string
-          baixa_dada?: boolean
-          caixa_sessao_id?: string | null
-          fechada_em?: string | null
-          forma_pagamento?: string | null
+          ativo?: boolean
+          codigo?: number
+          criado_em?: string
           id?: string
           nome?: string
-          num_pessoas?: number | null
-          observacoes?: string | null
-          operador_abertura_id?: string
-          operador_fechamento_id?: string | null
-          status?: string
-          tipo?: string
-          travada?: boolean
-          venda_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "pdv_comandas_arena_id_fkey"
+            foreignKeyName: "pdv_categorias_arena_id_fkey"
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "arenas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pdv_comandas_caixa_sessao_id_fkey"
-            columns: ["caixa_sessao_id"]
-            isOneToOne: false
-            referencedRelation: "caixa_sessoes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pdv_comandas_venda_id_fkey"
-            columns: ["venda_id"]
-            isOneToOne: false
-            referencedRelation: "pdv_vendas"
             referencedColumns: ["id"]
           },
         ]
@@ -2642,37 +2640,81 @@ export type Database = {
           },
         ]
       }
-      pdv_categorias: {
+      pdv_comandas: {
         Row: {
+          aberta_em: string
           arena_id: string
-          ativo: boolean
-          codigo: number
-          criado_em: string
+          baixa_dada: boolean
+          caixa_sessao_id: string | null
+          fechada_em: string | null
+          forma_pagamento: string | null
           id: string
           nome: string
+          num_pessoas: number | null
+          observacoes: string | null
+          operador_abertura_id: string
+          operador_fechamento_id: string | null
+          status: string
+          tipo: string
+          travada: boolean
+          venda_id: string | null
         }
         Insert: {
+          aberta_em?: string
           arena_id: string
-          ativo?: boolean
-          codigo: number
-          criado_em?: string
+          baixa_dada?: boolean
+          caixa_sessao_id?: string | null
+          fechada_em?: string | null
+          forma_pagamento?: string | null
           id?: string
           nome: string
+          num_pessoas?: number | null
+          observacoes?: string | null
+          operador_abertura_id: string
+          operador_fechamento_id?: string | null
+          status?: string
+          tipo: string
+          travada?: boolean
+          venda_id?: string | null
         }
         Update: {
+          aberta_em?: string
           arena_id?: string
-          ativo?: boolean
-          codigo?: number
-          criado_em?: string
+          baixa_dada?: boolean
+          caixa_sessao_id?: string | null
+          fechada_em?: string | null
+          forma_pagamento?: string | null
           id?: string
           nome?: string
+          num_pessoas?: number | null
+          observacoes?: string | null
+          operador_abertura_id?: string
+          operador_fechamento_id?: string | null
+          status?: string
+          tipo?: string
+          travada?: boolean
+          venda_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "pdv_categorias_arena_id_fkey"
+            foreignKeyName: "pdv_comandas_arena_id_fkey"
             columns: ["arena_id"]
             isOneToOne: false
             referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comandas_caixa_sessao_id_fkey"
+            columns: ["caixa_sessao_id"]
+            isOneToOne: false
+            referencedRelation: "caixa_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comandas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_vendas"
             referencedColumns: ["id"]
           },
         ]
@@ -2826,129 +2868,6 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "pdv_produtos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      caixa_sessoes: {
-        Row: {
-          abertura_detalhe: Json | null
-          aberto_em: string
-          arena_id: string
-          criado_em: string
-          diferenca: number | null
-          fechado_em: string | null
-          fechamento_detalhe: Json | null
-          id: string
-          observacoes: string | null
-          operador_abertura_id: string
-          operador_fechamento_id: string | null
-          status: string
-          valor_abertura: number
-          valor_calculado_fechamento: number | null
-          valor_contado_fechamento: number | null
-        }
-        Insert: {
-          abertura_detalhe?: Json | null
-          aberto_em?: string
-          arena_id: string
-          criado_em?: string
-          diferenca?: number | null
-          fechado_em?: string | null
-          fechamento_detalhe?: Json | null
-          id?: string
-          observacoes?: string | null
-          operador_abertura_id: string
-          operador_fechamento_id?: string | null
-          status?: string
-          valor_abertura?: number
-          valor_calculado_fechamento?: number | null
-          valor_contado_fechamento?: number | null
-        }
-        Update: {
-          abertura_detalhe?: Json | null
-          aberto_em?: string
-          arena_id?: string
-          criado_em?: string
-          diferenca?: number | null
-          fechado_em?: string | null
-          fechamento_detalhe?: Json | null
-          id?: string
-          observacoes?: string | null
-          operador_abertura_id?: string
-          operador_fechamento_id?: string | null
-          status?: string
-          valor_abertura?: number
-          valor_calculado_fechamento?: number | null
-          valor_contado_fechamento?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "caixa_sessoes_arena_id_fkey"
-            columns: ["arena_id"]
-            isOneToOne: false
-            referencedRelation: "arenas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      caixa_movimentos: {
-        Row: {
-          arena_id: string
-          caixa_sessao_id: string
-          criado_em: string
-          descricao: string | null
-          forma_pagamento: string | null
-          id: string
-          operador_id: string | null
-          tipo: string
-          valor: number
-          venda_id: string | null
-        }
-        Insert: {
-          arena_id: string
-          caixa_sessao_id: string
-          criado_em?: string
-          descricao?: string | null
-          forma_pagamento?: string | null
-          id?: string
-          operador_id?: string | null
-          tipo: string
-          valor: number
-          venda_id?: string | null
-        }
-        Update: {
-          arena_id?: string
-          caixa_sessao_id?: string
-          criado_em?: string
-          descricao?: string | null
-          forma_pagamento?: string | null
-          id?: string
-          operador_id?: string | null
-          tipo?: string
-          valor?: number
-          venda_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "caixa_movimentos_arena_id_fkey"
-            columns: ["arena_id"]
-            isOneToOne: false
-            referencedRelation: "arenas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "caixa_movimentos_caixa_sessao_id_fkey"
-            columns: ["caixa_sessao_id"]
-            isOneToOne: false
-            referencedRelation: "caixa_sessoes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "caixa_movimentos_venda_id_fkey"
-            columns: ["venda_id"]
-            isOneToOne: false
-            referencedRelation: "pdv_vendas"
             referencedColumns: ["id"]
           },
         ]
@@ -3131,6 +3050,7 @@ export type Database = {
           data: string
           dia_semana: number | null
           duracao_partida_minutos: number
+          encerrada_manualmente_em: string | null
           goleiros_por_time: number
           gols_para_encerrar: number | null
           grupo_id: string
@@ -3168,6 +3088,7 @@ export type Database = {
           data: string
           dia_semana?: number | null
           duracao_partida_minutos?: number
+          encerrada_manualmente_em?: string | null
           goleiros_por_time?: number
           gols_para_encerrar?: number | null
           grupo_id: string
@@ -3205,6 +3126,7 @@ export type Database = {
           data?: string
           dia_semana?: number | null
           duracao_partida_minutos?: number
+          encerrada_manualmente_em?: string | null
           goleiros_por_time?: number
           gols_para_encerrar?: number | null
           grupo_id?: string
@@ -3674,6 +3596,175 @@ export type Database = {
           },
         ]
       }
+      saida_itens: {
+        Row: {
+          descricao: string
+          fornecedor_item_id: string | null
+          id: string
+          produto_id: string | null
+          quantidade: number
+          saida_id: string
+          subtotal: number
+          valor_unitario: number
+          vincular_estoque: boolean
+        }
+        Insert: {
+          descricao: string
+          fornecedor_item_id?: string | null
+          id?: string
+          produto_id?: string | null
+          quantidade: number
+          saida_id: string
+          subtotal: number
+          valor_unitario: number
+          vincular_estoque?: boolean
+        }
+        Update: {
+          descricao?: string
+          fornecedor_item_id?: string | null
+          id?: string
+          produto_id?: string | null
+          quantidade?: number
+          saida_id?: string
+          subtotal?: number
+          valor_unitario?: number
+          vincular_estoque?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saida_itens_fornecedor_item_id_fkey"
+            columns: ["fornecedor_item_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedor_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saida_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saida_itens_saida_id_fkey"
+            columns: ["saida_id"]
+            isOneToOne: false
+            referencedRelation: "saidas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saida_parcelas: {
+        Row: {
+          arena_id: string
+          id: string
+          numero: number
+          pago: boolean
+          pago_em: string | null
+          saida_id: string
+          total_parcelas: number
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          arena_id: string
+          id?: string
+          numero: number
+          pago?: boolean
+          pago_em?: string | null
+          saida_id: string
+          total_parcelas: number
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          arena_id?: string
+          id?: string
+          numero?: number
+          pago?: boolean
+          pago_em?: string | null
+          saida_id?: string
+          total_parcelas?: number
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saida_parcelas_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saida_parcelas_saida_id_fkey"
+            columns: ["saida_id"]
+            isOneToOne: false
+            referencedRelation: "saidas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saidas: {
+        Row: {
+          arena_id: string
+          categoria: string | null
+          criado_em: string
+          data_compra: string
+          descricao: string
+          forma_pagamento: string
+          fornecedor_id: string | null
+          id: string
+          num_parcelas: number
+          observacao: string | null
+          parcelado: boolean
+          valor_total: number
+        }
+        Insert: {
+          arena_id: string
+          categoria?: string | null
+          criado_em?: string
+          data_compra?: string
+          descricao: string
+          forma_pagamento: string
+          fornecedor_id?: string | null
+          id?: string
+          num_parcelas?: number
+          observacao?: string | null
+          parcelado?: boolean
+          valor_total: number
+        }
+        Update: {
+          arena_id?: string
+          categoria?: string | null
+          criado_em?: string
+          data_compra?: string
+          descricao?: string
+          forma_pagamento?: string
+          fornecedor_id?: string | null
+          id?: string
+          num_parcelas?: number
+          observacao?: string | null
+          parcelado?: boolean
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saidas_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saidas_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       selos: {
         Row: {
           ativo: boolean
@@ -4047,6 +4138,131 @@ export type Database = {
           },
         ]
       }
+      tv_anunciante_quadras: {
+        Row: {
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Insert: {
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Update: {
+          quadra_id?: string
+          tv_anunciante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_anunciante_quadras_quadra_id_fkey"
+            columns: ["quadra_id"]
+            isOneToOne: false
+            referencedRelation: "quadras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tv_anunciante_quadras_tv_anunciante_id_fkey"
+            columns: ["tv_anunciante_id"]
+            isOneToOne: false
+            referencedRelation: "tv_anunciantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tv_anunciantes: {
+        Row: {
+          arena_id: string
+          ativo: boolean
+          criado_em: string
+          data_fim: string | null
+          data_inicio: string | null
+          dias_semana: number[]
+          duracao_segundos: number
+          id: string
+          imagem_url: string
+          insercoes_feitas: number
+          limite_insercoes: number | null
+          modo_exibicao: string
+          nome: string
+          tipo_duracao: string
+        }
+        Insert: {
+          arena_id: string
+          ativo?: boolean
+          criado_em?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          dias_semana?: number[]
+          duracao_segundos?: number
+          id?: string
+          imagem_url: string
+          insercoes_feitas?: number
+          limite_insercoes?: number | null
+          modo_exibicao?: string
+          nome: string
+          tipo_duracao?: string
+        }
+        Update: {
+          arena_id?: string
+          ativo?: boolean
+          criado_em?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          dias_semana?: number[]
+          duracao_segundos?: number
+          id?: string
+          imagem_url?: string
+          insercoes_feitas?: number
+          limite_insercoes?: number | null
+          modo_exibicao?: string
+          nome?: string
+          tipo_duracao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_anunciantes_arena_id_fkey"
+            columns: ["arena_id"]
+            isOneToOne: false
+            referencedRelation: "arenas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tv_anuncio_exibicoes: {
+        Row: {
+          exibido_em: string
+          id: string
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Insert: {
+          exibido_em?: string
+          id?: string
+          quadra_id: string
+          tv_anunciante_id: string
+        }
+        Update: {
+          exibido_em?: string
+          id?: string
+          quadra_id?: string
+          tv_anunciante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_anuncio_exibicoes_quadra_id_fkey"
+            columns: ["quadra_id"]
+            isOneToOne: false
+            referencedRelation: "quadras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tv_anuncio_exibicoes_tv_anunciante_id_fkey"
+            columns: ["tv_anunciante_id"]
+            isOneToOne: false
+            referencedRelation: "tv_anunciantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usuario_selos: {
         Row: {
           conquistado_em: string
@@ -4161,131 +4377,6 @@ export type Database = {
           },
         ]
       }
-      tv_anunciantes: {
-        Row: {
-          arena_id: string
-          ativo: boolean
-          criado_em: string
-          data_fim: string | null
-          data_inicio: string | null
-          dias_semana: number[]
-          duracao_segundos: number
-          id: string
-          imagem_url: string
-          insercoes_feitas: number
-          limite_insercoes: number | null
-          modo_exibicao: string
-          nome: string
-          tipo_duracao: string
-        }
-        Insert: {
-          arena_id: string
-          ativo?: boolean
-          criado_em?: string
-          data_fim?: string | null
-          data_inicio?: string | null
-          dias_semana?: number[]
-          duracao_segundos?: number
-          id?: string
-          imagem_url: string
-          insercoes_feitas?: number
-          limite_insercoes?: number | null
-          modo_exibicao?: string
-          nome: string
-          tipo_duracao?: string
-        }
-        Update: {
-          arena_id?: string
-          ativo?: boolean
-          criado_em?: string
-          data_fim?: string | null
-          data_inicio?: string | null
-          dias_semana?: number[]
-          duracao_segundos?: number
-          id?: string
-          imagem_url?: string
-          insercoes_feitas?: number
-          limite_insercoes?: number | null
-          modo_exibicao?: string
-          nome?: string
-          tipo_duracao?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tv_anunciantes_arena_id_fkey"
-            columns: ["arena_id"]
-            isOneToOne: false
-            referencedRelation: "arenas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tv_anuncio_exibicoes: {
-        Row: {
-          exibido_em: string
-          id: string
-          quadra_id: string
-          tv_anunciante_id: string
-        }
-        Insert: {
-          exibido_em?: string
-          id?: string
-          quadra_id: string
-          tv_anunciante_id: string
-        }
-        Update: {
-          exibido_em?: string
-          id?: string
-          quadra_id?: string
-          tv_anunciante_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tv_anuncio_exibicoes_quadra_id_fkey"
-            columns: ["quadra_id"]
-            isOneToOne: false
-            referencedRelation: "quadras"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tv_anuncio_exibicoes_tv_anunciante_id_fkey"
-            columns: ["tv_anunciante_id"]
-            isOneToOne: false
-            referencedRelation: "tv_anunciantes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tv_anunciante_quadras: {
-        Row: {
-          quadra_id: string
-          tv_anunciante_id: string
-        }
-        Insert: {
-          quadra_id: string
-          tv_anunciante_id: string
-        }
-        Update: {
-          quadra_id?: string
-          tv_anunciante_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tv_anunciante_quadras_quadra_id_fkey"
-            columns: ["quadra_id"]
-            isOneToOne: false
-            referencedRelation: "quadras"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tv_anunciante_quadras_tv_anunciante_id_fkey"
-            columns: ["tv_anunciante_id"]
-            isOneToOne: false
-            referencedRelation: "tv_anunciantes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       confirmacoes_completas: {
@@ -4361,17 +4452,6 @@ export type Database = {
         Returns: undefined
       }
       atualizar_status_mrcoins: { Args: never; Returns: undefined }
-      criar_saida: {
-        Args: {
-          _arena_id: string; _fornecedor_id: string | null; _descricao: string; _categoria: string | null
-          _forma_pagamento: string; _data_compra: string; _parcelado: boolean; _num_parcelas: number
-          _primeiro_vencimento: string; _ja_pago: boolean; _observacao: string | null; _valor_total: number; _itens: Json
-        }
-        Returns: string
-      }
-      pagar_parcela_saida: { Args: { _parcela_id: string; _pago: boolean }; Returns: undefined }
-      excluir_saida: { Args: { _saida_id: string }; Returns: undefined }
-      excluir_venda_pdv: { Args: { _venda_id: string }; Returns: undefined }
       buscar_indicacao_por_codigo: {
         Args: { _codigo: string }
         Returns: {
@@ -4380,23 +4460,14 @@ export type Database = {
           indicador_nome: string
         }[]
       }
-      buscar_info_grupo:
-        | {
-            Args: { _codigo: string }
-            Returns: {
-              criado_por: string
-              id: string
-              nome: string
-            }[]
-          }
-        | {
-            Args: { _codigo?: string; _grupo_id?: string }
-            Returns: {
-              criado_por: string
-              id: string
-              nome: string
-            }[]
-          }
+      buscar_info_grupo: {
+        Args: { _codigo: string }
+        Returns: {
+          criado_por: string
+          id: string
+          nome: string
+        }[]
+      }
       cancelar_peladas_nao_iniciadas: { Args: never; Returns: undefined }
       check_selos: { Args: { _user_id: string }; Returns: undefined }
       convidar_auxiliares_pelada: {
@@ -4411,8 +4482,8 @@ export type Database = {
         | {
             Args: {
               _acao: string
-              _detalhes?: Json
-              _pelada_id?: string
+              _extra: Json
+              _pelada_id: string
               _user_id: string
             }
             Returns: undefined
@@ -4431,6 +4502,38 @@ export type Database = {
         }
         Returns: string
       }
+      criar_pelada_rascunho_dono: {
+        Args: {
+          _criado_por: string
+          _data: string
+          _grupo_id: string
+          _horario_fim: string
+          _horario_inicio: string
+          _nome_pelada: string
+          _quadra_id?: string
+        }
+        Returns: string
+      }
+      criar_saida: {
+        Args: {
+          _arena_id: string
+          _categoria: string
+          _data_compra: string
+          _descricao: string
+          _forma_pagamento: string
+          _fornecedor_id: string
+          _itens: Json
+          _ja_pago: boolean
+          _num_parcelas: number
+          _observacao: string
+          _parcelado: boolean
+          _primeiro_vencimento: string
+          _valor_total: number
+        }
+        Returns: string
+      }
+      excluir_saida: { Args: { _saida_id: string }; Returns: undefined }
+      excluir_venda_pdv: { Args: { _venda_id: string }; Returns: undefined }
       fechar_mes_mrcoins: { Args: never; Returns: undefined }
       fechar_temporada: { Args: { _temporada_id: string }; Returns: undefined }
       fechar_temporadas_vencidas: { Args: never; Returns: undefined }
@@ -4438,12 +4541,25 @@ export type Database = {
       gerar_posts_pelada: { Args: { _pelada_id: string }; Returns: undefined }
       goleiro_perfil_publico: { Args: { _user_id: string }; Returns: Json }
       grupo_de_pelada: { Args: { _pelada_id: string }; Returns: string }
+      grupos_do_capitao: {
+        Args: { _user_id: string }
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      ids_capitaes_reais: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          user_id: string
+        }[]
       }
       is_grupo_capitao: {
         Args: { _grupo_id: string; _user_id: string }
@@ -4466,6 +4582,10 @@ export type Database = {
       }
       media_skill_user: { Args: { _user_id: string }; Returns: number }
       obter_ou_criar_temporada_atual: { Args: never; Returns: string }
+      pagar_parcela_saida: {
+        Args: { _pago: boolean; _parcela_id: string }
+        Returns: undefined
+      }
       recalcular_skills_jogador: {
         Args: { _grupo_id: string; _user_id: string }
         Returns: undefined
@@ -4479,10 +4599,23 @@ export type Database = {
         Args: { _aceitar: boolean; _id: string }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       slugify: { Args: { _text: string }; Returns: string }
+      status_peladas_do_dono: {
+        Args: { _arena_id: string }
+        Returns: {
+          id: string
+          status: string
+        }[]
+      }
       unaccent: { Args: { "": string }; Returns: string }
       user_stats: { Args: { _user_id: string }; Returns: Json }
       verify_capitao_status: { Args: never; Returns: undefined }
+      zerar_avaliacoes_grupo: {
+        Args: { _grupo_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "jogador" | "capitao" | "dono_quadra" | "parceiro" | "admin"
@@ -4511,6 +4644,7 @@ export type Database = {
         | "entrada_forte"
         | "cartao_vermelho"
         | "cartao_amarelo"
+        | "gol_contra"
       tipo_superficie: "society" | "futsal" | "campo" | "outro"
     }
     CompositeTypes: {
@@ -4527,12 +4661,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4556,11 +4690,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4581,11 +4715,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4606,11 +4740,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4623,11 +4757,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4667,6 +4801,7 @@ export const Constants = {
         "entrada_forte",
         "cartao_vermelho",
         "cartao_amarelo",
+        "gol_contra",
       ],
       tipo_superficie: ["society", "futsal", "campo", "outro"],
     },
