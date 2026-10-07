@@ -9,6 +9,8 @@ export interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Submenu: aparece indentado abaixo do item quando a rota atual está dentro dele. */
+  children?: { to: string; label: string }[];
 }
 
 const SIDEBAR_COLLAPSE_KEY = "dashboard_sidebar_collapsed";
@@ -45,13 +47,27 @@ export function DashboardShell({ items, title, children }: { items: NavItem[]; t
       {!collapsed && <div className="px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">{title}</div>}
       <nav className="flex-1 space-y-1 px-3 pt-2">
         {items.map((it) => {
-          const active = path === it.to;
+          const filhos = it.children ?? [];
+          const dentro = filhos.length > 0 && (path === it.to || path.startsWith(it.to + "/"));
+          const active = filhos.length > 0 ? false : path === it.to;
           return (
-            <Link key={it.to} to={it.to} onClick={() => setOpen(false)} title={collapsed ? it.label : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${collapsed ? "justify-center px-0" : ""} ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
-              <it.icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{it.label}</span>}
-            </Link>
+            <div key={it.to}>
+              <Link to={it.to} onClick={() => setOpen(false)} title={collapsed ? it.label : undefined}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${collapsed ? "justify-center px-0" : ""} ${active || (dentro && collapsed) ? "bg-primary/10 text-primary" : dentro ? "text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                <it.icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span>{it.label}</span>}
+              </Link>
+              {dentro && !collapsed && (
+                <div className="ml-5 mt-1 mb-1 space-y-0.5 border-l border-border pl-3">
+                  {filhos.map((f) => (
+                    <Link key={f.to} to={f.to} onClick={() => setOpen(false)}
+                      className={`block rounded-md px-3 py-1.5 text-[13px] font-medium transition ${path === f.to ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                      {f.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
